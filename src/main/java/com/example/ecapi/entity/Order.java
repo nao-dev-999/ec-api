@@ -1,5 +1,6 @@
 package com.example.ecapi.entity;
 
+import com.example.ecapi.constant.OrderStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -52,13 +53,5 @@ public class Order {
     if (status == null) {
       status = OrderStatus.PENDING;
     }
-  }
-
-  public enum OrderStatus {
-    PENDING, // 注文受付
-    CONFIRMED, // 確認済み
-    SHIPPED, // 発送済み
-    DELIVERED, // 配達完了
-    CANCELLED // キャンセル
   }
 }

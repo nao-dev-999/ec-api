@@ -1,4 +1,4 @@
-package com.example.ecapi.controller.dto;
+package com.example.ecapi.controller.dto.order;
 
 import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
