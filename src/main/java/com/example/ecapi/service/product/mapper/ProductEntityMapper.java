@@ -20,7 +20,13 @@ public interface ProductEntityMapper {
     // Note: id/createdAt/updatedAt はマッピングしない（DB 側で生成される等）
     Product toProduct(CreateProduct dto);
 
-    // 既存エンティティを UpdateProduct の内容で更新（null のフィールドは無視）
+    /**
+     * 既存エンティティを UpdateProduct の内容で更新します。 UpdateProduct の null のフィールドは無視され、エンティティの対応するフィールドは変更されません。
+     * version フィールドも含まれます。
+     *
+     * @param dto 更新情報を含む DTO
+     * @param entity 更新対象のエンティティ
+     */
     @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
     void updateProductFromUpdate(UpdateProduct dto, @MappingTarget Product entity);
 }

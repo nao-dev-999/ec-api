@@ -13,7 +13,8 @@ import org.springframework.data.repository.query.Param;
  *
  * <p>Spring Data JPA がメソッド名・@Query を元にクエリを自動生成する。
  */
-public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
+public interface ProductRepository
+        extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
     // 商品名のあいまい検索（大文字小文字無視）
     List<Product> findByNameContainingIgnoreCase(String keyword);

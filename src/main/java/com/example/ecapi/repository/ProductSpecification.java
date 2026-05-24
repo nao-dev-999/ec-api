@@ -8,7 +8,8 @@ import java.util.List;
 import org.springframework.data.jpa.domain.Specification;
 
 public class ProductSpecification {
-    public static Specification<Product> byCriteria(String name, String description, BigDecimal price) {
+    public static Specification<Product> byCriteria(
+            String name, String description, BigDecimal price) {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -16,7 +17,10 @@ public class ProductSpecification {
                 predicates.add(cb.like(cb.lower(root.get("name")), "%" + name.toLowerCase() + "%"));
             }
             if (description != null) {
-                predicates.add(cb.like(cb.lower(root.get("description")), "%" + description.toLowerCase() + "%"));
+                predicates.add(
+                        cb.like(
+                                cb.lower(root.get("description")),
+                                "%" + description.toLowerCase() + "%"));
             }
             if (price != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("price"), price));

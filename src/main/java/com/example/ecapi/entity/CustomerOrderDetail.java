@@ -22,7 +22,7 @@ public class CustomerOrderDetail {
     @JoinColumn(name = "customer_order_id", nullable = false) // 修正: order_id -> customer_order_id
     private CustomerOrder order;
 
-    @ManyToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
 
@@ -61,29 +61,17 @@ public class CustomerOrderDetail {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
-        // Spring Security などで認証ユーザー情報を取得し設定する
-        // 例: String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        // TODO 認証ユーザー情報を取得し設定する
         if (this.createdBy == null) { // createdBy がまだ設定されていない場合のみ
             this.createdBy = "system"; // 仮の値
         }
         this.updatedBy = "system"; // 仮の値
-
-        // subtotal の自動計算
-        if (unitPrice != null && quantity > 0) {
-            this.subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
-        }
     }
 
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
-        // Spring Security などで認証ユーザー情報を取得し設定する
-        // 例: String currentUsername = SecurityContextHolder.getContext().getAuthentication().getName();
+        // TODO 認証ユーザー情報を取得し設定する
         this.updatedBy = "system"; // 仮の値
-
-        // subtotal の自動計算
-        if (unitPrice != null && quantity > 0) {
-            this.subtotal = unitPrice.multiply(BigDecimal.valueOf(quantity));
-        }
     }
 }

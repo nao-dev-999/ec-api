@@ -10,4 +10,5 @@ public record ProductResult(
         BigDecimal price,
         int stock,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt) {}
+        LocalDateTime updatedAt,
+        Integer version) {}

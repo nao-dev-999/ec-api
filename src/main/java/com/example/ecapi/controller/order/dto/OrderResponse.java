@@ -13,4 +13,5 @@ public record OrderResponse(
         BigDecimal totalAmount,
         List<OrderItemResponse> items,
         LocalDateTime orderedAt,
-        LocalDateTime updatedAt) {}
+        LocalDateTime updatedAt,
+        Integer version) {}

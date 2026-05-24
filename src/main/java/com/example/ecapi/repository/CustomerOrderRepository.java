@@ -9,7 +9,18 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /** 注文リポジトリ */
-public interface CutomerOrderRepository extends JpaRepository<CustomerOrder, Long> {
+public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Long> {
+
+    @Override
+    @Query(
+            """
+            SELECT
+              DISTINCT o
+            FROM CustomerOrder o
+              LEFT JOIN FETCH o.items i
+              LEFT JOIN FETCH i.product
+          """)
+    List<CustomerOrder> findAll();
 
     List<CustomerOrder> findByCustomerName(String customerName);
 

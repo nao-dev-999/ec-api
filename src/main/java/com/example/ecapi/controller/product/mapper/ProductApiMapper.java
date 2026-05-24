@@ -14,6 +14,7 @@ public interface ProductApiMapper {
 
     CreateProduct toCreateProduct(CreateProductRequest request);
 
+    // UpdateProductRequest から UpdateProduct へのマッピングに version を含める
     UpdateProduct toUpdateProduct(UpdateProductRequest request);
 
     ProductResponse toProductResponse(ProductResult result);
