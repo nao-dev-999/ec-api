@@ -1,7 +1,6 @@
 package com.example.ecapi.entity;
 
 import jakarta.persistence.*;
-import jakarta.validation.constraints.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import lombok.*;

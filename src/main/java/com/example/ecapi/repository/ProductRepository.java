@@ -20,7 +20,8 @@ public interface ProductRepository
     List<Product> findByNameContainingIgnoreCase(String keyword);
 
     // 価格範囲検索（JPQL）
-    @Query("""
+    @Query(
+            """
         SELECT p FROM Product p
         WHERE p.price BETWEEN :min AND :max
         ORDER BY p.price

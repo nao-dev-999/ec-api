@@ -50,3 +50,5 @@ desktop.ini
 ### Local Configuration (Sensitive Data) ###
 .env
 src/main/resources/application-local.properties
+
+.linux_command

@@ -1,5 +1,6 @@
 package com.example.ecapi.service.product;
 
+import com.example.ecapi.config.MessageHelper;
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.repository.ProductRepository;
@@ -11,9 +12,7 @@ import com.example.ecapi.service.product.mapper.ProductEntityMapper;
 import jakarta.persistence.OptimisticLockException;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Locale;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.MessageSource;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -32,7 +31,7 @@ public class ProductService {
 
     private final ProductRepository productRepository;
     private final ProductEntityMapper productEntityMapper;
-    private final MessageSource messageSource;
+    private final MessageHelper messageHelper;
 
     /**
      * 全ての商品を取得します。
@@ -58,24 +57,10 @@ public class ProductService {
                         .orElseThrow(
                                 () ->
                                         new ProductNotFoundException(
-                                                messageSource.getMessage(
+                                                messageHelper.get(
                                                         "product.notFound",
-                                                        new Object[] {id},
-                                                        Locale
-                                                                .getDefault()))); // メッセージをプロパティファイルから取得
+                                                        id))); // メッセージをプロパティファイルから取得
         return productEntityMapper.toProductResult(product);
-    }
-
-    /**
-     * 商品名キーワードで商品を検索します。 このメソッドは、より汎用的な {@link #searchProducts(String, String, BigDecimal)}
-     * に置き換えられる可能性があります。
-     *
-     * @param keyword 検索キーワード（商品名で部分一致、大文字小文字無視）
-     * @return 検索結果の商品情報のリスト
-     */
-    public List<ProductResult> search(String keyword) {
-        return productEntityMapper.toProductResultList(
-                productRepository.findByNameContainingIgnoreCase(keyword));
     }
 
     /**
@@ -121,11 +106,9 @@ public class ProductService {
                         .orElseThrow(
                                 () ->
                                         new ProductNotFoundException(
-                                                messageSource.getMessage(
+                                                messageHelper.get(
                                                         "product.notFound",
-                                                        new Object[] {id},
-                                                        Locale
-                                                                .getDefault()))); // メッセージをプロパティファイルから取得
+                                                        id))); // メッセージをプロパティファイルから取得
         productEntityMapper.updateProductFromUpdate(updateProduct, product);
         return productEntityMapper.toProductResult(productRepository.save(product));
     }
@@ -140,10 +123,7 @@ public class ProductService {
     public void delete(Long id) {
         if (!productRepository.existsById(id)) {
             throw new ProductNotFoundException(
-                    messageSource.getMessage(
-                            "product.notFound",
-                            new Object[] {id},
-                            Locale.getDefault())); // メッセージをプロパティファイルから取得
+                    messageHelper.get("product.notFound", id)); // メッセージをプロパティファイルから取得
         }
         productRepository.deleteById(id);
     }

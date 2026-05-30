@@ -1,12 +1,11 @@
 package com.example.ecapi.exception;
 
+import com.example.ecapi.config.MessageHelper;
 import java.time.LocalDateTime;
 import java.util.HashMap;
-import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -25,7 +24,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RequiredArgsConstructor
 public class GlobalExceptionHandler {
 
-    private final MessageSource messageSource;
+    private final MessageHelper messageHelper;
 
     /** バリデーションエラー → 400 Bad Request */
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -39,10 +38,7 @@ public class GlobalExceptionHandler {
                             String field = ((FieldError) error).getField();
                             errors.put(field, error.getDefaultMessage());
                         });
-        return buildError(
-                HttpStatus.BAD_REQUEST,
-                messageSource.getMessage("validation.error", new Object[] {}, Locale.getDefault()),
-                errors);
+        return buildError(HttpStatus.BAD_REQUEST, messageHelper.get("error.validation"), errors);
     }
 
     /**
@@ -105,9 +101,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGeneral(Exception ex) {
         log.error("Unexpected exception occurred", ex);
-        return buildError(
-                HttpStatus.INTERNAL_SERVER_ERROR,
-                messageSource.getMessage("system.error", new Object[] {}, Locale.getDefault()));
+        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, messageHelper.get("error.system"));
     }
 
     private ResponseEntity<Map<String, Object>> buildError(HttpStatus status) {

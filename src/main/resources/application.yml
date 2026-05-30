@@ -21,6 +21,10 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
+  messages: # 追加
+    basename: messages # 追加
+    encoding: UTF-8 # 追加
+
 server:
   port: 8080
 

@@ -1,5 +1,6 @@
 package com.example.ecapi.service.order;
 
+import com.example.ecapi.config.MessageHelper;
 import com.example.ecapi.constant.OrderStatus;
 import com.example.ecapi.entity.CustomerOrder;
 import com.example.ecapi.entity.CustomerOrderDetail;
@@ -16,9 +17,7 @@ import com.example.ecapi.service.order.mapper.OrderEntityMapper;
 import jakarta.persistence.OptimisticLockException;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Locale;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,7 +34,7 @@ public class OrderService {
     private final CustomerOrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final OrderEntityMapper orderEntityMapper;
-    private final MessageSource messageSource;
+    private final MessageHelper messageHelper;
 
     /**
      * 全ての注文を取得します。
@@ -60,10 +59,7 @@ public class OrderService {
                         .orElseThrow(
                                 () ->
                                         new OrderNotFoundException(
-                                                messageSource.getMessage(
-                                                        "order.notFound",
-                                                        new Object[] {id},
-                                                        Locale.getDefault())));
+                                                messageHelper.get("order.notFound", id)));
         return orderEntityMapper.toOrderResult(order);
     }
 
@@ -88,19 +84,16 @@ public class OrderService {
                             .orElseThrow(
                                     () ->
                                             new ProductNotFoundException(
-                                                    messageSource.getMessage(
-                                                            "product.notFound",
-                                                            new Object[] {item.productId()},
-                                                            Locale.getDefault())));
+                                                    messageHelper.get(
+                                                            "product.notFound", item.productId())));
             // 在庫チェック
             if (product.getStock() < item.quantity()) {
                 throw new InsufficientStockException(
-                        messageSource.getMessage(
+                        messageHelper.get(
                                 "order.insufficientStock",
-                                new Object[] {
-                                    product.getName(), product.getStock(), item.quantity()
-                                },
-                                Locale.getDefault()));
+                                product.getName(),
+                                product.getStock(),
+                                item.quantity()));
             }
             // 在庫減算
             product.setStock(product.getStock() - item.quantity());
@@ -141,10 +134,7 @@ public class OrderService {
                         .orElseThrow(
                                 () ->
                                         new OrderNotFoundException(
-                                                messageSource.getMessage(
-                                                        "order.notFound",
-                                                        new Object[] {id},
-                                                        Locale.getDefault())));
+                                                messageHelper.get("order.notFound", id)));
         order.setStatus(newStatus);
         CustomerOrder saved = orderRepository.save(order);
         return orderEntityMapper.toOrderResult(saved);
@@ -165,29 +155,9 @@ public class OrderService {
                         .orElseThrow(
                                 () ->
                                         new OrderNotFoundException(
-                                                messageSource.getMessage(
-                                                        "order.notFound",
-                                                        new Object[] {id},
-                                                        Locale.getDefault())));
+                                                messageHelper.get("order.notFound", id)));
         order.setStatus(OrderStatus.CANCELLED);
         CustomerOrder saved = orderRepository.save(order);
         return orderEntityMapper.toOrderResult(saved);
-    }
-
-    /**
-     * 注文を検索します。 クエリ文字列またはステータスに基づいて注文をフィルタリングします。
-     *
-     * @param q 顧客名での検索クエリ（部分一致は未実装）
-     * @param status 注文ステータス（現在は使用されていません）
-     * @return 検索結果の注文リスト
-     */
-    public List<OrderResult> search(String q, OrderStatus status) {
-        if (status != null) {
-            return orderEntityMapper.toOrderResultList(orderRepository.findByStatus(status));
-        }
-        if (q != null && !q.isBlank()) {
-            return orderEntityMapper.toOrderResultList(orderRepository.findByCustomerName(q));
-        }
-        return findAll();
     }
 }

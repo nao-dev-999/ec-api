@@ -5,5 +5,5 @@ import jakarta.validation.constraints.*;
 import java.util.List;
 
 public record OrderRequest(
-        @NotBlank(message = "顧客名は必須です") String customerName,
-        @NotEmpty(message = "注文商品は1つ以上必要です") @Valid List<OrderItemRequest> items) {}
+        @NotBlank(message = "{validation.order.customerName.notBlank}") String customerName,
+        @NotEmpty(message = "{validation.order.items.notEmpty}") @Valid List<OrderItemRequest> items) {}

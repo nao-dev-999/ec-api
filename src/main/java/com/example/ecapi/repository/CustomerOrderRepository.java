@@ -26,7 +26,8 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
 
     List<CustomerOrder> findByStatus(OrderStatus status);
 
-    @Query("""
+    @Query(
+            """
         SELECT DISTINCT o FROM CustomerOrder o
         LEFT JOIN FETCH o.items i
         LEFT JOIN FETCH i.product
