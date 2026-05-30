@@ -29,6 +29,10 @@ public interface ProductRepository
     List<Product> findByStockGreaterThan(int minStock);
 
     // 価格範囲検索（JPQL）
-    @Query("SELECT p FROM Product p WHERE p.price BETWEEN :min AND :max ORDER BY p.price")
+    @Query("""
+        SELECT p FROM Product p
+        WHERE p.price BETWEEN :min AND :max
+        ORDER BY p.price
+        """)
     List<Product> findByPriceRange(@Param("min") BigDecimal min, @Param("max") BigDecimal max);
 }
