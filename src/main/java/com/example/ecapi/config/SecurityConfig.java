@@ -1,5 +1,8 @@
 package com.example.ecapi.config;
 
+import com.example.ecapi.filter.JwtAuthenticationFilter;
+import com.example.ecapi.helper.MessageHelper;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,6 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final MessageHelper messageHelper;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -46,7 +50,43 @@ public class SecurityConfig {
                                         .anyRequest()
                                         .authenticated())
                 .addFilterBefore(
-                        jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                        jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                .exceptionHandling(
+                        ex ->
+                                ex.authenticationEntryPoint(
+                                                (request, response, authException) -> {
+                                                    // トークンなし・無効 → 401
+                                                    response.setStatus(
+                                                            HttpServletResponse.SC_UNAUTHORIZED);
+                                                    response.setContentType(
+                                                            "application/json;charset=UTF-8");
+                                                    response.getWriter()
+                                                            .write(
+                                                                    """
+                {"status":401,"error":"Unauthorized","message":"%s"}
+                """
+                                                                            .formatted(
+                                                                                    messageHelper
+                                                                                            .get(
+                                                                                                    "error.unauthorized")));
+                                                })
+                                        .accessDeniedHandler(
+                                                (request, response, accessDeniedException) -> {
+                                                    // 権限不足 → 403
+                                                    response.setStatus(
+                                                            HttpServletResponse.SC_FORBIDDEN);
+                                                    response.setContentType(
+                                                            "application/json;charset=UTF-8");
+                                                    response.getWriter()
+                                                            .write(
+                                                                    """
+                {"status":403,"error":"Forbidden","message":"%s"}
+                """
+                                                                            .formatted(
+                                                                                    messageHelper
+                                                                                            .get(
+                                                                                                    "error.forbidden")));
+                                                }));
 
         return http.build();
     }

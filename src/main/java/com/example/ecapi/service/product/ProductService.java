@@ -1,8 +1,8 @@
 package com.example.ecapi.service.product;
 
-import com.example.ecapi.config.MessageHelper;
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.ProductNotFoundException;
+import com.example.ecapi.helper.MessageHelper;
 import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.repository.ProductSpecification;
 import com.example.ecapi.service.product.dto.CreateProduct;

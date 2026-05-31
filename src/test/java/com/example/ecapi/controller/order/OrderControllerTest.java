@@ -9,8 +9,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.ecapi.config.JwtAuthenticationFilter;
-import com.example.ecapi.config.MessageHelper;
 import com.example.ecapi.constant.OrderStatus;
 import com.example.ecapi.controller.order.dto.OrderItemRequest;
 import com.example.ecapi.controller.order.dto.OrderItemResponse;

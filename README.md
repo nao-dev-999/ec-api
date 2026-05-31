@@ -151,10 +151,20 @@ docker-compose up -d
 ```bash
 # 一覧
 curl http://localhost:8080/api/products | jq
-curl http://localhost:8080/api/orders | jq
+
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password"}' | jq -r '.accessToken')
+curl http://localhost:8080/api/orders -H "Authorization: Bearer ${TOKEN}" | jq
 
 # ID指定
 curl http://localhost:8080/api/products/2 | jq
+
+TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"user@example.com","password":"password"}' | jq -r '.accessToken')
+curl http://localhost:8080/api/orders/1 -H "Authorization: Bearer ${TOKEN}" | jq
+
 curl http://localhost:8080/api/orders/1 | jq
 
 # 商品検索 (name, description, price で AND 検索)
@@ -196,18 +206,3 @@ curl -X POST http://localhost:8080/api/orders \
 # ステータス更新
 curl -X PATCH "http://localhost:8080/api/orders/1/status?status=CONFIRMED" | jq
 ```
-
----
-
-## 学習ポイント
-
-1. **Gradle Kotlin DSL** `build.gradle.kts` による型安全なビルド設定
-2. **Spotless** Google Java Format でチーム全体のコードスタイルを統一
-3. **Hibernate 7** Spring Boot 4.0 に同梱される最新 ORM。Jakarta EE 11 ベース
-4. **レイヤードアーキテクチャ** Controller → Service → Repository の役割分担
-5. **Spring Data JPA** メソッド名クエリ・`@Query` によるカスタムクエリ・`Specification` による動的検索
-6. **トランザクション管理** `@Transactional` で在庫チェック〜注文〜在庫減算を原子的に実行
-7. **N+1 問題対策** `LEFT JOIN FETCH` で関連エンティティを一括取得
-8. **楽観ロック** `@Version` アノテーションによるデータ競合の防止
-9. **例外ハンドリング** `@RestControllerAdvice` とカスタム例外（`ProductNotFoundException`, `OrderNotFoundException`, `InsufficientStockException` など）による統一エラーレスポンス
-10. **メッセージの外部化 (i18n)** `messages.properties` と `MessageSource` によるハードコード文字列の排除

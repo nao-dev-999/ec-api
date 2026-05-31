@@ -1,10 +1,10 @@
 package com.example.ecapi.controller.auth;
 
-import com.example.ecapi.config.JwtHelper;
 import com.example.ecapi.config.JwtProperties;
 import com.example.ecapi.controller.auth.dto.*;
 import com.example.ecapi.entity.Customer;
 import com.example.ecapi.exception.AuthException;
+import com.example.ecapi.helper.JwtHelper;
 import com.example.ecapi.repository.CustomerRepository;
 import com.example.ecapi.service.auth.TokenRedisService;
 import io.jsonwebtoken.Claims;

@@ -1,6 +1,6 @@
 package com.example.ecapi.exception;
 
-import com.example.ecapi.config.MessageHelper;
+import com.example.ecapi.helper.MessageHelper;
 import jakarta.persistence.OptimisticLockException;
 import java.time.LocalDateTime;
 import java.util.Map;

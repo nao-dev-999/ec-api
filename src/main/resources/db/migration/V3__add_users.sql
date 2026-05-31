@@ -9,11 +9,11 @@ CREATE TABLE customer (
     created_by  VARCHAR(255),
     updated_by  VARCHAR(255),
     deleted_by  VARCHAR(255),
-    version     INT NOT NULL DEFAULT 0;
+    version     INT NOT NULL DEFAULT 0
 );
 
 -- 開発用初期ユーザー（パスワード: password123）
 INSERT INTO customer (email, password, role)
 VALUES
-    ('admin@example.com', '$2a$12$xMFzEoRpvlUCwGoGJBfXf.LJ/1FJiGYSfZf7YXH6Fhb7J7v6KX4Oy', 'ROLE_ADMIN'),
-    ('user@example.com',  '$2a$12$xMFzEoRpvlUCwGoGJBfXf.LJ/1FJiGYSfZf7YXH6Fhb7J7v6KX4Oy', 'ROLE_USER');
+    ('admin@example.com', '$2b$12$xMFzEoRpvlUCwGoGJBfXf.LJ/1FJiGYSfZf7YXH6Fhb7J7v6KX4Oy', 'ROLE_ADMIN'),
+    ('user@example.com',  '$2b$12$xMFzEoRpvlUCwGoGJBfXf.LJ/1FJiGYSfZf7YXH6Fhb7J7v6KX4Oy', 'ROLE_USER');

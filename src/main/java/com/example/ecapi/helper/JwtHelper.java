@@ -1,6 +1,8 @@
-package com.example.ecapi.config;
+package com.example.ecapi.helper;
 
-import io.jsonwebtoken.*;
+import com.example.ecapi.config.JwtProperties;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;

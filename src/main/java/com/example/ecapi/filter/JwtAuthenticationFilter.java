@@ -1,5 +1,6 @@
-package com.example.ecapi.config;
+package com.example.ecapi.filter;
 
+import com.example.ecapi.helper.JwtHelper;
 import com.example.ecapi.service.auth.TokenRedisService;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;

@@ -1,8 +1,7 @@
 package com.example.ecapi.service.auth;
 
-import java.util.List;
-
 import com.example.ecapi.repository.CustomerRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

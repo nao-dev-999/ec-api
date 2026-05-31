@@ -1,4 +1,4 @@
-package com.example.ecapi.config;
+package com.example.ecapi.helper;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;

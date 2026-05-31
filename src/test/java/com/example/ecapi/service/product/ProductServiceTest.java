@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.ecapi.config.MessageHelper;
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.repository.ProductRepository;
