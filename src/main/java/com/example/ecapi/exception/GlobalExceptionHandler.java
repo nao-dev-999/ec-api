@@ -90,6 +90,11 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.INTERNAL_SERVER_ERROR, messageHelper.get("error.system"));
     }
 
+    @ExceptionHandler(AuthException.class)
+    public ResponseEntity<ErrorResponse> handleAuthException(AuthException ex) {
+        return buildError(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
     private ResponseEntity<ErrorResponse> buildError(HttpStatus status, String message) {
         return buildError(status, message, null);
     }

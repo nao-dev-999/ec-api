@@ -21,12 +21,24 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-  messages: # 追加
-    basename: messages # 追加
-    encoding: UTF-8 # 追加
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  messages:
+    basename: messages
+    encoding: UTF-8
 
 server:
   port: 8080
+
+# JWT 設定
+jwt:
+  secret: "your-256-bit-secret-key-please-change-in-production-env"
+  access-token-expiry-minutes: 30
+  refresh-token-expiry-days: 7
 
 logging:
   level:

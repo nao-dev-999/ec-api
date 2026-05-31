@@ -9,11 +9,12 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.ecapi.config.JwtAuthenticationFilter;
 import com.example.ecapi.config.MessageHelper;
+import com.example.ecapi.controller.order.OrderController;
 import com.example.ecapi.controller.product.dto.CreateProductRequest;
 import com.example.ecapi.controller.product.dto.ProductResponse;
 import com.example.ecapi.controller.product.dto.UpdateProductRequest;
@@ -34,39 +35,31 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.context.WebApplicationContext;
 import tools.jackson.databind.json.JsonMapper;
 
 @WebMvcTest(ProductController.class)
-@Import({GlobalExceptionHandler.class, MessageHelper.class})
+@AutoConfigureMockMvc(addFilters = false)
+@Import({GlobalExceptionHandler.class})
 class ProductControllerTest {
 
-    @Autowired private JsonMapper jsonMapper;
-
     @MockitoBean private ProductService productService;
-
     @MockitoBean private ProductApiMapper productApiMapper;
-
     @MockitoBean private MessageHelper messageHelper;
+    @MockitoBean private JwtAuthenticationFilter jwtAuthenticationFilter;
+    @Autowired private JsonMapper jsonMapper;
+    @Autowired private MockMvc mockMvc;
 
-    @Autowired private WebApplicationContext wac;
-
-    private MockMvc mockMvc;
     private ProductResult productResult;
     private ProductResponse productResponse;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders
-                .webAppContextSetup(wac)
-                .build();
-
         productResult =
                 new ProductResult(
                         1L,
@@ -313,8 +306,7 @@ class ProductControllerTest {
                     .when(productService)
                     .delete(any(Long.class));
 
-            mockMvc.perform(delete("/api/products/{id}", 99L))
-                    .andExpect(status().isNotFound());
+            mockMvc.perform(delete("/api/products/{id}", 99L)).andExpect(status().isNotFound());
         }
     }
 }
