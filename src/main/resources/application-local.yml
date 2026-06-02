@@ -39,15 +39,17 @@ server:
       cookie:
         name: SESSION
         http-only: true
-        secure: true
+        secure: false # ローカル環境のみfalse
         same-site: Lax  # 要件により Strict/None
 
 logging:
   level:
     root: off
-    com.example: INFO # DEBUG から INFO に変更
+    com.example: DEBUG
     org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE  # バインドパラメータをログ出力
+    org.hibernate.orm.jdbc.bind: TRACE
+    org.springframework.security: DEBUG
+    org.springframework.session: DEBUG
 
 springdoc:
   swagger-ui:

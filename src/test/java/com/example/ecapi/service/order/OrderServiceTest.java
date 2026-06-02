@@ -12,6 +12,7 @@ import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.InsufficientStockException;
 import com.example.ecapi.exception.OrderNotFoundException;
 import com.example.ecapi.exception.ProductNotFoundException;
+import com.example.ecapi.helper.MessageHelper;
 import com.example.ecapi.repository.CustomerOrderRepository;
 import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.service.order.dto.CreateOrder;
@@ -48,25 +49,21 @@ class OrderServiceTest {
 
     @BeforeEach
     void setUp() {
-        product =
-                Product.builder()
-                        .id(1L)
-                        .name("Test Product")
-                        .price(BigDecimal.valueOf(100.00))
-                        .stock(10)
-                        .version(1)
-                        .build();
+        product = new Product();
+        product.setId(1L);
+        product.setName("Test Product");
+        product.setPrice(BigDecimal.valueOf(100.00));
+        product.setStock(10);
+        product.setVersion(1);
 
-        customerOrder =
-                CustomerOrder.builder()
-                        .id(1L)
-                        .customerName("Test Customer")
-                        .status(OrderStatus.PENDING)
-                        .totalAmount(BigDecimal.valueOf(200.00))
-                        .createdAt(LocalDateTime.now())
-                        .updatedAt(LocalDateTime.now())
-                        .version(1)
-                        .build();
+        customerOrder = new CustomerOrder();
+        customerOrder.setId(1L);
+        customerOrder.setCustomerName("Test Customer");
+        customerOrder.setStatus(OrderStatus.PENDING);
+        customerOrder.setTotalAmount(BigDecimal.valueOf(200.00));
+        customerOrder.setCreatedAt(LocalDateTime.now());
+        customerOrder.setUpdatedAt(LocalDateTime.now());
+        customerOrder.setVersion(1);
 
         orderResult =
                 new OrderResult(

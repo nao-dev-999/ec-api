@@ -1,6 +1,5 @@
 package com.example.ecapi.config;
 
-import com.example.ecapi.filter.JwtAuthenticationFilter;
 import com.example.ecapi.helper.MessageHelper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -15,24 +14,31 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final MessageHelper messageHelper;
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-        http.csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        http.csrf(
+                        csrf ->
+                                csrf.ignoringRequestMatchers("/api/auth/login")
+                                        .csrfTokenRepository(
+                                                CookieCsrfTokenRepository.withHttpOnlyFalse()))
+                .sessionManagement(
+                        sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
                 .authorizeHttpRequests(
                         auth ->
                                 auth
-                                        // 認証不要
+                                        // Swagger UI を認証不要に追加
+                                        .requestMatchers("/swagger-ui/**", "/v3/api-docs/**")
+                                        .permitAll()
                                         .requestMatchers("/api/auth/**")
                                         .permitAll()
                                         // 商品参照は全員可（作成・更新・削除は ADMIN のみ）
@@ -44,18 +50,14 @@ public class SecurityConfig {
                                         .hasRole("ADMIN")
                                         .requestMatchers(HttpMethod.DELETE, "/api/products/**")
                                         .hasRole("ADMIN")
-                                        // 注文は認証済みユーザーのみ
                                         .requestMatchers("/api/orders/**")
                                         .authenticated()
                                         .anyRequest()
                                         .authenticated())
-                .addFilterBefore(
-                        jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(
                         ex ->
                                 ex.authenticationEntryPoint(
                                                 (request, response, authException) -> {
-                                                    // トークンなし・無効 → 401
                                                     response.setStatus(
                                                             HttpServletResponse.SC_UNAUTHORIZED);
                                                     response.setContentType(
@@ -72,7 +74,6 @@ public class SecurityConfig {
                                                 })
                                         .accessDeniedHandler(
                                                 (request, response, accessDeniedException) -> {
-                                                    // 権限不足 → 403
                                                     response.setStatus(
                                                             HttpServletResponse.SC_FORBIDDEN);
                                                     response.setContentType(
@@ -100,5 +101,10 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config)
             throws Exception {
         return config.getAuthenticationManager();
+    }
+
+    @Bean
+    public HttpSessionSecurityContextRepository securityContextRepository() {
+        return new HttpSessionSecurityContextRepository();
     }
 }

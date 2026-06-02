@@ -18,6 +18,7 @@ import com.example.ecapi.controller.product.dto.UpdateProductRequest;
 import com.example.ecapi.controller.product.mapper.ProductApiMapper;
 import com.example.ecapi.exception.GlobalExceptionHandler;
 import com.example.ecapi.exception.ProductNotFoundException;
+import com.example.ecapi.helper.MessageHelper;
 import com.example.ecapi.service.product.ProductService;
 import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
@@ -48,7 +49,6 @@ class ProductControllerTest {
     @MockitoBean private ProductService productService;
     @MockitoBean private ProductApiMapper productApiMapper;
     @MockitoBean private MessageHelper messageHelper;
-    @MockitoBean private JwtAuthenticationFilter jwtAuthenticationFilter;
     @Autowired private JsonMapper jsonMapper;
     @Autowired private MockMvc mockMvc;
 

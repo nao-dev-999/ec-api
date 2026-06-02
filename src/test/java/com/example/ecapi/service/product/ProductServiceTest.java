@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.ProductNotFoundException;
+import com.example.ecapi.helper.MessageHelper;
 import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
@@ -43,17 +44,15 @@ class ProductServiceTest {
 
     @BeforeEach
     void setUp() {
-        product =
-                Product.builder()
-                        .id(1L)
-                        .name("Test Product")
-                        .description("Description")
-                        .price(BigDecimal.valueOf(100.00))
-                        .stock(10)
-                        .createdAt(LocalDateTime.now())
-                        .updatedAt(LocalDateTime.now())
-                        .version(1)
-                        .build();
+        product = new Product();
+        product.setId(1L);
+        product.setName("Test Product");
+        product.setDescription("Description");
+        product.setPrice(BigDecimal.valueOf(100.00));
+        product.setStock(10);
+        product.setCreatedAt(LocalDateTime.now());
+        product.setUpdatedAt(LocalDateTime.now());
+        product.setVersion(1);
 
         productResult =
                 new ProductResult(

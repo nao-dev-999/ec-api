@@ -17,7 +17,6 @@ public interface ProductEntityMapper {
     List<ProductResult> toProductResultList(List<Product> products);
 
     // CreateProduct (service DTO) -> Product entity
-    // Note: id/createdAt/updatedAt はマッピングしない（DB 側で生成される等）
     Product toProduct(CreateProduct dto);
 
     /**

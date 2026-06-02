@@ -17,6 +17,7 @@ import com.example.ecapi.controller.order.dto.OrderResponse;
 import com.example.ecapi.controller.order.mapper.OrderApiMapper;
 import com.example.ecapi.exception.GlobalExceptionHandler;
 import com.example.ecapi.exception.OrderNotFoundException;
+import com.example.ecapi.helper.MessageHelper;
 import com.example.ecapi.service.order.OrderService;
 import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.OrderResult;
@@ -45,7 +46,6 @@ class OrderControllerTest {
     @MockitoBean private OrderService orderService;
     @MockitoBean private OrderApiMapper orderApiMapper;
     @MockitoBean private MessageHelper messageHelper;
-    @MockitoBean private JwtAuthenticationFilter jwtAuthenticationFilter;
     @Autowired private JsonMapper jsonMapper;
     @Autowired private MockMvc mockMvc;
 

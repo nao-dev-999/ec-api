@@ -24,7 +24,9 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                                 new org.springframework.security.core.userdetails.User(
                                         customer.getEmail(),
                                         customer.getPassword(),
-                                        List.of(new SimpleGrantedAuthority(customer.getRole()))))
+                                        List.of(
+                                                new SimpleGrantedAuthority(
+                                                        "ROLE_" + customer.getRole()))))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
     }
 }

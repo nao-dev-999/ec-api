@@ -157,6 +157,17 @@ public class OrderService {
                                         new OrderNotFoundException(
                                                 messageHelper.get("order.notFound", id)));
         order.setStatus(OrderStatus.CANCELLED);
+        List<CustomerOrderDetail> items = order.getItems();
+        items.forEach(
+                e -> {
+                    productRepository
+                            .findById(e.getId())
+                            .ifPresent(
+                                    p -> {
+                                        p.setStock(p.getStock() + e.getQuantity());
+                                        productRepository.save(p);
+                                    });
+                });
         CustomerOrder saved = orderRepository.save(order);
         return orderEntityMapper.toOrderResult(saved);
     }

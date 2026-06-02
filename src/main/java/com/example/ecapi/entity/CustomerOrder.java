@@ -11,11 +11,10 @@ import lombok.*;
 /** 注文エンティティ */
 @Entity
 @Table(name = "customer_order")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class CustomerOrder {
+public class CustomerOrder extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,7 +32,6 @@ public class CustomerOrder {
 
     // 注文明細（1 対多）
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
-    @Builder.Default
     private List<CustomerOrderDetail> items = new ArrayList<>();
 
     @Column(name = "created_at", updatable = false)
@@ -45,27 +43,10 @@ public class CustomerOrder {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
-    @Column(name = "created_by", length = 255)
-    private String createdBy;
-
-    @Column(name = "updated_by", length = 255)
-    private String updatedBy;
-
     @Column(name = "deleted_by", length = 255)
     private String deletedBy;
 
     @Version
     @Column(nullable = false)
     private int version;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-    }
 }

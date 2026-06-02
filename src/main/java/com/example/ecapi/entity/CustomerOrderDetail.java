@@ -8,11 +8,10 @@ import lombok.*;
 /** 注文明細エンティティ */
 @Entity
 @Table(name = "customer_order_detail")
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
-@AllArgsConstructor
-@Builder
-public class CustomerOrderDetail {
+public class CustomerOrderDetail extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -35,12 +34,6 @@ public class CustomerOrderDetail {
     @Column(name = "subtotal", nullable = false, precision = 10, scale = 2) // subtotal もカラムとして追加
     private BigDecimal subtotal;
 
-    @Column(name = "created_at", updatable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
@@ -56,22 +49,4 @@ public class CustomerOrderDetail {
     @Version
     @Column(nullable = false)
     private int version;
-
-    @PrePersist
-    protected void onCreate() {
-        createdAt = LocalDateTime.now();
-        updatedAt = LocalDateTime.now();
-        // TODO 認証ユーザー情報を取得し設定する
-        if (this.createdBy == null) { // createdBy がまだ設定されていない場合のみ
-            this.createdBy = "system"; // 仮の値
-        }
-        this.updatedBy = "system"; // 仮の値
-    }
-
-    @PreUpdate
-    protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
-        // TODO 認証ユーザー情報を取得し設定する
-        this.updatedBy = "system"; // 仮の値
-    }
 }

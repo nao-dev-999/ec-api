@@ -1,4 +1,5 @@
 # ECサイトAPI - Spring Boot サンプル
+![CI](https://github.com/kazuya2099/ec-api/actions/workflows/ci.yml/badge.svg)
 
 ## 技術スタック
 
@@ -149,23 +150,18 @@ docker-compose up -d
 ## 動作確認（curl）
 
 ```bash
-# 一覧
+### ログイン
+curl -v -c cookies.txt -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"password"}' \
+  http://localhost:8080/api/auth/login
+
+### 一覧
 curl http://localhost:8080/api/products | jq
+curl -s -b cookies.txt http://localhost:8080/api/orders | jq
 
-TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"password"}' | jq -r '.accessToken')
-curl http://localhost:8080/api/orders -H "Authorization: Bearer ${TOKEN}" | jq
-
-# ID指定
+### ID指定
 curl http://localhost:8080/api/products/2 | jq
-
-TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"user@example.com","password":"password"}' | jq -r '.accessToken')
-curl http://localhost:8080/api/orders/1 -H "Authorization: Bearer ${TOKEN}" | jq
-
-curl http://localhost:8080/api/orders/1 | jq
+curl -s -b cookies.txt http://localhost:8080/api/orders/1 | jq
 
 # 商品検索 (name, description, price で AND 検索)
 curl "http://localhost:8080/api/products?name=$(echo -n 'USBハブ' | jq -sRr @uri)" | jq
@@ -174,7 +170,7 @@ curl "http://localhost:8080/api/products?price=10000" | jq
 curl "http://localhost:8080/api/products?name=$(echo -n 'マウス' | jq -sRr @uri)&price=10000" | jq
 
 # 商品登録
-curl -X POST http://localhost:8080/api/products \
+curl -s -b cookies.txt -X POST http://localhost:8080/api/products \
   -H "Content-Type: application/json" \
   -d '{"name":"ヘッドセット","description":"ノイズキャンセリング","price":15800,"stock":30}' | jq
 
@@ -193,7 +189,7 @@ curl -X PUT http://localhost:8080/api/products/${PRODUCT_ID} \
   }' | jq
 
 # 注文作成（在庫が自動減算される）
-curl -X POST http://localhost:8080/api/orders \
+curl -s -b cookies.txt -X POST http://localhost:8080/api/orders \
   -H "Content-Type: application/json" \
   -d '{
     "customerName": "鈴木一郎",
