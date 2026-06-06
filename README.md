@@ -5,12 +5,13 @@
 
 | 分類 | 内容 |
 |------|------|
-| フレームワーク | Spring Boot 4.0.1 |
+| フレームワーク | Spring Boot 4.0.1 (Spring WebMVC) |
 | ORM | Hibernate 7.1（Spring Data JPA 経由） |
 | DB | PostgreSQL |
 | 言語 | Java 21 |
 | ビルド | Gradle 8.14 (Kotlin DSL) |
 | コードフォーマット | Spotless 8.4.0 + Google Java Format 1.18.1 |
+| セッション管理 | Spring Session Redis |
 
 ## プロジェクト構成
 
@@ -23,8 +24,16 @@ ec-api/
 ├── src/main/java/com/example/ecapi/
 │   ├── EcApiApplication.java
 │   ├── config/
-│   │   └── DataInitializer.java     # 起動時サンプルデータ投入
+│   │   ├── DataInitializer.java     # 起動時サンプルデータ投入
+│   │   ├── LoggingInterceptor.java  # コントローラー層ログ用インターセプター
+│   │   ├── WebMvcConfig.java        # インターセプター登録用設定
+│   │   └── ServiceLoggingAspect.java # サービス層ログ用 Aspect
 │   ├── controller/
+│   │   ├── auth/
+│   │   │   ├── AuthController.java
+│   │   │   └── dto/                 # 認証関連 DTO
+│   │   │       ├── LoginRequest.java
+│   │   │       └── LoginResponse.java
 │   │   ├── product/
 │   │   │   ├── ProductController.java
 │   │   │   ├── dto/                 # Web 層専用 DTO (Request/Response)
@@ -66,12 +75,14 @@ ec-api/
 │   │   ├── CustomerOrder.java
 │   │   ├── CustomerOrderDetail.java
 │   │   └── Product.java
-│   └── exception/
-│       ├── ErrorResponse.java
-│       ├── GlobalExceptionHandler.java
-│       ├── InsufficientStockException.java
-│       ├── OrderNotFoundException.java
-│       └── ProductNotFoundException.java
+│   ├── exception/
+│   │   ├── ErrorResponse.java
+│   │   ├── GlobalExceptionHandler.java
+│   │   ├── InsufficientStockException.java
+│   │   ├── OrderNotFoundException.java
+│   │   └── ProductNotFoundException.java
+│   └── helper/
+│       └── MessageHelper.java       # メッセージ取得ヘルパー
 └── src/main/resources/
     ├── application.yml
     └── messages.properties # メッセージ外部化
@@ -124,6 +135,12 @@ docker-compose up -d
 
 ## API エンドポイント
 
+### 認証 API
+
+| メソッド | URL | 説明 |
+|--------|-----|------|
+| POST | /api/auth/login | ログイン（セッションクッキーを発行） |
+
 ### 商品 API
 
 | メソッド | URL | 説明 |
@@ -150,16 +167,17 @@ docker-compose up -d
 ## 動作確認（curl）
 
 ```bash
-### ログイン
+### ログイン (セッションクッキーを取得)
+# admin@example.com / password でログイン
 curl -v -c cookies.txt -H "Content-Type: application/json" \
   -d '{"email":"admin@example.com","password":"password"}' \
   http://localhost:8080/api/auth/login
 
-### 一覧
-curl http://localhost:8080/api/products | jq
+### 一覧 (セッションクッキーを使用)
+curl -s http://localhost:8080/api/products | jq
 curl -s -b cookies.txt http://localhost:8080/api/orders | jq
 
-### ID指定
+### ID指定 (セッションクッキーを使用)
 curl http://localhost:8080/api/products/2 | jq
 curl -s -b cookies.txt http://localhost:8080/api/orders/1 | jq
 
@@ -169,12 +187,12 @@ curl "http://localhost:8080/api/products?description=$(echo -n '15インチ' | j
 curl "http://localhost:8080/api/products?price=10000" | jq
 curl "http://localhost:8080/api/products?name=$(echo -n 'マウス' | jq -sRr @uri)&price=10000" | jq
 
-# 商品登録
-curl -s -b cookies.txt -X POST http://localhost:8080/api/products \
+# 商品登録 (セッションクッキーを使用)
+curl -vs -b cookies.txt -X POST http://localhost:8080/api/products \
   -H "Content-Type: application/json" \
   -d '{"name":"ヘッドセット","description":"ノイズキャンセリング","price":15800,"stock":30}' | jq
 
-# 商品更新 (version を含める必要がある)
+# 商品更新 (version を含める必要がある, セッションクッキーを使用)
 # まず現在の version を取得
 PRODUCT_ID=1
 VERSION=$(curl http://localhost:8080/api/products/${PRODUCT_ID} | jq -r .version)
@@ -188,7 +206,7 @@ curl -X PUT http://localhost:8080/api/products/${PRODUCT_ID} \
     "version":'${VERSION}'
   }' | jq
 
-# 注文作成（在庫が自動減算される）
+# 注文作成（在庫が自動減算される, セッションクッキーを使用）
 curl -s -b cookies.txt -X POST http://localhost:8080/api/orders \
   -H "Content-Type: application/json" \
   -d '{
@@ -199,6 +217,9 @@ curl -s -b cookies.txt -X POST http://localhost:8080/api/orders \
     ]
   }' | jq
 
-# ステータス更新
-curl -X PATCH "http://localhost:8080/api/orders/1/status?status=CONFIRMED" | jq
+# ステータス更新 (セッションクッキーを使用)
+curl -s -b cookies.txt -X PATCH "http://localhost:8080/api/orders/1/status?status=CONFIRMED" | jq
+
+# 注文キャンセル (セッションクッキーを使用)
+curl -s -b cookies.txt -X PATCH "http://localhost:8080/api/orders/1/cancel" | jq
 ```

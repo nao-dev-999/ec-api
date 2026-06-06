@@ -5,6 +5,7 @@ import com.example.ecapi.controller.product.dto.ProductResponse;
 import com.example.ecapi.controller.product.dto.UpdateProductRequest;
 import com.example.ecapi.controller.product.mapper.ProductApiMapper;
 import com.example.ecapi.service.product.ProductService;
+import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
 import jakarta.validation.Valid;
 import java.math.BigDecimal; // BigDecimal をインポート
@@ -66,6 +67,7 @@ public class ProductController {
     @PostMapping
     public ResponseEntity<ProductResponse> create(
             @Valid @RequestBody CreateProductRequest request) {
+        CreateProduct createProduct = productApiMapper.toCreateProduct(request);
         ProductResult result = productService.create(productApiMapper.toCreateProduct(request));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(productApiMapper.toProductResponse(result));
