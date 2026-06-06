@@ -1,5 +1,5 @@
 # ECサイトAPI - Spring Boot サンプル
-![CI](https://github.com/kazuya2099/ec-api/actions/workflows/ci.yml/badge.svg)
+[![CI](https://github.com/nao-dev-999/ec-api/actions/workflows/ci.yml/badge.svg)]
 
 ## 技術スタック
 
