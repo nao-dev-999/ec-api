@@ -1,17 +1,17 @@
 # ECサイトAPI - Spring Boot サンプル
-[![CI](https://github.com/nao-dev-999/ec-api/actions/workflows/ci.yml/badge.svg)]
+![CI](https://github.com/nao-dev-999/ec-api/actions/workflows/ci.yml/badge.svg)
 
 ## 技術スタック
 
-| 分類 | 内容 |
-|------|------|
-| フレームワーク | Spring Boot 4.0.1 (Spring WebMVC) |
-| ORM | Hibernate 7.1（Spring Data JPA 経由） |
-| DB | PostgreSQL |
-| 言語 | Java 21 |
-| ビルド | Gradle 8.14 (Kotlin DSL) |
+| 分類 | 内容                                         |
+|------|--------------------------------------------|
+| フレームワーク | Spring Boot 4.0.1 (Spring WebMVC)          |
+| ORM | Hibernate 7.1（Spring Data JPA 経由）          |
+| DB | PostgreSQL                                 |
+| 言語 | Java 25                                    |
+| ビルド | Gradle 8.14 (Kotlin DSL)                   |
 | コードフォーマット | Spotless 8.4.0 + Google Java Format 1.18.1 |
-| セッション管理 | Spring Session Redis |
+| セッション管理 | Spring Session Redis                       |
 
 ## プロジェクト構成
 

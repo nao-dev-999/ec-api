@@ -1,8 +1,8 @@
-CREATE TABLE customer (
+CREATE TABLE employee (
     id          BIGSERIAL PRIMARY KEY,
     email       VARCHAR(255) NOT NULL UNIQUE,
     password    VARCHAR(255) NOT NULL,
-    role        VARCHAR(50)  NOT NULL DEFAULT 'ROLE_USER',
+    role        VARCHAR(50)  NOT NULL DEFAULT 'OTHER',
     created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     deleted_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -13,7 +13,7 @@ CREATE TABLE customer (
 );
 
 -- 開発用初期ユーザー（パスワード: password123）
-INSERT INTO customer (email, password, role)
+INSERT INTO employee (email, password, role)
 VALUES
-    ('admin@example.com', '$2b$12$xMFzEoRpvlUCwGoGJBfXf.LJ/1FJiGYSfZf7YXH6Fhb7J7v6KX4Oy', 'ROLE_ADMIN'),
-    ('user@example.com',  '$2b$12$xMFzEoRpvlUCwGoGJBfXf.LJ/1FJiGYSfZf7YXH6Fhb7J7v6KX4Oy', 'ROLE_USER');
+    ('satou@example.com', '$2a$12$lWIfifxI/nsgpI39NVXXFuCQU9VW.sXYJKoIR58J1aBBYn3nA0Q4u', 'ADMIN'),
+    ('katou@example.com',  '$2a$12$lWIfifxI/nsgpI39NVXXFuCQU9VW.sXYJKoIR58J1aBBYn3nA0Q4u', 'SALES');

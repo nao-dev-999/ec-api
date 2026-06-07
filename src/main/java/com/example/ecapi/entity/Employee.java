@@ -1,17 +1,18 @@
 package com.example.ecapi.entity;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
-@Table(name = "customer")
+@Table(name = "employee")
 @Getter
 @Setter
 @NoArgsConstructor
-public class Customer extends BaseEntity {
+public class Employee extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -22,6 +23,9 @@ public class Customer extends BaseEntity {
 
     @Column(nullable = false)
     private String password;
+
+    @Column(nullable = false)
+    private String role;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;

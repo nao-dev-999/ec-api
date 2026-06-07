@@ -1,6 +1,6 @@
 package com.example.ecapi.service.auth;
 
-import com.example.ecapi.repository.CustomerRepository;
+import com.example.ecapi.repository.EnployeeRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,26 +16,26 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final CustomerRepository customerRepository;
+    private final EnployeeRepository enployeeRepository;
 
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        return customerRepository
+        return enployeeRepository
                 .findByEmail(email)
                 .map(
-                        customer -> {
+                        employee -> {
                             log.info(
-                                    "Loaded user: email={}, role={}",
-                                    customer.getEmail(),
-                                    customer.getRole());
+                                    "Loaded employee: email={}, role={}",
+                                    employee.getEmail(),
+                                    employee.getRole());
 
                             return new User(
-                                    customer.getEmail(),
-                                    customer.getPassword(),
+                                    employee.getEmail(),
+                                    employee.getPassword(),
                                     List.of(
                                             new SimpleGrantedAuthority(
-                                                    "ROLE_" + customer.getRole())));
+                                                    "ROLE_" + employee.getRole())));
                         })
-                .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
+                .orElseThrow(() -> new UsernameNotFoundException("employee not found: " + email));
     }
 }
