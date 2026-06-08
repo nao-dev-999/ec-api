@@ -163,6 +163,8 @@ docker-compose up -d
 | PATCH | /api/orders/{id}/cancel | 注文キャンセル（サービス層で楽観ロック適用） |
 
 ---
+## swagger
+http://localhost:8080/swagger-ui/index.html
 
 ## 動作確認（curl）
 

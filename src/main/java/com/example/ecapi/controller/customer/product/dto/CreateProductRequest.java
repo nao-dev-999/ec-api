@@ -1,4 +1,4 @@
-package com.example.ecapi.controller.product.dto;
+package com.example.ecapi.controller.customer.product.dto;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;

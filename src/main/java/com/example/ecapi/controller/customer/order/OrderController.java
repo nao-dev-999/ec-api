@@ -1,11 +1,9 @@
-package com.example.ecapi.controller.order;
-
-import static com.example.ecapi.constant.OrderStatus.*;
+package com.example.ecapi.controller.customer.order;
 
 import com.example.ecapi.constant.OrderStatus;
-import com.example.ecapi.controller.order.dto.OrderRequest;
-import com.example.ecapi.controller.order.dto.OrderResponse;
-import com.example.ecapi.controller.order.mapper.OrderApiMapper;
+import com.example.ecapi.controller.customer.order.dto.OrderRequest;
+import com.example.ecapi.controller.customer.order.dto.OrderResponse;
+import com.example.ecapi.controller.customer.order.mapper.OrderApiMapper;
 import com.example.ecapi.service.order.OrderService;
 import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.OrderResult;

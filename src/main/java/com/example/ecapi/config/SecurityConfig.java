@@ -5,7 +5,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -38,15 +37,11 @@ public class SecurityConfig {
                                         .requestMatchers("/api/auth/**")
                                         .permitAll()
                                         // 商品参照は全員可（作成・更新・削除は ADMIN のみ）
-                                        .requestMatchers(HttpMethod.GET, "/api/products/**")
+                                        .requestMatchers("/api/products/**")
                                         .permitAll()
-                                        .requestMatchers(HttpMethod.POST, "/api/products/**")
-                                        .hasRole("ADMIN")
-                                        .requestMatchers(HttpMethod.PUT, "/api/products/**")
-                                        .hasRole("ADMIN")
-                                        .requestMatchers(HttpMethod.DELETE, "/api/products/**")
-                                        .hasRole("ADMIN")
                                         .requestMatchers("/api/orders/**")
+                                        .authenticated()
+                                        .requestMatchers("/api/admin/**")
                                         .authenticated()
                                         .anyRequest()
                                         .authenticated())

@@ -1,4 +1,4 @@
-package com.example.ecapi.controller.product.dto;
+package com.example.ecapi.controller.customer.product.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

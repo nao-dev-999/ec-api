@@ -1,7 +1,8 @@
-package com.example.ecapi.controller.order.dto;
+package com.example.ecapi.controller.customer.order.dto;
 
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.*;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import java.util.List;
 
 public record OrderRequest(

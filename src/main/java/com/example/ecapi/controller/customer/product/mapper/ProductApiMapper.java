@@ -1,8 +1,8 @@
-package com.example.ecapi.controller.product.mapper;
+package com.example.ecapi.controller.customer.product.mapper;
 
-import com.example.ecapi.controller.product.dto.CreateProductRequest;
-import com.example.ecapi.controller.product.dto.ProductResponse;
-import com.example.ecapi.controller.product.dto.UpdateProductRequest;
+import com.example.ecapi.controller.customer.product.dto.CreateProductRequest;
+import com.example.ecapi.controller.customer.product.dto.ProductResponse;
+import com.example.ecapi.controller.customer.product.dto.UpdateProductRequest;
 import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
 import com.example.ecapi.service.product.dto.UpdateProduct;

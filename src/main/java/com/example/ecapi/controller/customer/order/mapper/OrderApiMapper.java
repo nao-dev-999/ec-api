@@ -1,7 +1,7 @@
-package com.example.ecapi.controller.order.mapper;
+package com.example.ecapi.controller.customer.order.mapper;
 
-import com.example.ecapi.controller.order.dto.OrderRequest;
-import com.example.ecapi.controller.order.dto.OrderResponse;
+import com.example.ecapi.controller.customer.order.dto.OrderRequest;
+import com.example.ecapi.controller.customer.order.dto.OrderResponse;
 import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.OrderResult;
 import java.util.List;

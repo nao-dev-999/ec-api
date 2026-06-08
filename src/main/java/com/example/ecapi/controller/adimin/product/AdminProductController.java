@@ -1,41 +1,24 @@
-package com.example.ecapi.controller.product;
+package com.example.ecapi.controller.adimin.product;
 
-import com.example.ecapi.controller.product.dto.CreateProductRequest;
-import com.example.ecapi.controller.product.dto.ProductResponse;
-import com.example.ecapi.controller.product.dto.UpdateProductRequest;
-import com.example.ecapi.controller.product.mapper.ProductApiMapper;
+import com.example.ecapi.controller.customer.product.dto.CreateProductRequest;
+import com.example.ecapi.controller.customer.product.dto.ProductResponse;
+import com.example.ecapi.controller.customer.product.dto.UpdateProductRequest;
+import com.example.ecapi.controller.customer.product.mapper.ProductApiMapper;
 import com.example.ecapi.service.product.ProductService;
 import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
 import jakarta.validation.Valid;
-import java.math.BigDecimal; // BigDecimal をインポート
+import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/**
- * 商品 REST コントローラー
- *
- * <p>商品に関するCRUD操作と検索機能を提供するRESTful API。
- *
- * <pre>
- * GET    /api/products                      全商品取得、または検索条件に合致する商品を取得
- * GET    /api/products?name=xxx             商品名で部分一致検索（大文字小文字無視）
- * GET    /api/products?description=xxx      商品説明で部分一致検索（大文字小文字無視）
- * GET    /api/products?price=xxx            価格が指定値以下の商品を検索
- *                                         （name, description, price はAND条件で検索）
- * GET    /api/products/{id}                 商品詳細
- * POST   /api/products                      商品登録
- * PUT    /api/products/{id}                 商品更新
- * DELETE /api/products/{id}                 商品削除
- * </pre>
- */
 @RestController
-@RequestMapping("/api/products")
+@RequestMapping("/api/admin/products")
 @RequiredArgsConstructor
-public class ProductController {
+public class AdminProductController {
 
     private final ProductService productService;
     private final ProductApiMapper productApiMapper;

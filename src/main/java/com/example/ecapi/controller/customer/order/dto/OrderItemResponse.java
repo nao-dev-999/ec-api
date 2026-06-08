@@ -1,4 +1,4 @@
-package com.example.ecapi.controller.order.dto;
+package com.example.ecapi.controller.customer.order.dto;
 
 import java.math.BigDecimal;
 
