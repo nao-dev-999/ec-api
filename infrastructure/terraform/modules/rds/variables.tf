@@ -28,8 +28,6 @@ variable "instance_class" {
   type        = string
 }
 
-# instance_count は単一RDSインスタンスには不要なので削除
-
 variable "database_name" {
   description = "Name of the database to create"
   type        = string
@@ -37,17 +35,6 @@ variable "database_name" {
 
 variable "master_username" {
   description = "Master username for the database"
-  type        = string
-}
-
-variable "master_password" {
-  description = "Master password for the database"
-  type        = string
-  sensitive   = true
-}
-
-variable "vpc_id" { # ここを追加します
-  description = "VPC ID where the RDS instance will be deployed"
   type        = string
 }
 

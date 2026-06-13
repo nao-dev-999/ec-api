@@ -14,7 +14,6 @@ variable "rds_engine_version" {}
 variable "rds_instance_class" {}
 variable "rds_database_name" {}
 variable "rds_master_username" {}
-variable "rds_master_password" { sensitive = true }
 
 # EC2
 variable "ec2_ami_id" {}

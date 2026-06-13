@@ -17,7 +17,7 @@ resource "aws_db_instance" "this" {
   storage_type            = "gp3"
   db_name                 = var.database_name
   username                = var.master_username
-  password                = var.master_password
+  manage_master_user_password = true
   db_subnet_group_name    = aws_db_subnet_group.this.name
   vpc_security_group_ids  = var.security_group_ids
   skip_final_snapshot     = true
@@ -30,14 +30,4 @@ resource "aws_db_instance" "this" {
   tags = {
     Name = var.identifier
   }
-}
-
-output "rds_endpoint" {
-  description = "The connection endpoint for the RDS instance"
-  value       = aws_db_instance.this.address
-}
-
-output "rds_port" {
-  description = "The port for the RDS instance"
-  value       = aws_db_instance.this.port
 }

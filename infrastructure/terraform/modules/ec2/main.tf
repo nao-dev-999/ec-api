@@ -3,7 +3,6 @@ resource "aws_instance" "this" {
   instance_type          = var.instance_type
   subnet_id              = var.subnet_id
   vpc_security_group_ids = var.security_group_ids
-  key_name               = var.key_name
   iam_instance_profile   = aws_iam_instance_profile.ssm_profile.name
 
   root_block_device {
@@ -11,6 +10,10 @@ resource "aws_instance" "this" {
     volume_size           = 20
     delete_on_termination = true
     encrypted             = true
+
+    tags = {
+      Name = "${var.project}-${var.env}-ec2-root"
+    }
   }
 
   metadata_options {
