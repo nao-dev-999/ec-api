@@ -11,7 +11,6 @@
 ### Logs & Crash Reports ###
 log/
 logs/
-*.log
 hs_err_pid*
 replay_pid*
 
@@ -51,4 +50,27 @@ desktop.ini
 .env
 src/main/resources/application-local.properties
 
+### Terraform ###
+# Terraform の作業ディレクトリ
+.terraform/
+# Terraform の状態ファイル
+*.tfstate
+*.tfstate.backup
+# Terraform の実行計画ファイル
+*.tfplan
+*.tfplan.json
+# 変数定義ファイル (機密情報を含む可能性があるため、必ず無視)
+*.tfvars
+*.tfvars.json
+# クラッシュログ
+crash.log
+# 一時的なオーバーライドファイル
+override.tf
+override.tf.json
+*.override.tf
+*.override.tf.json
+# コアダンプファイル
+*.core
+
+### Other ###
 .linux_command.md
