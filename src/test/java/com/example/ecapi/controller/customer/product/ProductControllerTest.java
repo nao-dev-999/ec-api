@@ -1,6 +1,5 @@
-package com.example.ecapi.controller.product;
+package com.example.ecapi.controller.customer.product;
 
-import com.example.ecapi.controller.customer.product.ProductController;
 import com.example.ecapi.controller.customer.product.dto.ProductResponse;
 import com.example.ecapi.controller.customer.product.mapper.ProductApiMapper;
 import com.example.ecapi.exception.GlobalExceptionHandler;
