@@ -17,6 +17,6 @@ output "rds_port" {
 }
 
 output "rds_secret_arn" {
-  description = "Secrets Manager ARN containing the master credentials"
+  description = "The ARN of the Secrets Manager secret created by AWS for the RDS master user"
   value       = aws_db_instance.this.master_user_secret[0].secret_arn
 }

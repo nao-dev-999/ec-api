@@ -14,9 +14,9 @@ output "public_route_table_id" {
   value = aws_route_table.public.id
 }
 
-output "private_route_table_id" {
-  value = aws_route_table.private.id
-}
+# output "private_route_table_id" {
+#   value = aws_route_table.private.id
+# }
 
 # 既存のコードの後に追記
 output "db_sg_id" {

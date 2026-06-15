@@ -17,7 +17,7 @@ resource "aws_lb_target_group" "this" {
   port        = var.target_port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
-  target_type = "instance"
+  target_type = "ip"
 
   health_check {
     enabled             = true
@@ -32,6 +32,8 @@ resource "aws_lb_target_group" "this" {
 
   tags = {
     Name = "${var.project}-${var.env}-tg"
+    Project = var.project
+    Env     = var.env
   }
 }
 
@@ -44,11 +46,4 @@ resource "aws_lb_listener" "http" {
     type             = "forward"
     target_group_arn = aws_lb_target_group.this.arn
   }
-}
-
-resource "aws_lb_target_group_attachment" "this" {
-  count            = length(var.target_instance_ids)
-  target_group_arn = aws_lb_target_group.this.arn
-  target_id        = var.target_instance_ids[count.index]
-  port             = var.target_port
 }

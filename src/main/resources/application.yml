@@ -14,7 +14,7 @@ spring:
         format_sql: true
         jdbc:
           time_zone: Asia/Tokyo
-    open-in-view: false       # OSIV は明示的に false 推奨
+    open-in-view: false
 
   flyway:
     enabled: true

@@ -1,0 +1,74 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "=== Logging in to Amazon ECR ==="
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-8)
+      - IMAGE_URI="$ECR_REPO_URI:$IMAGE_TAG"
+      - echo "Image URI = $IMAGE_URI"
+
+  build:
+    commands:
+      - echo "=== Building Docker image ==="
+      - docker build -t $IMAGE_URI .
+      - docker tag $IMAGE_URI $ECR_REPO_URI:latest
+
+  post_build:
+    commands:
+      # ── 1. ECR push ───────────────────────────────────────────────────
+      - echo "=== Pushing image to ECR ==="
+      - docker push $IMAGE_URI
+      - docker push $ECR_REPO_URI:latest
+
+      # ── 2. Flyway migration (ECS Run Task) ────────────────────────────
+      - echo "=== Running Flyway migration ==="
+      - |
+        TASK_ARN=$(aws ecs run-task \
+          --cluster $ECS_CLUSTER \
+          --task-definition $FLYWAY_TASK_DEF_FAMILY \
+          --launch-type FARGATE \
+          --network-configuration "awsvpcConfiguration={subnets=[$FLYWAY_SUBNET],securityGroups=[$FLYWAY_SG],assignPublicIp=DISABLED}" \
+          --overrides "{\"containerOverrides\":[{\"name\":\"flyway\",\"environment\":[{\"name\":\"FLYWAY_IMAGE_URI\",\"value\":\"$IMAGE_URI\"}]}]}" \
+          --query 'tasks[0].taskArn' \
+          --output text)
+      - echo "Flyway task ARN: $TASK_ARN"
+
+      # タスク完了まで待機（最大10分）
+      - |
+        for i in $(seq 1 60); do
+          STATUS=$(aws ecs describe-tasks \
+            --cluster $ECS_CLUSTER \
+            --tasks $TASK_ARN \
+            --query 'tasks[0].lastStatus' \
+            --output text)
+          echo "[$i/60] Flyway task status: $STATUS"
+          if [ "$STATUS" = "STOPPED" ]; then
+            break
+          fi
+          sleep 10
+        done
+
+      # 終了コード確認（0以外ならビルド失敗）
+      - |
+        EXIT_CODE=$(aws ecs describe-tasks \
+          --cluster $ECS_CLUSTER \
+          --tasks $TASK_ARN \
+          --query 'tasks[0].containers[0].exitCode' \
+          --output text)
+        echo "Flyway exit code: $EXIT_CODE"
+        if [ "$EXIT_CODE" != "0" ]; then
+          echo "ERROR: Flyway migration failed with exit code $EXIT_CODE"
+          exit 1
+        fi
+        echo "=== Flyway migration succeeded ==="
+
+      # ── 3. imagedefinitions.json 生成（ECS Deployステージ用）─────────
+      - echo "=== Generating imagedefinitions.json ==="
+      - printf '[{"name":"app","imageUri":"%s"}]' "$IMAGE_URI" > imagedefinitions.json
+      - cat imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json

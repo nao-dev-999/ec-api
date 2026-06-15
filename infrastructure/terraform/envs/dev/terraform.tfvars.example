@@ -11,11 +11,13 @@ availability_zones   = ["ap-northeast-1a", "ap-northeast-1c"]
 
 # RDS設定
 rds_engine          = "postgres"
-rds_engine_version  = "16.8"
+rds_engine_version  = "18.4"
 rds_instance_class  = "db.t3.micro"
 rds_database_name   = "awstest"
 rds_master_username = "awstest"
 
-# EC2設定
-ec2_ami_id        = "ami-0a21a03072be95559"
-ec2_instance_type = "t3.nano"
+# CodePipeline / GitHub
+# AWSコンソール > CodePipeline > Settings > Connections で作成後にARNを貼る
+codestar_connection_arn = "arn:aws:codestar-connections:ap-northeast-1:ACCOUNT_ID:connection/XXXXXXXX"
+github_repository       = "your-org/ec-api"
+github_branch           = "main"

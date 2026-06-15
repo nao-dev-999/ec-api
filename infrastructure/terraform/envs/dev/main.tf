@@ -1,4 +1,4 @@
-# 1. VPC Module
+# VPC Module
 module "vpc" {
   source = "../../modules/vpc"
 
@@ -10,7 +10,7 @@ module "vpc" {
   availability_zones   = var.availability_zones
 }
 
-# 2. RDS Module (db.t4g.nano)
+# RDS Module (db.t4g.nano)
 module "rds" { # モジュール名を "rds" に変更
   source = "../../modules/rds" # 既に変更済み
   project            = var.project
@@ -25,18 +25,7 @@ module "rds" { # モジュール名を "rds" に変更
   security_group_ids = [module.vpc.db_sg_id]
 }
 
-# 3. EC2 Module
-module "ec2" {
-  source = "../../modules/ec2"
-
-  project          = var.project
-  env              = var.env
-  ami_id           = var.ec2_ami_id
-  instance_type    = var.ec2_instance_type
-  subnet_id        = module.vpc.private_subnet_ids[0]
-  security_group_ids = [module.vpc.web_sg_id]
-}
-
+# ALB
 module "alb" {
   source = "../../modules/alb"
 
@@ -46,6 +35,63 @@ module "alb" {
   public_subnet_ids   = module.vpc.public_subnet_ids
   security_group_ids  = [module.vpc.alb_sg_id]
   target_port         = 8080
-  health_check_path   = "/"
-  target_instance_ids = [module.ec2.instance_id]
+  health_check_path   = "/actuator/health"
+}
+
+# ECR
+module "ecr" {
+  source = "../../modules/ecr"
+
+  project = var.project
+  env     = var.env
+}
+
+# ECS (Fargate + ElastiCache Redis)
+module "ecs" {
+  source = "../../modules/ecs"
+
+  project    = var.project
+  env        = var.env
+  aws_region = var.aws_region
+
+  vpc_id             = module.vpc.vpc_id
+  private_subnet_ids = module.vpc.private_subnet_ids
+  alb_sg_id          = module.vpc.alb_sg_id
+  target_group_arn   = module.alb.target_group_arn
+
+  app_image_url = module.ecr.app_repository_url
+  app_image_tag = "latest"
+
+  db_host     = module.rds.rds_endpoint
+  db_name     = var.rds_database_name
+  db_username = var.rds_master_username
+  db_password_secret_arn = module.rds.rds_secret_arn
+  jwt_secret_arn = module.ecs.jwt_secret_arn
+
+  task_cpu      = "512"
+  task_memory   = "1024"
+  desired_count = 1
+  min_capacity  = 1
+  max_capacity  = 4
+}
+
+# CodePipeline
+module "codepipeline" {
+  source = "../../modules/codepipeline"
+
+  project    = var.project
+  env        = var.env
+  aws_region = var.aws_region
+
+  codestar_connection_arn = var.codestar_connection_arn
+  github_repository       = var.github_repository
+  github_branch           = var.github_branch
+
+  app_repository_url = module.ecr.app_repository_url
+  ecs_cluster_name   = module.ecs.cluster_name
+  ecs_service_name   = module.ecs.service_name
+
+  flyway_task_definition_family = module.ecs.flyway_task_definition_family
+  flyway_subnet_id              = module.vpc.private_subnet_ids[0]
+  flyway_sg_id                  = module.ecs.ecs_sg_id
 }

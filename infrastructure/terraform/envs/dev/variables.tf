@@ -9,14 +9,19 @@ variable "private_subnet_cidrs" { type = list(string) }
 variable "availability_zones" { type = list(string) }
 
 # RDS
-variable "rds_engine" {}
-variable "rds_engine_version" {}
-variable "rds_instance_class" {}
+variable "rds_engine" { default = "postgres" }
+variable "rds_engine_version" { default = "16" }
+variable "rds_instance_class" { default = "db.t4g.micro" }
 variable "rds_database_name" {}
 variable "rds_master_username" {}
 
-# EC2
-variable "ec2_ami_id" {}
-variable "ec2_instance_type" {}
-variable "key_name" { default = null } # 追加
-
+# GitHub / CodePipeline
+variable "codestar_connection_arn" {
+  description = "AWSコンソールで作成したCodeStar ConnectionsのARN"
+}
+variable "github_repository" {
+  description = "owner/repo 形式"
+}
+variable "github_branch" {
+  default = "main"
+}

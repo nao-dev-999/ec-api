@@ -88,6 +88,29 @@ ec-api/
     └── messages.properties # メッセージ外部化
 ```
 
+```aiexclude
+GitHub push
+  │
+  ├─► GitHub Actions CI
+  │     └─ spotlessCheck → test
+  │
+  └─► CodePipeline
+        ├─ Source: GitHub (CodeStar Connections)
+        ├─ Build: CodeBuild → Docker build → ECR push
+        ├─ Migrate: ECS Run Task（Flywayコンテナ）
+        └─ Deploy: ECS Fargate サービス更新
+```
+## terraform実行手順
+### ステップ1: 土台（ネットワークとリポ）を最優先で作成
+terraform apply -target=module.vpc -target=module.ecr
+
+### ステップ2: 永続レイア（DB）の作成
+terraform apply -target=module.rds
+
+### ステップ3: 残り（ALB, ECS, CodePipeline）をすべて作成
+terraform apply
+
+
 ## 起動手順
 
 ### 1. docker起動
