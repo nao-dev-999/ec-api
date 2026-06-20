@@ -30,7 +30,7 @@ phases:
           --overrides "{\"containerOverrides\":[{\"name\":\"flyway\",\"image\":\"$IMAGE_URI\"}]}" \
           --query "tasks[0].taskArn" \
           --output text)
-      - echo "Flyway task ARN: $TASK_ARN"
+      - echo "Flyway task ARN= $TASK_ARN"
       - |
         for i in $(seq 1 60); do
           STATUS=$(aws ecs describe-tasks \
