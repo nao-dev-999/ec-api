@@ -28,7 +28,7 @@ phases:
           --launch-type FARGATE \
           --network-configuration "awsvpcConfiguration={subnets=[$FLYWAY_SUBNET],securityGroups=[$FLYWAY_SG],assignPublicIp=DISABLED}" \
           --overrides "{\"containerOverrides\":[{\"name\":\"flyway\",\"environment\":[{\"name\":\"FLYWAY_IMAGE_URI\",\"value\":\"$IMAGE_URI\"}]}]}" \
-          --query 'tasks[0].taskArn' \
+          --query "tasks[0].containers[0].exitCode" \
           --output text)
       - echo "Flyway task ARN: $TASK_ARN"
       - |

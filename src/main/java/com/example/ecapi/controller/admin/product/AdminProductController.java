@@ -5,7 +5,6 @@ import com.example.ecapi.controller.customer.product.dto.ProductResponse;
 import com.example.ecapi.controller.customer.product.dto.UpdateProductRequest;
 import com.example.ecapi.controller.customer.product.mapper.ProductApiMapper;
 import com.example.ecapi.service.product.ProductService;
-import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
