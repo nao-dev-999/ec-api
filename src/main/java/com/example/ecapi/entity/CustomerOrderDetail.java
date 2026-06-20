@@ -2,7 +2,6 @@ package com.example.ecapi.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import lombok.*;
 
 /** 注文明細エンティティ */
@@ -33,20 +32,4 @@ public class CustomerOrderDetail extends BaseEntity {
 
     @Column(name = "subtotal", nullable = false, precision = 10, scale = 2) // subtotal もカラムとして追加
     private BigDecimal subtotal;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-
-    @Column(name = "created_by", length = 255)
-    private String createdBy;
-
-    @Column(name = "updated_by", length = 255)
-    private String updatedBy;
-
-    @Column(name = "deleted_by", length = 255)
-    private String deletedBy;
-
-    @Version
-    @Column(nullable = false)
-    private int version;
 }

@@ -2,6 +2,7 @@ package com.example.ecapi.controller.admin.auth;
 
 import com.example.ecapi.controller.admin.auth.dto.LoginRequest;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpSession;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -41,9 +42,11 @@ public class AuthController {
 
     @PostMapping("/logout")
     public ResponseEntity<Void> logout(HttpServletRequest request) {
-        request.getSession(false);
+        HttpSession session = request.getSession(false);
+        if (session != null) {
+            session.invalidate();
+        }
         SecurityContextHolder.clearContext();
-        request.getSession().invalidate();
         return ResponseEntity.noContent().build();
     }
 }

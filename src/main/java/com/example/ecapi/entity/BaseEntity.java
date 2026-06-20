@@ -3,6 +3,7 @@ package com.example.ecapi.entity;
 import jakarta.persistence.Column;
 import jakarta.persistence.EntityListeners;
 import jakarta.persistence.MappedSuperclass;
+import jakarta.persistence.Version;
 import java.time.LocalDateTime;
 import lombok.Getter;
 import lombok.Setter;
@@ -23,4 +24,20 @@ public abstract class BaseEntity {
     @LastModifiedDate
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
+    @Column(name = "created_by", length = 255)
+    private String createdBy;
+
+    @Column(name = "updated_by", length = 255)
+    private String updatedBy;
+
+    @Column(name = "deleted_by", length = 255)
+    private String deletedBy;
+
+    @Version
+    @Column(nullable = false)
+    private int version;
 }
