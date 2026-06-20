@@ -1,4 +1,4 @@
-package com.example.ecapi.controller.adimin.auth.dto;
+package com.example.ecapi.controller.admin.auth.dto;
 
 import jakarta.validation.constraints.NotBlank;
 

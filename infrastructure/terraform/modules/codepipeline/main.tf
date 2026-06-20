@@ -69,21 +69,15 @@ resource "aws_iam_role_policy" "pipeline" {
         Effect   = "Allow"
         Action   = ["iam:PassRole"]
         Resource = "*"
-        Condition = {
-          StringEqualsIfExists = {
-            "iam:PassedToService" = ["ecs-tasks.amazonaws.com"]
-          }
-        }
       },
       {
         Effect   = "Allow"
-        Action   = ["codestar-connections:UseConnection"]
-        Resource = var.codestar_connection_arn
+        Action   = ["codestar-connections:UseConnection", "codestar-connections:PassConnection"]
+        Resource = aws_codestarconnections_connection.github.arn
       },
-      # Flyway用ECS RunTask権限
       {
-        Effect = "Allow"
-        Action = ["ecs:RunTask", "ecs:DescribeTasks"]
+        Effect   = "Allow"
+        Action   = ["ecs:RunTask", "ecs:DescribeTasks"]
         Resource = "*"
       }
     ]
@@ -126,8 +120,8 @@ resource "aws_iam_role_policy" "codebuild" {
       {
         Effect   = "Allow"
         Action   = ["ecr:GetAuthorizationToken", "ecr:BatchCheckLayerAvailability", "ecr:GetDownloadUrlForLayer",
-                    "ecr:BatchGetImage", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart",
-                    "ecr:CompleteLayerUpload", "ecr:PutImage"]
+          "ecr:BatchGetImage", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart",
+          "ecr:CompleteLayerUpload", "ecr:PutImage"]
         Resource = "*"
       },
       {
@@ -137,6 +131,11 @@ resource "aws_iam_role_policy" "codebuild" {
       }
     ]
   })
+}
+
+resource "aws_codestarconnections_connection" "github" {
+  name          = "${var.project}-${var.env}-github"
+  provider_type = "GitHub"
 }
 
 # ---------------------------------------------------------------------------
@@ -232,7 +231,7 @@ resource "aws_codepipeline" "this" {
       output_artifacts = ["source_output"]
 
       configuration = {
-        ConnectionArn        = var.codestar_connection_arn
+        ConnectionArn        = aws_codestarconnections_connection.github.arn
         FullRepositoryId     = var.github_repository   # "owner/repo"
         BranchName           = var.github_branch
         OutputArtifactFormat = "CODE_ZIP"

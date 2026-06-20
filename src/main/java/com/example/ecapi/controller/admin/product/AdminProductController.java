@@ -1,4 +1,4 @@
-package com.example.ecapi.controller.adimin.product;
+package com.example.ecapi.controller.admin.product;
 
 import com.example.ecapi.controller.customer.product.dto.CreateProductRequest;
 import com.example.ecapi.controller.customer.product.dto.ProductResponse;
@@ -50,7 +50,6 @@ public class AdminProductController {
     @PostMapping
     public ResponseEntity<ProductResponse> create(
             @Valid @RequestBody CreateProductRequest request) {
-        CreateProduct createProduct = productApiMapper.toCreateProduct(request);
         ProductResult result = productService.create(productApiMapper.toCreateProduct(request));
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(productApiMapper.toProductResponse(result));

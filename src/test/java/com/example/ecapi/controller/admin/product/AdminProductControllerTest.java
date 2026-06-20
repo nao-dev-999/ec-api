@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.ecapi.controller.adimin.product.AdminProductController;
 import com.example.ecapi.controller.customer.product.dto.CreateProductRequest;
 import com.example.ecapi.controller.customer.product.dto.ProductResponse;
 import com.example.ecapi.controller.customer.product.dto.UpdateProductRequest;

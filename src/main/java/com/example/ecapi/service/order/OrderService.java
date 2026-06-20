@@ -161,7 +161,7 @@ public class OrderService {
         items.forEach(
                 e -> {
                     productRepository
-                            .findById(e.getId())
+                            .findById(e.getProduct().getId())
                             .ifPresent(
                                     p -> {
                                         p.setStock(p.getStock() + e.getQuantity());

@@ -4,7 +4,7 @@ CREATE TABLE customer (
     password    VARCHAR(255) NOT NULL,
     created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at  TIMESTAMP    NULL,
     created_by  VARCHAR(255),
     updated_by  VARCHAR(255),
     deleted_by  VARCHAR(255),

@@ -17,12 +17,9 @@ phases:
 
   post_build:
     commands:
-      # ── 1. ECR push ───────────────────────────────────────────────────
       - echo "=== Pushing image to ECR ==="
       - docker push $IMAGE_URI
       - docker push $ECR_REPO_URI:latest
-
-      # ── 2. Flyway migration (ECS Run Task) ────────────────────────────
       - echo "=== Running Flyway migration ==="
       - |
         TASK_ARN=$(aws ecs run-task \
@@ -34,8 +31,6 @@ phases:
           --query 'tasks[0].taskArn' \
           --output text)
       - echo "Flyway task ARN: $TASK_ARN"
-
-      # タスク完了まで待機（最大10分）
       - |
         for i in $(seq 1 60); do
           STATUS=$(aws ecs describe-tasks \
@@ -49,8 +44,6 @@ phases:
           fi
           sleep 10
         done
-
-      # 終了コード確認（0以外ならビルド失敗）
       - |
         EXIT_CODE=$(aws ecs describe-tasks \
           --cluster $ECS_CLUSTER \
@@ -63,8 +56,6 @@ phases:
           exit 1
         fi
         echo "=== Flyway migration succeeded ==="
-
-      # ── 3. imagedefinitions.json 生成（ECS Deployステージ用）─────────
       - echo "=== Generating imagedefinitions.json ==="
       - printf '[{"name":"app","imageUri":"%s"}]' "$IMAGE_URI" > imagedefinitions.json
       - cat imagedefinitions.json

@@ -37,12 +37,6 @@ public class CustomerOrder extends BaseEntity {
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at")
-    private LocalDateTime updatedAt;
-
-    @Column(name = "deleted_at")
-    private LocalDateTime deletedAt;
-
     @Column(name = "deleted_by", length = 255)
     private String deletedBy;
 

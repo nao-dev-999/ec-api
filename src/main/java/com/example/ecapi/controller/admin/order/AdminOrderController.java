@@ -1,4 +1,4 @@
-package com.example.ecapi.controller.adimin.order;
+package com.example.ecapi.controller.admin.order;
 
 import com.example.ecapi.constant.OrderStatus;
 import com.example.ecapi.controller.customer.order.dto.OrderResponse;

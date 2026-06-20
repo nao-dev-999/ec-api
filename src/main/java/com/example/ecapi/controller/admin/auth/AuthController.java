@@ -1,6 +1,6 @@
-package com.example.ecapi.controller.adimin.auth;
+package com.example.ecapi.controller.admin.auth;
 
-import com.example.ecapi.controller.adimin.auth.dto.LoginRequest;
+import com.example.ecapi.controller.admin.auth.dto.LoginRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;

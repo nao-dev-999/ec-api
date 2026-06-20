@@ -5,7 +5,7 @@ CREATE TABLE employee (
     role        VARCHAR(50)  NOT NULL DEFAULT 'OTHER',
     created_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at  TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at  TIMESTAMP,
     created_by  VARCHAR(255),
     updated_by  VARCHAR(255),
     deleted_by  VARCHAR(255),
