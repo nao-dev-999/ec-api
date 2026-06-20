@@ -27,8 +27,8 @@ phases:
           --task-definition $FLYWAY_TASK_DEF_FAMILY \
           --launch-type FARGATE \
           --network-configuration "awsvpcConfiguration={subnets=[$FLYWAY_SUBNET],securityGroups=[$FLYWAY_SG],assignPublicIp=DISABLED}" \
-          --overrides "{\"containerOverrides\":[{\"name\":\"flyway\",\"environment\":[{\"name\":\"FLYWAY_IMAGE_URI\",\"value\":\"$IMAGE_URI\"}]}]}" \
-          --query "tasks[0].containers[0].exitCode" \
+          --overrides "{\"containerOverrides\":[{\"name\":\"flyway\",\"environment\":[{\"name元のコードではここにカンマ抜けなどのパースエラーも起きやすいため注意\\\"FLYWAY_IMAGE_URI\\\",\\\"value\\\":\\\"$IMAGE_URI\\\"}]}]}" \
+          --query "tasks[0].taskArn" \
           --output text)
       - echo "Flyway task ARN: $TASK_ARN"
       - |
