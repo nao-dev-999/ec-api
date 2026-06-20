@@ -8,7 +8,7 @@ variable "env" {
   type        = string
 }
 
-variable "identifier" { # cluster_identifier から identifier に変更
+variable "identifier" {
   description = "RDS instance identifier"
   type        = string
 }
@@ -43,7 +43,10 @@ variable "subnet_ids" {
   type        = list(string)
 }
 
-variable "security_group_ids" {
-  description = "List of security group IDs for the RDS instance"
-  type        = list(string)
+variable "vpc_id" {
+  type = string
+}
+
+variable "ecs_sg_id" {
+  type = string
 }

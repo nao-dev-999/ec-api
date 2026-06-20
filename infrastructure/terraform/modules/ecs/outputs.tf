@@ -26,6 +26,10 @@ output "task_execution_role_arn" {
   value = aws_iam_role.task_execution.arn
 }
 
+output "task_role_arn" {
+  value = aws_iam_role.task.arn
+}
+
 output "redis_host" {
   value = aws_elasticache_cluster.this.cache_nodes[0].address
 }

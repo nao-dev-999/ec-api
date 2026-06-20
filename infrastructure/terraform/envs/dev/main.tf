@@ -11,7 +11,7 @@ module "vpc" {
 }
 
 # RDS Module (db.t4g.nano)
-module "rds" { # モジュール名を "rds" に変更
+module "rds" {
   source = "../../modules/rds" # 既に変更済み
   project            = var.project
   env                = var.env
@@ -21,8 +21,9 @@ module "rds" { # モジュール名を "rds" に変更
   instance_class     = var.rds_instance_class
   database_name      = var.rds_database_name
   master_username    = var.rds_master_username
+  vpc_id             = module.vpc.vpc_id
   subnet_ids         = module.vpc.private_subnet_ids
-  security_group_ids = [module.vpc.db_sg_id]
+  ecs_sg_id          = module.ecs.ecs_sg_id
 }
 
 # ALB
@@ -33,7 +34,6 @@ module "alb" {
   env                 = var.env
   vpc_id              = module.vpc.vpc_id
   public_subnet_ids   = module.vpc.public_subnet_ids
-  security_group_ids  = [module.vpc.alb_sg_id]
   target_port         = 8080
   health_check_path   = "/actuator/health"
 }
@@ -41,7 +41,6 @@ module "alb" {
 # ECR
 module "ecr" {
   source = "../../modules/ecr"
-
   project = var.project
   env     = var.env
 }
@@ -56,7 +55,7 @@ module "ecs" {
 
   vpc_id             = module.vpc.vpc_id
   private_subnet_ids = module.vpc.private_subnet_ids
-  alb_sg_id          = module.vpc.alb_sg_id
+  alb_sg_id          = module.alb.alb_sg_id
   target_group_arn   = module.alb.target_group_arn
 
   app_image_url = module.ecr.app_repository_url
@@ -83,13 +82,15 @@ module "codepipeline" {
   env        = var.env
   aws_region = var.aws_region
 
-  codestar_connection_arn = var.codestar_connection_arn
   github_repository       = var.github_repository
   github_branch           = var.github_branch
 
   app_repository_url = module.ecr.app_repository_url
   ecs_cluster_name   = module.ecs.cluster_name
   ecs_service_name   = module.ecs.service_name
+
+  task_execution_role_arn = module.ecs.task_execution_role_arn
+  task_role_arn           = module.ecs.task_role_arn
 
   flyway_task_definition_family = module.ecs.flyway_task_definition_family
   flyway_subnet_id              = module.vpc.private_subnet_ids[0]

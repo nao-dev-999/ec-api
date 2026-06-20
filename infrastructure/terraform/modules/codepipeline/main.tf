@@ -126,8 +126,22 @@ resource "aws_iam_role_policy" "codebuild" {
       },
       {
         Effect   = "Allow"
-        Action   = ["ecs:DescribeTaskDefinition"]
+        Action = [
+          "ecs:RunTask",
+          "ecs:DescribeTasks",
+          "ecs:DescribeTaskDefinition"
+        ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "iam:PassRole"
+        ]
+        Resource = [
+          var.task_execution_role_arn,
+          var.task_role_arn
+        ]
       }
     ]
   })

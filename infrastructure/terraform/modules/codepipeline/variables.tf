@@ -2,11 +2,6 @@ variable "project" { type = string }
 variable "env" { type = string }
 variable "aws_region" { type = string }
 
-variable "codestar_connection_arn" {
-  description = "CodeStar Connections ARN for GitHub"
-  type        = string
-}
-
 variable "github_repository" {
   description = "GitHub repository (owner/repo)"
   type        = string
@@ -46,4 +41,12 @@ variable "flyway_subnet_id" {
 variable "flyway_sg_id" {
   description = "Security Group ID for Flyway ECS task"
   type        = string
+}
+
+variable "task_execution_role_arn" {
+  type = string
+}
+
+variable "task_role_arn" {
+  type = string
 }

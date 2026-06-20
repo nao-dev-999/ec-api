@@ -16,9 +16,6 @@ variable "rds_database_name" {}
 variable "rds_master_username" {}
 
 # GitHub / CodePipeline
-variable "codestar_connection_arn" {
-  description = "AWSコンソールで作成したCodeStar ConnectionsのARN"
-}
 variable "github_repository" {
   description = "owner/repo 形式"
 }
