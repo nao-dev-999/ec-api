@@ -57,29 +57,6 @@ resource "aws_security_group" "ecs" {
 }
 
 # ---------------------------------------------------------------------------
-# JWT Secret Key (SSM Parameter)
-# ---------------------------------------------------------------------------
-# ランダムな32文字の文字列を自動生成（シークレットの値として使用）
-resource "random_password" "jwt_secret" {
-  length  = 32
-  special = true
-}
-
-# 生成したランダム文字列を暗号化（SecureString）してSSM Parameter Storeに保存
-resource "aws_ssm_parameter" "jwt_secret" {
-  name        = "/${var.project}/${var.env}/jwt_secret"
-  description = "JWT Secret Key for App Authentication"
-  type        = "SecureString"
-  value       = random_password.jwt_secret.result
-
-  tags = {
-    Name    = "/${var.project}/${var.env}/jwt_secret"
-    Project = var.project
-    Env     = var.env
-  }
-}
-
-# ---------------------------------------------------------------------------
 # Security Group for ElastiCache Redis
 # ---------------------------------------------------------------------------
 resource "aws_security_group" "redis" {
@@ -270,10 +247,6 @@ resource "aws_ecs_task_definition" "app" {
         {
           name      = "SPRING_DATASOURCE_PASSWORD"
           valueFrom = var.db_password_secret_arn
-        },
-        {
-          name      = "JWT_SECRET"
-          valueFrom = var.jwt_secret_arn
         }
       ]
 
@@ -342,10 +315,6 @@ resource "aws_ecs_task_definition" "flyway" {
         {
           name      = "SPRING_DATASOURCE_PASSWORD"
           valueFrom = var.db_password_secret_arn
-        },
-        {
-          name      = "JWT_SECRET"
-          valueFrom = var.jwt_secret_arn
         }
       ]
 

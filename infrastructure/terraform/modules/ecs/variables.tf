@@ -20,10 +20,6 @@ variable "db_password_secret_arn" {
   type      = string
   description = "RDS managed Secrets Manager ARN"
 }
-variable "jwt_secret_arn" {
-  type      = string
-  description = "JWT Secret ARN"
-}
 
 variable "task_cpu" {
   type    = string

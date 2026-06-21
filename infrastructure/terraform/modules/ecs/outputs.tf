@@ -33,8 +33,3 @@ output "task_role_arn" {
 output "redis_host" {
   value = aws_elasticache_cluster.this.cache_nodes[0].address
 }
-
-output "jwt_secret_arn" {
-  description = "The ARN of the automatically generated JWT secret SSM parameter"
-  value       = aws_ssm_parameter.jwt_secret.arn
-}

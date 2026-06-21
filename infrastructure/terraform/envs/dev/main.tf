@@ -65,7 +65,6 @@ module "ecs" {
   db_name     = var.rds_database_name
   db_username = var.rds_master_username
   db_password_secret_arn = module.rds.rds_secret_arn
-  jwt_secret_arn = module.ecs.jwt_secret_arn
 
   task_cpu      = "512"
   task_memory   = "1024"

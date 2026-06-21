@@ -1,5 +1,5 @@
 # ビルドステージ
-FROM eclipse-temurin:25-jdk AS build
+FROM public.ecr.aws/amazoncorretto/amazoncorretto:25 AS build
 WORKDIR /app
 COPY gradlew ./
 COPY gradle ./gradle
@@ -10,7 +10,7 @@ RUN chmod +x gradlew
 RUN ./gradlew bootJar --no-daemon -x spotlessCheck
 
 # 実行ステージ
-FROM eclipse-temurin:25-jre AS runtime
+FROM public.ecr.aws/amazoncorretto/amazoncorretto:25 AS runtime
 WORKDIR /app
 COPY --from=build /app/build/libs/*.jar app.jar
 
