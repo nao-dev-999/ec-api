@@ -19,6 +19,7 @@ resource "aws_db_instance" "this" {
   username                = var.master_username
   manage_master_user_password = true
   db_subnet_group_name    = aws_db_subnet_group.this.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
   skip_final_snapshot     = true
   final_snapshot_identifier = "${var.identifier}-final-snapshot"
   deletion_protection     = false
