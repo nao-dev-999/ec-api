@@ -6,6 +6,7 @@ COPY gradle ./gradle
 COPY build.gradle.kts settings.gradle.kts ./
 COPY src ./src
 
+RUN yum install -y findutils
 RUN chmod +x gradlew
 RUN ./gradlew bootJar --no-daemon -x spotlessCheck
 
