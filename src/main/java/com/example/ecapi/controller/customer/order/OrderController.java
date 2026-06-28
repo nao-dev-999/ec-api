@@ -1,11 +1,12 @@
 package com.example.ecapi.controller.customer.order;
 
 import com.example.ecapi.constant.OrderStatus;
+import com.example.ecapi.controller.customer.order.dto.OrderItemResponse;
 import com.example.ecapi.controller.customer.order.dto.OrderRequest;
 import com.example.ecapi.controller.customer.order.dto.OrderResponse;
-import com.example.ecapi.controller.customer.order.mapper.OrderApiMapper;
 import com.example.ecapi.service.order.OrderService;
 import com.example.ecapi.service.order.dto.CreateOrder;
+import com.example.ecapi.service.order.dto.CreateOrderItem;
 import com.example.ecapi.service.order.dto.OrderResult;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -32,7 +33,6 @@ import org.springframework.web.bind.annotation.*;
 public class OrderController {
 
     private final OrderService orderService;
-    private final OrderApiMapper orderApiMapper;
 
     /**
      * 全ての注文を取得します。
@@ -42,7 +42,7 @@ public class OrderController {
     @GetMapping
     public ResponseEntity<List<OrderResponse>> getAll() {
         List<OrderResult> result = orderService.findAll();
-        List<OrderResponse> responses = orderApiMapper.toOrderResponseList(result);
+        List<OrderResponse> responses = result.stream().map(this::toOrderResponse).toList();
         return ResponseEntity.ok(responses);
     }
 
@@ -55,7 +55,7 @@ public class OrderController {
     @GetMapping("/{id}")
     public ResponseEntity<OrderResponse> getById(@PathVariable Long id) {
         OrderResult result = orderService.findById(id);
-        return ResponseEntity.ok(orderApiMapper.toOrderResponse(result));
+        return ResponseEntity.ok(toOrderResponse(result));
     }
 
     /**
@@ -66,10 +66,9 @@ public class OrderController {
      */
     @PostMapping
     public ResponseEntity<OrderResponse> create(@Valid @RequestBody OrderRequest request) {
-        CreateOrder createOrder = orderApiMapper.toCreateOrder(request);
+        CreateOrder createOrder = toCreateOrder(request);
         OrderResult result = orderService.create(createOrder);
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(orderApiMapper.toOrderResponse(result));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toOrderResponse(result));
     }
 
     /**
@@ -88,6 +87,48 @@ public class OrderController {
                             orderService.updateStatus(id, status);
                     case CANCELLED -> orderService.cancel(id);
                 };
-        return ResponseEntity.ok(orderApiMapper.toOrderResponse(result));
+        return ResponseEntity.ok(toOrderResponse(result));
+    }
+
+    /**
+     * Convert OrderResult to OrderResponse
+     *
+     * @param result
+     * @return
+     */
+    private OrderResponse toOrderResponse(OrderResult result) {
+        return new OrderResponse(
+                result.id(),
+                result.customerName(),
+                result.status(),
+                result.totalAmount(),
+                result.items().stream()
+                        .map(
+                                i ->
+                                        new OrderItemResponse(
+                                                i.productId(),
+                                                i.productName(),
+                                                i.quantity(),
+                                                i.unitPrice(),
+                                                i.subtotal()))
+                        .toList(),
+                result.orderedAt(),
+                result.updatedAt(),
+                result.version());
+    }
+
+    /**
+     * Convert OrderRequest to CreateOrder
+     *
+     * @param request
+     * @return
+     */
+    private CreateOrder toCreateOrder(OrderRequest request) {
+        return new CreateOrder(
+                request.customerId(),
+                request.customerName(),
+                request.items().stream()
+                        .map(item -> new CreateOrderItem(item.productId(), item.quantity()))
+                        .toList());
     }
 }

@@ -8,7 +8,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.ecapi.controller.customer.product.dto.ProductResponse;
-import com.example.ecapi.controller.customer.product.mapper.ProductApiMapper;
 import com.example.ecapi.exception.GlobalExceptionHandler;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.helper.MessageHelper;
@@ -34,7 +33,6 @@ import tools.jackson.databind.json.JsonMapper;
 class ProductControllerTest {
 
     @MockitoBean private ProductService productService;
-    @MockitoBean private ProductApiMapper productApiMapper;
     @MockitoBean private MessageHelper messageHelper;
     @Autowired private JsonMapper jsonMapper;
     @Autowired private MockMvc mockMvc;
@@ -73,7 +71,6 @@ class ProductControllerTest {
         @DisplayName("指定したIDの商品を取得できること")
         void shouldGetProductById() throws Exception {
             when(productService.findById(1L)).thenReturn(productResult);
-            when(productApiMapper.toProductResponse(any())).thenReturn(productResponse);
 
             mockMvc.perform(get("/api/customer/products/{id}", 1L))
                     .andExpect(status().isOk())

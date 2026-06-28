@@ -13,8 +13,8 @@ import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
 import com.example.ecapi.service.product.dto.UpdateProduct;
-import com.example.ecapi.service.product.mapper.ProductEntityMapper;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -34,7 +34,6 @@ import org.springframework.data.jpa.domain.Specification;
 class ProductServiceTest {
 
     @Mock private ProductRepository productRepository;
-    @Mock private ProductEntityMapper productEntityMapper;
     @Mock private MessageHelper messageHelper;
 
     @InjectMocks private ProductService productService;
@@ -50,8 +49,8 @@ class ProductServiceTest {
         product.setDescription("Description");
         product.setPrice(BigDecimal.valueOf(100.00));
         product.setStock(10);
-        product.setCreatedAt(LocalDateTime.now());
-        product.setUpdatedAt(LocalDateTime.now());
+        product.setCreatedAt(Instant.now());
+        product.setUpdatedAt(Instant.now());
         product.setVersion(1);
 
         productResult =
@@ -74,7 +73,6 @@ class ProductServiceTest {
         @DisplayName("全商品を取得できること")
         void shouldReturnAllProducts() {
             when(productRepository.findAll()).thenReturn(List.of(product));
-            when(productEntityMapper.toProductResultList(any())).thenReturn(List.of(productResult));
 
             List<ProductResult> result = productService.findAll();
 
@@ -87,8 +85,6 @@ class ProductServiceTest {
         @DisplayName("商品が0件の場合、空のリストを返すこと")
         void shouldReturnEmptyListWhenNoProducts() {
             when(productRepository.findAll()).thenReturn(Collections.emptyList());
-            when(productEntityMapper.toProductResultList(any()))
-                    .thenReturn(Collections.emptyList());
 
             List<ProductResult> result = productService.findAll();
 
@@ -104,7 +100,6 @@ class ProductServiceTest {
         @DisplayName("指定したIDの商品を取得できること")
         void shouldReturnProductById() {
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-            when(productEntityMapper.toProductResult(product)).thenReturn(productResult);
 
             ProductResult result = productService.findById(1L);
 
@@ -132,7 +127,6 @@ class ProductServiceTest {
         void shouldReturnAllProductsWithoutCriteria() {
             when(productRepository.findAll(any(Specification.class), any(Sort.class)))
                     .thenReturn(List.of(product));
-            when(productEntityMapper.toProductResultList(any())).thenReturn(List.of(productResult));
 
             List<ProductResult> result = productService.searchProducts(null, null, null);
 
@@ -144,7 +138,6 @@ class ProductServiceTest {
         void shouldReturnFilteredProducts() {
             when(productRepository.findAll(any(Specification.class), any(Sort.class)))
                     .thenReturn(List.of(product));
-            when(productEntityMapper.toProductResultList(any())).thenReturn(List.of(productResult));
 
             List<ProductResult> result =
                     productService.searchProducts("Test", "Desc", BigDecimal.valueOf(150.00));
@@ -157,8 +150,6 @@ class ProductServiceTest {
         @DisplayName("条件に合致する商品がない場合、空のリストを返すこと")
         void shouldReturnEmptyListWhenNoMatch() {
             when(productRepository.findAll(any(Specification.class), any(Sort.class)))
-                    .thenReturn(Collections.emptyList());
-            when(productEntityMapper.toProductResultList(any()))
                     .thenReturn(Collections.emptyList());
 
             List<ProductResult> result = productService.searchProducts("NotExist", null, null);
@@ -174,17 +165,15 @@ class ProductServiceTest {
         @Test
         @DisplayName("商品を新規登録できること")
         void shouldCreateProduct() {
+            when(productRepository.save(any(Product.class))).thenReturn(product);
+
             CreateProduct createProduct =
                     new CreateProduct("New Product", "New Desc", BigDecimal.valueOf(200.00), 20);
-
-            when(productEntityMapper.toProduct(createProduct)).thenReturn(product);
-            when(productRepository.save(product)).thenReturn(product);
-            when(productEntityMapper.toProductResult(product)).thenReturn(productResult);
 
             ProductResult result = productService.create(createProduct);
 
             assertThat(result.id()).isEqualTo(1L);
-            verify(productRepository).save(product);
+            verify(productRepository).save(any(Product.class));
         }
     }
 
@@ -197,16 +186,19 @@ class ProductServiceTest {
         void shouldUpdateProduct() {
             UpdateProduct updateProduct =
                     new UpdateProduct(
-                            "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
+                            1L,
+                            "Updated Product",
+                            "Updated Desc",
+                            BigDecimal.valueOf(120.00),
+                            15,
+                            1);
 
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
             when(productRepository.save(product)).thenReturn(product);
-            when(productEntityMapper.toProductResult(product)).thenReturn(productResult);
 
-            ProductResult result = productService.update(1L, updateProduct);
+            ProductResult result = productService.update(updateProduct);
 
             assertThat(result).isNotNull();
-            verify(productEntityMapper).updateProductFromUpdate(updateProduct, product);
             verify(productRepository).save(product);
         }
 
@@ -215,12 +207,17 @@ class ProductServiceTest {
         void shouldThrowExceptionWhenProductNotFound() {
             UpdateProduct updateProduct =
                     new UpdateProduct(
-                            "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
+                            99L,
+                            "Updated Product",
+                            "Updated Desc",
+                            BigDecimal.valueOf(120.00),
+                            15,
+                            1);
 
             when(productRepository.findById(99L)).thenReturn(Optional.empty());
             when(messageHelper.get(any(), any())).thenReturn("商品が見つかりません: 99");
 
-            assertThatThrownBy(() -> productService.update(99L, updateProduct))
+            assertThatThrownBy(() -> productService.update(updateProduct))
                     .isInstanceOf(ProductNotFoundException.class);
         }
     }

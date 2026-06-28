@@ -1,8 +1,8 @@
 package com.example.ecapi.controller.admin.order;
 
 import com.example.ecapi.constant.OrderStatus;
+import com.example.ecapi.controller.customer.order.dto.OrderItemResponse;
 import com.example.ecapi.controller.customer.order.dto.OrderResponse;
-import com.example.ecapi.controller.customer.order.mapper.OrderApiMapper;
 import com.example.ecapi.service.order.OrderService;
 import com.example.ecapi.service.order.dto.OrderResult;
 import java.util.List;
@@ -16,17 +16,17 @@ import org.springframework.web.bind.annotation.*;
 public class AdminOrderController {
 
     private final OrderService orderService;
-    private final OrderApiMapper orderApiMapper;
 
     @GetMapping
     public ResponseEntity<List<OrderResponse>> getAll() {
-        List<OrderResult> result = orderService.findAll();
-        return ResponseEntity.ok(orderApiMapper.toOrderResponseList(result));
+        List<OrderResult> results = orderService.findAll();
+        List<OrderResponse> response = results.stream().map(this::toOrderResponse).toList();
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<OrderResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(orderApiMapper.toOrderResponse(orderService.findById(id)));
+        return ResponseEntity.ok(toOrderResponse(orderService.findById(id)));
     }
 
     @PatchMapping("/{id}/status")
@@ -38,6 +38,33 @@ public class AdminOrderController {
                             orderService.updateStatus(id, status);
                     case CANCELLED -> orderService.cancel(id);
                 };
-        return ResponseEntity.ok(orderApiMapper.toOrderResponse(result));
+        return ResponseEntity.ok(toOrderResponse(result));
+    }
+
+    /**
+     * Convert OrderResult to OrderResponse
+     *
+     * @param result
+     * @return
+     */
+    private OrderResponse toOrderResponse(OrderResult result) {
+        return new OrderResponse(
+                result.id(),
+                result.customerName(),
+                result.status(),
+                result.totalAmount(),
+                result.items().stream()
+                        .map(
+                                i ->
+                                        new OrderItemResponse(
+                                                i.productId(),
+                                                i.productName(),
+                                                i.quantity(),
+                                                i.unitPrice(),
+                                                i.subtotal()))
+                        .toList(),
+                result.orderedAt(),
+                result.updatedAt(),
+                result.version());
     }
 }

@@ -77,6 +77,7 @@ public class GlobalExceptionHandler {
         return buildError(HttpStatus.BAD_REQUEST, messageHelper.get("error.badRequest"));
     }
 
+    /** 楽観的ロックエラー → 409 Conflict */
     @ExceptionHandler(OptimisticLockException.class)
     public ResponseEntity<ErrorResponse> handleBusiness(
             OptimisticLockException ex, WebRequest request) {

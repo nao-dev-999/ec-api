@@ -13,9 +13,12 @@ import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.CreateOrderItem;
 import com.example.ecapi.service.order.dto.OrderResult;
-import com.example.ecapi.service.order.mapper.OrderEntityMapper;
+import com.example.ecapi.service.order.dto.OrderResultItem;
 import jakarta.persistence.OptimisticLockException;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -33,7 +36,6 @@ public class OrderService {
 
     private final CustomerOrderRepository orderRepository;
     private final ProductRepository productRepository;
-    private final OrderEntityMapper orderEntityMapper;
     private final MessageHelper messageHelper;
 
     /**
@@ -42,7 +44,7 @@ public class OrderService {
      * @return 全ての注文のリスト
      */
     public List<OrderResult> findAll() {
-        return orderEntityMapper.toOrderResultList(orderRepository.findAll());
+        return orderRepository.findAll().stream().map(this::toOrderResult).toList();
     }
 
     /**
@@ -60,7 +62,7 @@ public class OrderService {
                                 () ->
                                         new OrderNotFoundException(
                                                 messageHelper.get("order.notFound", id)));
-        return orderEntityMapper.toOrderResult(order);
+        return toOrderResult(order);
     }
 
     /**
@@ -76,6 +78,7 @@ public class OrderService {
         CustomerOrder order = new CustomerOrder();
         order.setCustomerName(createOrder.customerName());
         order.setStatus(OrderStatus.PENDING);
+        order.setOrderedAt(Instant.now());
 
         for (CreateOrderItem item : createOrder.items()) {
             Product product =
@@ -114,7 +117,7 @@ public class OrderService {
 
         CustomerOrder savedOrder = orderRepository.save(order);
 
-        return orderEntityMapper.toOrderResult(savedOrder);
+        return toOrderResult(savedOrder);
     }
 
     /**
@@ -137,7 +140,7 @@ public class OrderService {
                                                 messageHelper.get("order.notFound", id)));
         order.setStatus(newStatus);
         CustomerOrder saved = orderRepository.save(order);
-        return orderEntityMapper.toOrderResult(saved);
+        return toOrderResult(saved);
     }
 
     /**
@@ -169,6 +172,33 @@ public class OrderService {
                                     });
                 });
         CustomerOrder saved = orderRepository.save(order);
-        return orderEntityMapper.toOrderResult(saved);
+        return toOrderResult(saved);
+    }
+
+    /**
+     * CustomerOrder エンティティを OrderResult DTO に変換します。
+     *
+     * @param customerOrder 注文エンティティ
+     * @return 注文結果 DTO
+     */
+    private OrderResult toOrderResult(CustomerOrder customerOrder) {
+        return new OrderResult(
+                customerOrder.getId(),
+                customerOrder.getCustomerName(),
+                customerOrder.getStatus(),
+                customerOrder.getTotalAmount(),
+                customerOrder.getItems().stream()
+                        .map(
+                                item ->
+                                        new OrderResultItem(
+                                                item.getProduct().getId(),
+                                                item.getProduct().getName(),
+                                                item.getQuantity(),
+                                                item.getUnitPrice(),
+                                                item.getSubtotal()))
+                        .toList(),
+                LocalDateTime.ofInstant(customerOrder.getOrderedAt(), ZoneId.systemDefault()),
+                LocalDateTime.ofInstant(customerOrder.getUpdatedAt(), ZoneId.systemDefault()),
+                customerOrder.getVersion());
     }
 }
