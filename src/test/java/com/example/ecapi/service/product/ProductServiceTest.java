@@ -165,13 +165,15 @@ class ProductServiceTest {
         @Test
         @DisplayName("商品を新規登録できること")
         void shouldCreateProduct() {
+            when(productRepository.save(any(Product.class))).thenReturn(product);
+
             CreateProduct createProduct =
                     new CreateProduct("New Product", "New Desc", BigDecimal.valueOf(200.00), 20);
 
             ProductResult result = productService.create(createProduct);
 
             assertThat(result.id()).isEqualTo(1L);
-            verify(productRepository).save(product);
+            verify(productRepository).save(any(Product.class));
         }
     }
 
@@ -184,7 +186,12 @@ class ProductServiceTest {
         void shouldUpdateProduct() {
             UpdateProduct updateProduct =
                     new UpdateProduct(
-                            1L, "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
+                            1L,
+                            "Updated Product",
+                            "Updated Desc",
+                            BigDecimal.valueOf(120.00),
+                            15,
+                            1);
 
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
             when(productRepository.save(product)).thenReturn(product);
@@ -200,7 +207,12 @@ class ProductServiceTest {
         void shouldThrowExceptionWhenProductNotFound() {
             UpdateProduct updateProduct =
                     new UpdateProduct(
-                            99L, "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
+                            99L,
+                            "Updated Product",
+                            "Updated Desc",
+                            BigDecimal.valueOf(120.00),
+                            15,
+                            1);
 
             when(productRepository.findById(99L)).thenReturn(Optional.empty());
             when(messageHelper.get(any(), any())).thenReturn("商品が見つかりません: 99");

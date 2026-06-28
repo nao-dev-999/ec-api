@@ -16,11 +16,9 @@ import com.example.ecapi.exception.GlobalExceptionHandler;
 import com.example.ecapi.exception.OrderNotFoundException;
 import com.example.ecapi.helper.MessageHelper;
 import com.example.ecapi.service.order.OrderService;
-import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.OrderResult;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -88,11 +86,12 @@ class OrderControllerTest {
         @Test
         @DisplayName("全注文を取得できること")
         void shouldGetAllOrders() throws Exception {
+            when(orderService.findAll()).thenReturn(List.of(orderResult));
             mockMvc.perform(get("/api/orders"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[0].id").value(orderResponse.id()))
                     .andExpect(jsonPath("$[0].customerName").value(orderResponse.customerName()))
-                    .andExpect(jsonPath("$[0].status").value(orderResponse.status()));
+                    .andExpect(jsonPath("$[0].status").value(orderResponse.status().name()));
         }
 
         @Test
@@ -111,11 +110,12 @@ class OrderControllerTest {
         @Test
         @DisplayName("指定したIDの注文を取得できること")
         void shouldGetOrderById() throws Exception {
+            when(orderService.findById(1L)).thenReturn(orderResult);
             mockMvc.perform(get("/api/orders/{id}", 1L))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(orderResponse.id()))
                     .andExpect(jsonPath("$.customerName").value(orderResponse.customerName()))
-                    .andExpect(jsonPath("$.status").value(orderResponse.status()));
+                    .andExpect(jsonPath("$.status").value(orderResponse.status().name()));
         }
 
         @Test
@@ -135,6 +135,8 @@ class OrderControllerTest {
         @Test
         @DisplayName("注文を新規作成できること")
         void shouldCreateOrder() throws Exception {
+            when(orderService.create(any())).thenReturn(orderResult);
+
             OrderRequest request =
                     new OrderRequest("0001", "Test Customer", List.of(new OrderItemRequest(1L, 2)));
 
@@ -193,17 +195,7 @@ class OrderControllerTest {
         @Test
         @DisplayName("PENDING ステータスに更新できること")
         void shouldUpdateStatusToPending() throws Exception {
-            OrderResponse pendingResponse =
-                    new OrderResponse(
-                            1L,
-                            "Test Customer",
-                            OrderStatus.PENDING,
-                            BigDecimal.valueOf(200.00),
-                            List.of(),
-                            LocalDateTime.now(),
-                            LocalDateTime.now(),
-                            1);
-
+            when(orderService.updateStatus(1L, OrderStatus.PENDING)).thenReturn(orderResult);
             mockMvc.perform(patch("/api/orders/{id}/status", 1L).param("status", "PENDING"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("PENDING"));
@@ -212,8 +204,10 @@ class OrderControllerTest {
         @Test
         @DisplayName("CANCELLED ステータスに更新すると cancel() が呼ばれること")
         void shouldCallCancelWhenStatusIsCancelled() throws Exception {
-            OrderResponse cancelledResponse =
-                    new OrderResponse(
+            when(orderService.updateStatus(1L, OrderStatus.CANCELLED)).thenReturn(orderResult);
+
+            OrderResult cancelledResult =
+                    new OrderResult(
                             1L,
                             "Test Customer",
                             OrderStatus.CANCELLED,
@@ -222,7 +216,7 @@ class OrderControllerTest {
                             LocalDateTime.now(),
                             LocalDateTime.now(),
                             1);
-
+            when(orderService.cancel(1L)).thenReturn(cancelledResult);
             mockMvc.perform(patch("/api/orders/{id}/status", 1L).param("status", "CANCELLED"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("CANCELLED"));

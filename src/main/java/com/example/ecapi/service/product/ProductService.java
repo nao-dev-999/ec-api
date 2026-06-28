@@ -105,7 +105,13 @@ public class ProductService {
                                         new ProductNotFoundException(
                                                 messageHelper.get(
                                                         "product.notFound", updateProduct.id())));
-        return toProductResult(productRepository.save(toProduct(updateProduct)));
+        if (updateProduct.name() != null) product.setName(updateProduct.name());
+        if (updateProduct.description() != null)
+            product.setDescription(updateProduct.description());
+        if (updateProduct.price() != null) product.setPrice(updateProduct.price());
+        if (updateProduct.stock() != null) product.setStock(updateProduct.stock());
+        product.setVersion(updateProduct.version());
+        return toProductResult(productRepository.save(product));
     }
 
     /**
@@ -135,21 +141,6 @@ public class ProductService {
         product.setDescription(createProduct.description());
         product.setPrice(createProduct.price());
         product.setStock(createProduct.stock());
-        return product;
-    }
-
-    /**
-     * UpdateProduct DTO を Product エンティティに変換します。
-     *
-     * @param updateProduct
-     * @return
-     */
-    private Product toProduct(UpdateProduct updateProduct) {
-        Product product = new Product();
-        product.setName(updateProduct.name());
-        product.setDescription(updateProduct.description());
-        product.setPrice(updateProduct.price());
-        product.setStock(updateProduct.stock());
         return product;
     }
 

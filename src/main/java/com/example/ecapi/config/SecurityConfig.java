@@ -44,7 +44,7 @@ public class SecurityConfig {
                                         .requestMatchers("/api/orders/**")
                                         .authenticated()
                                         .requestMatchers("/api/admin/**")
-                                        .hasAnyAuthority("ADMIN", "PRODUCT_MANAGER")
+                                        .hasAnyRole("ADMIN", "PRODUCT_MANAGER")
                                         .anyRequest()
                                         .denyAll())
                 .exceptionHandling(

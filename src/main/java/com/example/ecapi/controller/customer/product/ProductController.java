@@ -1,7 +1,6 @@
 package com.example.ecapi.controller.customer.product;
 
 import com.example.ecapi.controller.customer.product.dto.ProductResponse;
-import com.example.ecapi.controller.customer.product.mapper.ProductApiMapper;
 import com.example.ecapi.service.product.ProductService;
 import com.example.ecapi.service.product.dto.ProductResult;
 import java.math.BigDecimal;
@@ -33,7 +32,6 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController {
 
     private final ProductService productService;
-    private final ProductApiMapper productApiMapper;
 
     /**
      * 全商品を取得、または検索条件に合致する商品を取得します。 検索条件が複数指定された場合はAND条件で検索されます。
@@ -51,11 +49,23 @@ public class ProductController {
         name = name == null ? null : name.trim();
         description = description == null ? null : description.trim();
         List<ProductResult> results = productService.searchProducts(name, description, price);
-        return ResponseEntity.ok(productApiMapper.toProductResponseList(results));
+        return ResponseEntity.ok(results.stream().map(this::toProductResponse).toList());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(productApiMapper.toProductResponse(productService.findById(id)));
+        return ResponseEntity.ok(toProductResponse(productService.findById(id)));
+    }
+
+    private ProductResponse toProductResponse(ProductResult result) {
+        return new ProductResponse(
+                result.id(),
+                result.name(),
+                result.description(),
+                result.price(),
+                result.stock(),
+                result.createdAt(),
+                result.updatedAt(),
+                result.version());
     }
 }

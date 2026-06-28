@@ -12,6 +12,7 @@ CREATE TABLE customer_order (
     id BIGSERIAL PRIMARY KEY,
     customer_name VARCHAR(255) NOT NULL,
     status VARCHAR(50) NOT NULL,
+    ordered_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     total_amount DECIMAL(19, 2) NOT NULL
 );
 

@@ -3,9 +3,10 @@ package com.example.ecapi.controller.admin.product;
 import com.example.ecapi.controller.customer.product.dto.CreateProductRequest;
 import com.example.ecapi.controller.customer.product.dto.ProductResponse;
 import com.example.ecapi.controller.customer.product.dto.UpdateProductRequest;
-import com.example.ecapi.controller.customer.product.mapper.ProductApiMapper;
 import com.example.ecapi.service.product.ProductService;
+import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
+import com.example.ecapi.service.product.dto.UpdateProduct;
 import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.util.List;
@@ -20,7 +21,6 @@ import org.springframework.web.bind.annotation.*;
 public class AdminProductController {
 
     private final ProductService productService;
-    private final ProductApiMapper productApiMapper;
 
     /**
      * 全商品を取得、または検索条件に合致する商品を取得します。 検索条件が複数指定された場合はAND条件で検索されます。
@@ -38,20 +38,19 @@ public class AdminProductController {
         name = name == null ? null : name.trim();
         description = description == null ? null : description.trim();
         List<ProductResult> results = productService.searchProducts(name, description, price);
-        return ResponseEntity.ok(productApiMapper.toProductResponseList(results));
+        return ResponseEntity.ok(results.stream().map(this::toProductResponse).toList());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<ProductResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(productApiMapper.toProductResponse(productService.findById(id)));
+        return ResponseEntity.ok(toProductResponse(productService.findById(id)));
     }
 
     @PostMapping
     public ResponseEntity<ProductResponse> create(
             @Valid @RequestBody CreateProductRequest request) {
-        ProductResult result = productService.create(productApiMapper.toCreateProduct(request));
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(productApiMapper.toProductResponse(result));
+        ProductResult result = productService.create(toCreateProduct(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toProductResponse(result));
     }
 
     @PutMapping("/{id}")
@@ -60,13 +59,58 @@ public class AdminProductController {
         if (!id.equals(request.id())) {
             throw new IllegalArgumentException("Path variable id and request body id must match.");
         }
-        ProductResult result = productService.update(productApiMapper.toUpdateProduct(request));
-        return ResponseEntity.ok(productApiMapper.toProductResponse(result));
+        ProductResult result = productService.update(toUpdateProduct(request));
+        return ResponseEntity.ok(toProductResponse(result));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         productService.delete(id);
         return ResponseEntity.noContent().build();
+    }
+
+    /**
+     * ProductResultをProductResponseに変換します。
+     *
+     * @param result
+     * @return
+     */
+    private ProductResponse toProductResponse(ProductResult result) {
+        return new ProductResponse(
+                result.id(),
+                result.name(),
+                result.description(),
+                result.price(),
+                result.stock(),
+                result.createdAt(),
+                result.updatedAt(),
+                result.version());
+    }
+
+    /**
+     * CreateProductRequestをCreateProductに変換します。
+     *
+     * @param request
+     * @return
+     */
+    private CreateProduct toCreateProduct(CreateProductRequest request) {
+        return new CreateProduct(
+                request.name(), request.description(), request.price(), request.stock());
+    }
+
+    /**
+     * UpdateProductRequestをUpdateProductに変換します。
+     *
+     * @param request
+     * @return
+     */
+    private UpdateProduct toUpdateProduct(UpdateProductRequest request) {
+        return new UpdateProduct(
+                request.id(),
+                request.name(),
+                request.description(),
+                request.price(),
+                request.stock(),
+                request.version());
     }
 }

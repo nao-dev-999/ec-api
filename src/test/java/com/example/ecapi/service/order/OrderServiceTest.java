@@ -21,7 +21,6 @@ import com.example.ecapi.service.order.dto.OrderResult;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -60,6 +59,7 @@ class OrderServiceTest {
         customerOrder.setCustomerName("Test Customer");
         customerOrder.setStatus(OrderStatus.PENDING);
         customerOrder.setTotalAmount(BigDecimal.valueOf(200.00));
+        customerOrder.setOrderedAt(Instant.now());
         customerOrder.setCreatedAt(Instant.now());
         customerOrder.setUpdatedAt(Instant.now());
         customerOrder.setVersion(1);
@@ -83,10 +83,11 @@ class OrderServiceTest {
         @Test
         @DisplayName("全注文を取得できること")
         void shouldReturnAllOrders() {
+            when(orderRepository.findAll()).thenReturn(List.of(customerOrder));
             List<OrderResult> result = orderService.findAll();
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).id()).isEqualTo(1L);
-            assertThat(result.get(0).customerName()).isEqualTo("Test Customer");
+            assertThat(result.getFirst().id()).isEqualTo(1L);
+            assertThat(result.getFirst().customerName()).isEqualTo("Test Customer");
         }
 
         @Test
@@ -104,6 +105,7 @@ class OrderServiceTest {
         @Test
         @DisplayName("指定したIDの注文を取得できること")
         void shouldReturnOrderById() {
+            when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
             OrderResult result = orderService.findById(1L);
             assertThat(result.id()).isEqualTo(1L);
             assertThat(result.customerName()).isEqualTo("Test Customer");
@@ -129,6 +131,8 @@ class OrderServiceTest {
         void shouldCreateOrder() {
             CreateOrder createOrder =
                     new CreateOrder("0001", "Test Customer", List.of(new CreateOrderItem(1L, 2)));
+            when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+            when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
             OrderResult result = orderService.create(createOrder);
             assertThat(result.id()).isEqualTo(1L);
             assertThat(result.customerName()).isEqualTo("Test Customer");
@@ -228,7 +232,7 @@ class OrderServiceTest {
 
             OrderResult result = orderService.cancel(1L);
 
-            assertThat(result.status()).isEqualTo("CANCELLED");
+            assertThat(result.status()).isEqualTo(OrderStatus.CANCELLED);
             verify(orderRepository).save(customerOrder);
         }
 

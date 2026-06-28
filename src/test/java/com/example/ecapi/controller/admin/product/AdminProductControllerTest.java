@@ -1,7 +1,6 @@
 package com.example.ecapi.controller.admin.product;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -10,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.ecapi.controller.customer.product.dto.CreateProductRequest;
 import com.example.ecapi.controller.customer.product.dto.ProductResponse;
 import com.example.ecapi.controller.customer.product.dto.UpdateProductRequest;
-import com.example.ecapi.controller.customer.product.mapper.ProductApiMapper;
 import com.example.ecapi.exception.GlobalExceptionHandler;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.helper.MessageHelper;
@@ -42,7 +40,6 @@ import tools.jackson.databind.json.JsonMapper;
 class AdminProductControllerTest {
 
     @MockitoBean private ProductService productService;
-    @MockitoBean private ProductApiMapper productApiMapper;
     @MockitoBean private MessageHelper messageHelper;
     @Autowired private JsonMapper jsonMapper;
     @Autowired private MockMvc mockMvc;
@@ -82,8 +79,6 @@ class AdminProductControllerTest {
         void shouldGetAllProductsWithoutCriteria() throws Exception {
             when(productService.searchProducts(null, null, null))
                     .thenReturn(List.of(productResult));
-            when(productApiMapper.toProductResponseList(any()))
-                    .thenReturn(List.of(productResponse));
 
             mockMvc.perform(get("/api/admin/products"))
                     .andExpect(status().isOk())
@@ -100,8 +95,6 @@ class AdminProductControllerTest {
 
             when(productService.searchProducts(name, description, price))
                     .thenReturn(List.of(productResult));
-            when(productApiMapper.toProductResponseList(any()))
-                    .thenReturn(List.of(productResponse));
 
             mockMvc.perform(
                             get("/api/admin/products")
@@ -118,7 +111,6 @@ class AdminProductControllerTest {
         void shouldReturnEmptyListWhenNoProductsFound() throws Exception {
             when(productService.searchProducts(any(), any(), any()))
                     .thenReturn(Collections.emptyList());
-            when(productApiMapper.toProductResponseList(any())).thenReturn(Collections.emptyList());
 
             mockMvc.perform(get("/api/admin/products"))
                     .andExpect(status().isOk())
@@ -133,7 +125,6 @@ class AdminProductControllerTest {
         @DisplayName("指定したIDの商品を取得できること")
         void shouldGetProductById() throws Exception {
             when(productService.findById(1L)).thenReturn(productResult);
-            when(productApiMapper.toProductResponse(any())).thenReturn(productResponse);
 
             mockMvc.perform(get("/api/admin/products/{id}", 1L))
                     .andExpect(status().isOk())
@@ -162,12 +153,7 @@ class AdminProductControllerTest {
                     new CreateProductRequest(
                             "New Product", "New Desc", BigDecimal.valueOf(200.00), 20);
 
-            when(productApiMapper.toCreateProduct(any(CreateProductRequest.class)))
-                    .thenReturn(
-                            new CreateProduct(
-                                    "New Product", "New Desc", BigDecimal.valueOf(200.00), 20));
             when(productService.create(any(CreateProduct.class))).thenReturn(productResult);
-            when(productApiMapper.toProductResponse(any())).thenReturn(productResponse);
 
             mockMvc.perform(
                             post("/api/admin/products")
@@ -203,18 +189,14 @@ class AdminProductControllerTest {
         void shouldUpdateProduct() throws Exception {
             UpdateProductRequest request =
                     new UpdateProductRequest(
-                            1L, "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
+                            1L,
+                            "Updated Product",
+                            "Updated Desc",
+                            BigDecimal.valueOf(120.00),
+                            15,
+                            1);
 
-            when(productApiMapper.toUpdateProduct(any(UpdateProductRequest.class)))
-                    .thenReturn(
-                            new UpdateProduct(
-                                    1L,
-                                    "Updated Product",
-                                    "Updated Desc",
-                                    BigDecimal.valueOf(120.00),
-                                    15,
-                                    1));
-            when(productApiMapper.toProductResponse(any())).thenReturn(productResponse);
+            when(productService.update(any(UpdateProduct.class))).thenReturn(productResult);
 
             mockMvc.perform(
                             put("/api/admin/products/{id}", 1L)
@@ -230,17 +212,16 @@ class AdminProductControllerTest {
         void shouldReturnNotFoundWhenUpdatingNonExistentProduct() throws Exception {
             UpdateProductRequest request =
                     new UpdateProductRequest(
-                            1L, "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
+                            99L,
+                            "Updated Product",
+                            "Updated Desc",
+                            BigDecimal.valueOf(120.00),
+                            15,
+                            1);
 
-            when(productApiMapper.toUpdateProduct(any(UpdateProductRequest.class)))
-                    .thenReturn(
-                            new UpdateProduct(
-                                    1L,
-                                    "Updated Product",
-                                    "Updated Desc",
-                                    BigDecimal.valueOf(120.00),
-                                    15,
-                                    1));
+            doThrow(new ProductNotFoundException("Product not found"))
+                    .when(productService)
+                    .update(any(UpdateProduct.class));
 
             mockMvc.perform(
                             put("/api/admin/products/{id}", 99L)
@@ -254,17 +235,12 @@ class AdminProductControllerTest {
         void shouldReturnConflictWhenOptimisticLockExceptionOccurs() throws Exception {
             UpdateProductRequest request =
                     new UpdateProductRequest(
-                            1L, "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
-
-            when(productApiMapper.toUpdateProduct(any(UpdateProductRequest.class)))
-                    .thenReturn(
-                            new UpdateProduct(
-                                    1L,
-                                    "Updated Product",
-                                    "Updated Desc",
-                                    BigDecimal.valueOf(120.00),
-                                    15,
-                                    1));
+                            1L,
+                            "Updated Product",
+                            "Updated Desc",
+                            BigDecimal.valueOf(120.00),
+                            15,
+                            1);
 
             doThrow(new OptimisticLockException("Optimistic lock failed"))
                     .when(productService)

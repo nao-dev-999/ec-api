@@ -16,6 +16,7 @@ import com.example.ecapi.service.order.dto.OrderResult;
 import com.example.ecapi.service.order.dto.OrderResultItem;
 import jakarta.persistence.OptimisticLockException;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
@@ -77,6 +78,7 @@ public class OrderService {
         CustomerOrder order = new CustomerOrder();
         order.setCustomerName(createOrder.customerName());
         order.setStatus(OrderStatus.PENDING);
+        order.setOrderedAt(Instant.now());
 
         for (CreateOrderItem item : createOrder.items()) {
             Product product =
@@ -180,27 +182,23 @@ public class OrderService {
      * @return 注文結果 DTO
      */
     private OrderResult toOrderResult(CustomerOrder customerOrder) {
-        OrderResult result =
-                new OrderResult(
-                        customerOrder.getId(),
-                        customerOrder.getCustomerName(),
-                        customerOrder.getStatus(),
-                        customerOrder.getTotalAmount(),
-                        customerOrder.getItems().stream()
-                                .map(
-                                        item ->
-                                                new OrderResultItem(
-                                                        item.getProduct().getId(),
-                                                        item.getProduct().getName(),
-                                                        item.getQuantity(),
-                                                        item.getUnitPrice(),
-                                                        item.getSubtotal()))
-                                .toList(),
-                        LocalDateTime.ofInstant(
-                                customerOrder.getOrderedAt(), ZoneId.systemDefault()),
-                        LocalDateTime.ofInstant(
-                                customerOrder.getUpdatedAt(), ZoneId.systemDefault()),
-                        customerOrder.getVersion());
-        return result;
+        return new OrderResult(
+                customerOrder.getId(),
+                customerOrder.getCustomerName(),
+                customerOrder.getStatus(),
+                customerOrder.getTotalAmount(),
+                customerOrder.getItems().stream()
+                        .map(
+                                item ->
+                                        new OrderResultItem(
+                                                item.getProduct().getId(),
+                                                item.getProduct().getName(),
+                                                item.getQuantity(),
+                                                item.getUnitPrice(),
+                                                item.getSubtotal()))
+                        .toList(),
+                LocalDateTime.ofInstant(customerOrder.getOrderedAt(), ZoneId.systemDefault()),
+                LocalDateTime.ofInstant(customerOrder.getUpdatedAt(), ZoneId.systemDefault()),
+                customerOrder.getVersion());
     }
 }
