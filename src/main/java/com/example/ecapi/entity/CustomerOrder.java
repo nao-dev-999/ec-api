@@ -3,6 +3,7 @@ package com.example.ecapi.entity;
 import com.example.ecapi.constant.OrderStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.*;
@@ -25,6 +26,9 @@ public class CustomerOrder extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus status;
+
+    @Column(name = "ordered_at", updatable = false, nullable = false)
+    private Instant orderedAt;
 
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;

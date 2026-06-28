@@ -57,7 +57,10 @@ public class AdminProductController {
     @PutMapping("/{id}")
     public ResponseEntity<ProductResponse> update(
             @PathVariable Long id, @Valid @RequestBody UpdateProductRequest request) {
-        ProductResult result = productService.update(id, productApiMapper.toUpdateProduct(request));
+        if (!id.equals(request.id())) {
+            throw new IllegalArgumentException("Path variable id and request body id must match.");
+        }
+        ProductResult result = productService.update(productApiMapper.toUpdateProduct(request));
         return ResponseEntity.ok(productApiMapper.toProductResponse(result));
     }
 

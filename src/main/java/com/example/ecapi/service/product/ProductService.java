@@ -8,9 +8,10 @@ import com.example.ecapi.repository.ProductSpecification;
 import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
 import com.example.ecapi.service.product.dto.UpdateProduct;
-import com.example.ecapi.service.product.mapper.ProductEntityMapper;
 import jakarta.persistence.OptimisticLockException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Sort;
@@ -30,7 +31,6 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final ProductEntityMapper productEntityMapper;
     private final MessageHelper messageHelper;
 
     /**
@@ -40,7 +40,7 @@ public class ProductService {
      */
     public List<ProductResult> findAll() {
         List<Product> products = productRepository.findAll();
-        return productEntityMapper.toProductResultList(products);
+        return products.stream().map(this::toProductResult).toList();
     }
 
     /**
@@ -57,10 +57,8 @@ public class ProductService {
                         .orElseThrow(
                                 () ->
                                         new ProductNotFoundException(
-                                                messageHelper.get(
-                                                        "product.notFound",
-                                                        id))); // メッセージをプロパティファイルから取得
-        return productEntityMapper.toProductResult(product);
+                                                messageHelper.get("product.notFound", id)));
+        return toProductResult(product);
     }
 
     /**
@@ -74,7 +72,7 @@ public class ProductService {
     public List<ProductResult> searchProducts(String name, String description, BigDecimal price) {
         Specification<Product> spec = ProductSpecification.byCriteria(name, description, price);
         List<Product> products = productRepository.findAll(spec, Sort.by("name").ascending());
-        return productEntityMapper.toProductResultList(products);
+        return products.stream().map(this::toProductResult).toList();
     }
 
     /**
@@ -85,32 +83,29 @@ public class ProductService {
      */
     @Transactional
     public ProductResult create(CreateProduct createProduct) {
-        Product product = productEntityMapper.toProduct(createProduct);
-        return productEntityMapper.toProductResult(productRepository.save(product));
+        Product product = toProduct(createProduct);
+        return toProductResult(productRepository.save(product));
     }
 
     /**
      * 指定されたIDの商品情報を更新します。 楽観ロックを適用するため、{@code updateProduct} には現在の {@code version} を含める必要があります。
      *
-     * @param id 更新対象の商品ID
      * @param updateProduct 更新する商品の情報 {@link UpdateProduct} (version フィールドを含む)
      * @return 更新された商品情報 {@link ProductResult}
      * @throws ProductNotFoundException 指定されたIDの商品が見つからない場合
      * @throws OptimisticLockException 楽観ロックの競合が発生した場合（他のトランザクションによって既に更新されている場合）
      */
     @Transactional
-    public ProductResult update(Long id, UpdateProduct updateProduct) {
+    public ProductResult update(UpdateProduct updateProduct) {
         Product product =
                 productRepository
-                        .findById(id)
+                        .findById(updateProduct.id())
                         .orElseThrow(
                                 () ->
                                         new ProductNotFoundException(
                                                 messageHelper.get(
-                                                        "product.notFound",
-                                                        id))); // メッセージをプロパティファイルから取得
-        productEntityMapper.updateProductFromUpdate(updateProduct, product);
-        return productEntityMapper.toProductResult(productRepository.save(product));
+                                                        "product.notFound", updateProduct.id())));
+        return toProductResult(productRepository.save(toProduct(updateProduct)));
     }
 
     /**
@@ -126,5 +121,53 @@ public class ProductService {
                     messageHelper.get("product.notFound", id)); // メッセージをプロパティファイルから取得
         }
         productRepository.deleteById(id);
+    }
+
+    /**
+     * CreateProduct DTO を Product エンティティに変換します。
+     *
+     * @param createProduct
+     * @return
+     */
+    private Product toProduct(CreateProduct createProduct) {
+        Product product = new Product();
+        product.setName(createProduct.name());
+        product.setDescription(createProduct.description());
+        product.setPrice(createProduct.price());
+        product.setStock(createProduct.stock());
+        return product;
+    }
+
+    /**
+     * UpdateProduct DTO を Product エンティティに変換します。
+     *
+     * @param updateProduct
+     * @return
+     */
+    private Product toProduct(UpdateProduct updateProduct) {
+        Product product = new Product();
+        product.setName(updateProduct.name());
+        product.setDescription(updateProduct.description());
+        product.setPrice(updateProduct.price());
+        product.setStock(updateProduct.stock());
+        return product;
+    }
+
+    /**
+     * Product エンティティを ProductResult DTO に変換します。
+     *
+     * @param product Product エンティティ
+     * @return ProductResult DTO
+     */
+    private ProductResult toProductResult(Product product) {
+        return new ProductResult(
+                product.getId(),
+                product.getName(),
+                product.getDescription(),
+                product.getPrice(),
+                product.getStock(),
+                LocalDateTime.ofInstant(product.getCreatedAt(), ZoneId.systemDefault()),
+                LocalDateTime.ofInstant(product.getUpdatedAt(), ZoneId.systemDefault()),
+                product.getVersion());
     }
 }

@@ -203,17 +203,17 @@ class AdminProductControllerTest {
         void shouldUpdateProduct() throws Exception {
             UpdateProductRequest request =
                     new UpdateProductRequest(
-                            "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
+                            1L, "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
 
             when(productApiMapper.toUpdateProduct(any(UpdateProductRequest.class)))
                     .thenReturn(
                             new UpdateProduct(
+                                    1L,
                                     "Updated Product",
                                     "Updated Desc",
                                     BigDecimal.valueOf(120.00),
                                     15,
                                     1));
-            when(productService.update(eq(1L), any(UpdateProduct.class))).thenReturn(productResult);
             when(productApiMapper.toProductResponse(any())).thenReturn(productResponse);
 
             mockMvc.perform(
@@ -230,20 +230,17 @@ class AdminProductControllerTest {
         void shouldReturnNotFoundWhenUpdatingNonExistentProduct() throws Exception {
             UpdateProductRequest request =
                     new UpdateProductRequest(
-                            "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
+                            1L, "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
 
             when(productApiMapper.toUpdateProduct(any(UpdateProductRequest.class)))
                     .thenReturn(
                             new UpdateProduct(
+                                    1L,
                                     "Updated Product",
                                     "Updated Desc",
                                     BigDecimal.valueOf(120.00),
                                     15,
                                     1));
-
-            doThrow(new ProductNotFoundException("Product not found"))
-                    .when(productService)
-                    .update(eq(99L), any(UpdateProduct.class));
 
             mockMvc.perform(
                             put("/api/admin/products/{id}", 99L)
@@ -257,11 +254,12 @@ class AdminProductControllerTest {
         void shouldReturnConflictWhenOptimisticLockExceptionOccurs() throws Exception {
             UpdateProductRequest request =
                     new UpdateProductRequest(
-                            "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
+                            1L, "Updated Product", "Updated Desc", BigDecimal.valueOf(120.00), 15, 1);
 
             when(productApiMapper.toUpdateProduct(any(UpdateProductRequest.class)))
                     .thenReturn(
                             new UpdateProduct(
+                                    1L,
                                     "Updated Product",
                                     "Updated Desc",
                                     BigDecimal.valueOf(120.00),
@@ -270,7 +268,7 @@ class AdminProductControllerTest {
 
             doThrow(new OptimisticLockException("Optimistic lock failed"))
                     .when(productService)
-                    .update(eq(1L), any(UpdateProduct.class));
+                    .update(any(UpdateProduct.class));
 
             mockMvc.perform(
                             put("/api/admin/products/{id}", 1L)

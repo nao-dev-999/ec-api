@@ -18,8 +18,8 @@ import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.CreateOrderItem;
 import com.example.ecapi.service.order.dto.OrderResult;
-import com.example.ecapi.service.order.mapper.OrderEntityMapper;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -38,7 +38,6 @@ class OrderServiceTest {
 
     @Mock private CustomerOrderRepository orderRepository;
     @Mock private ProductRepository productRepository;
-    @Mock private OrderEntityMapper orderEntityMapper;
     @Mock private MessageHelper messageHelper;
 
     @InjectMocks private OrderService orderService;
@@ -61,15 +60,15 @@ class OrderServiceTest {
         customerOrder.setCustomerName("Test Customer");
         customerOrder.setStatus(OrderStatus.PENDING);
         customerOrder.setTotalAmount(BigDecimal.valueOf(200.00));
-        customerOrder.setCreatedAt(LocalDateTime.now());
-        customerOrder.setUpdatedAt(LocalDateTime.now());
+        customerOrder.setCreatedAt(Instant.now());
+        customerOrder.setUpdatedAt(Instant.now());
         customerOrder.setVersion(1);
 
         orderResult =
                 new OrderResult(
                         1L,
                         "Test Customer",
-                        "PENDING",
+                        OrderStatus.PENDING,
                         BigDecimal.valueOf(200.00),
                         List.of(),
                         LocalDateTime.now(),
@@ -84,11 +83,7 @@ class OrderServiceTest {
         @Test
         @DisplayName("全注文を取得できること")
         void shouldReturnAllOrders() {
-            when(orderRepository.findAll()).thenReturn(List.of(customerOrder));
-            when(orderEntityMapper.toOrderResultList(any())).thenReturn(List.of(orderResult));
-
             List<OrderResult> result = orderService.findAll();
-
             assertThat(result).hasSize(1);
             assertThat(result.get(0).id()).isEqualTo(1L);
             assertThat(result.get(0).customerName()).isEqualTo("Test Customer");
@@ -97,11 +92,7 @@ class OrderServiceTest {
         @Test
         @DisplayName("注文が0件の場合、空のリストを返すこと")
         void shouldReturnEmptyListWhenNoOrders() {
-            when(orderRepository.findAll()).thenReturn(Collections.emptyList());
-            when(orderEntityMapper.toOrderResultList(any())).thenReturn(Collections.emptyList());
-
             List<OrderResult> result = orderService.findAll();
-
             assertThat(result).isEmpty();
         }
     }
@@ -113,11 +104,7 @@ class OrderServiceTest {
         @Test
         @DisplayName("指定したIDの注文を取得できること")
         void shouldReturnOrderById() {
-            when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
-            when(orderEntityMapper.toOrderResult(customerOrder)).thenReturn(orderResult);
-
             OrderResult result = orderService.findById(1L);
-
             assertThat(result.id()).isEqualTo(1L);
             assertThat(result.customerName()).isEqualTo("Test Customer");
         }
@@ -141,14 +128,8 @@ class OrderServiceTest {
         @DisplayName("注文を正常に作成できること")
         void shouldCreateOrder() {
             CreateOrder createOrder =
-                    new CreateOrder("Test Customer", List.of(new CreateOrderItem(1L, 2)));
-
-            when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-            when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
-            when(orderEntityMapper.toOrderResult(any(CustomerOrder.class))).thenReturn(orderResult);
-
+                    new CreateOrder("0001", "Test Customer", List.of(new CreateOrderItem(1L, 2)));
             OrderResult result = orderService.create(createOrder);
-
             assertThat(result.id()).isEqualTo(1L);
             assertThat(result.customerName()).isEqualTo("Test Customer");
             verify(orderRepository).save(any(CustomerOrder.class));
@@ -158,7 +139,7 @@ class OrderServiceTest {
         @DisplayName("注文対象の商品が存在しない場合、ProductNotFoundException をスローすること")
         void shouldThrowExceptionWhenProductNotFound() {
             CreateOrder createOrder =
-                    new CreateOrder("Test Customer", List.of(new CreateOrderItem(99L, 2)));
+                    new CreateOrder("0001", "Test Customer", List.of(new CreateOrderItem(99L, 2)));
 
             when(productRepository.findById(99L)).thenReturn(Optional.empty());
             when(messageHelper.get(any(), any())).thenReturn("商品が見つかりません: 99");
@@ -172,7 +153,7 @@ class OrderServiceTest {
         void shouldThrowExceptionWhenStockInsufficient() {
             // stock=10 に対して quantity=20 を注文
             CreateOrder createOrder =
-                    new CreateOrder("Test Customer", List.of(new CreateOrderItem(1L, 20)));
+                    new CreateOrder("0001", "Test Customer", List.of(new CreateOrderItem(1L, 20)));
 
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
             when(messageHelper.get(any(), any(), any(), any())).thenReturn("在庫が不足しています");
@@ -185,11 +166,10 @@ class OrderServiceTest {
         @DisplayName("注文作成後に在庫が減算されること")
         void shouldDecrementStockAfterOrderCreation() {
             CreateOrder createOrder =
-                    new CreateOrder("Test Customer", List.of(new CreateOrderItem(1L, 3)));
+                    new CreateOrder("0001", "Test Customer", List.of(new CreateOrderItem(1L, 3)));
 
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
-            when(orderEntityMapper.toOrderResult(any(CustomerOrder.class))).thenReturn(orderResult);
 
             orderService.create(createOrder);
 
@@ -207,7 +187,6 @@ class OrderServiceTest {
         void shouldUpdateOrderStatus() {
             when(orderRepository.findById(1L)).thenReturn(Optional.of(customerOrder));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
-            when(orderEntityMapper.toOrderResult(any(CustomerOrder.class))).thenReturn(orderResult);
 
             OrderResult result = orderService.updateStatus(1L, OrderStatus.CONFIRMED);
 
@@ -237,7 +216,7 @@ class OrderServiceTest {
                     new OrderResult(
                             1L,
                             "Test Customer",
-                            "CANCELLED",
+                            OrderStatus.CANCELLED,
                             BigDecimal.valueOf(200.00),
                             List.of(),
                             LocalDateTime.now(),
@@ -246,8 +225,6 @@ class OrderServiceTest {
 
             when(orderRepository.findById(1L)).thenReturn(Optional.of(customerOrder));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
-            when(orderEntityMapper.toOrderResult(any(CustomerOrder.class)))
-                    .thenReturn(cancelledResult);
 
             OrderResult result = orderService.cancel(1L);
 
