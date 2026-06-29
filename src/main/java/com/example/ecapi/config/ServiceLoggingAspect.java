@@ -1,9 +1,6 @@
 package com.example.ecapi.config;
 
-import java.util.Arrays;
-import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.ProceedingJoinPoint;
-import org.aspectj.lang.annotation.AfterThrowing;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Pointcut;
@@ -15,32 +12,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class ServiceLoggingAspect {
 
-    // com.example.ecapi.service パッケージ内のすべてのクラスのすべてのメソッドを対象とする
     @Pointcut("execution(* com.example.ecapi.service..*.*(..))")
     public void serviceMethods() {}
 
     @Around("serviceMethods()")
     public Object logAround(ProceedingJoinPoint joinPoint) throws Throwable {
-        Class<?> targetClass = joinPoint.getTarget().getClass();
-        Logger log = LoggerFactory.getLogger(targetClass);
-
-        String methodName = joinPoint.getSignature().toShortString();
-        String args = Arrays.toString(joinPoint.getArgs());
-
-        log.info("Service Method Start: {} with args {}", methodName, args);
-
-        Object result = joinPoint.proceed(); // メソッドの実行
-
-        log.info("Service Method End: {} with result {}", methodName, result);
-        return result;
-    }
-
-    @AfterThrowing(pointcut = "serviceMethods()", throwing = "error")
-    public void logAfterThrowing(JoinPoint joinPoint, Throwable error) {
-        Class<?> targetClass = joinPoint.getTarget().getClass();
-        Logger log = LoggerFactory.getLogger(targetClass);
-        String methodName = joinPoint.getSignature().toShortString();
-        log.error(
-                "Service Method Error: {} threw {}", methodName, error.getClass().getSimpleName());
+        Logger log = LoggerFactory.getLogger(joinPoint.getTarget().getClass());
+        String method = joinPoint.getSignature().toShortString();
+        long start = System.currentTimeMillis();
+        try {
+            Object result = joinPoint.proceed();
+            log.debug("method={} responseTimeMs={}", method, System.currentTimeMillis() - start);
+            return result;
+        } catch (Throwable t) {
+            // 例外は GlobalExceptionHandler でログを出すため、ここでは二重にしない
+            log.debug("method={} threw={}", method, t.getClass().getSimpleName());
+            throw t;
+        }
     }
 }

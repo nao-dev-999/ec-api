@@ -31,6 +31,17 @@
 | 削除 | `delete{Resource}` | `deleteProduct` |
 | キャンセル等の状態遷移 | 動詞 | `cancel`, `ship`, `complete` |
 
+## enum 定数名
+
+- `SCREAMING_SNAKE_CASE`（全大文字・アンダースコア区切り）を使用する
+- `{リソース}_{状態}` または `{理由}` の形式で命名する
+
+| 例 | 説明 |
+|---|---|
+| `PRODUCT_NOT_FOUND` | リソース + 状態 |
+| `INSUFFICIENT_STOCK` | 理由 |
+| `OPTIMISTIC_LOCK_CONFLICT` | カテゴリ + 理由 |
+
 ## フィールド名
 
 - `camelCase` を使用する

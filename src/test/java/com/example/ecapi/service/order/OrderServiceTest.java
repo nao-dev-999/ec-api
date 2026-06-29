@@ -12,7 +12,6 @@ import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.InsufficientStockException;
 import com.example.ecapi.exception.OrderNotFoundException;
 import com.example.ecapi.exception.ProductNotFoundException;
-import com.example.ecapi.helper.MessageHelper;
 import com.example.ecapi.repository.CustomerOrderRepository;
 import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.service.order.dto.CreateOrder;
@@ -31,13 +30,13 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
 
     @Mock private CustomerOrderRepository orderRepository;
     @Mock private ProductRepository productRepository;
-    @Mock private MessageHelper messageHelper;
 
     @InjectMocks private OrderService orderService;
 
@@ -60,8 +59,8 @@ class OrderServiceTest {
         customerOrder.setStatus(OrderStatus.PENDING);
         customerOrder.setTotalAmount(BigDecimal.valueOf(200.00));
         customerOrder.setOrderedAt(Instant.now());
-        customerOrder.setCreatedAt(Instant.now());
-        customerOrder.setUpdatedAt(Instant.now());
+        ReflectionTestUtils.setField(customerOrder, "createdAt", Instant.now());
+        ReflectionTestUtils.setField(customerOrder, "updatedAt", Instant.now());
         customerOrder.setVersion(1);
 
         orderResult =
@@ -115,7 +114,6 @@ class OrderServiceTest {
         @DisplayName("指定したIDの注文が見つからない場合、OrderNotFoundException をスローすること")
         void shouldThrowExceptionWhenOrderNotFound() {
             when(orderRepository.findByIdWithItems(99L)).thenReturn(Optional.empty());
-            when(messageHelper.get(any(), any())).thenReturn("注文が見つかりません: 99");
 
             assertThatThrownBy(() -> orderService.findById(99L))
                     .isInstanceOf(OrderNotFoundException.class);
@@ -146,7 +144,6 @@ class OrderServiceTest {
                     new CreateOrder("0001", "Test Customer", List.of(new CreateOrderItem(99L, 2)));
 
             when(productRepository.findById(99L)).thenReturn(Optional.empty());
-            when(messageHelper.get(any(), any())).thenReturn("商品が見つかりません: 99");
 
             assertThatThrownBy(() -> orderService.create(createOrder))
                     .isInstanceOf(ProductNotFoundException.class);
@@ -155,12 +152,10 @@ class OrderServiceTest {
         @Test
         @DisplayName("在庫が不足している場合、InsufficientStockException をスローすること")
         void shouldThrowExceptionWhenStockInsufficient() {
-            // stock=10 に対して quantity=20 を注文
             CreateOrder createOrder =
                     new CreateOrder("0001", "Test Customer", List.of(new CreateOrderItem(1L, 20)));
 
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-            when(messageHelper.get(any(), any(), any(), any())).thenReturn("在庫が不足しています");
 
             assertThatThrownBy(() -> orderService.create(createOrder))
                     .isInstanceOf(InsufficientStockException.class);
@@ -202,7 +197,6 @@ class OrderServiceTest {
         @DisplayName("指定したIDの注文が見つからない場合、OrderNotFoundException をスローすること")
         void shouldThrowExceptionWhenOrderNotFound() {
             when(orderRepository.findById(99L)).thenReturn(Optional.empty());
-            when(messageHelper.get(any(), any())).thenReturn("注文が見つかりません: 99");
 
             assertThatThrownBy(() -> orderService.updateStatus(99L, OrderStatus.CONFIRMED))
                     .isInstanceOf(OrderNotFoundException.class);
@@ -216,18 +210,7 @@ class OrderServiceTest {
         @Test
         @DisplayName("注文をキャンセルできること")
         void shouldCancelOrder() {
-            OrderResult cancelledResult =
-                    new OrderResult(
-                            1L,
-                            "Test Customer",
-                            OrderStatus.CANCELLED,
-                            BigDecimal.valueOf(200.00),
-                            List.of(),
-                            LocalDateTime.now(),
-                            LocalDateTime.now(),
-                            1);
-
-            when(orderRepository.findById(1L)).thenReturn(Optional.of(customerOrder));
+            when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
 
             OrderResult result = orderService.cancel(1L);
@@ -239,8 +222,7 @@ class OrderServiceTest {
         @Test
         @DisplayName("指定したIDの注文が見つからない場合、OrderNotFoundException をスローすること")
         void shouldThrowExceptionWhenOrderNotFound() {
-            when(orderRepository.findById(99L)).thenReturn(Optional.empty());
-            when(messageHelper.get(any(), any())).thenReturn("注文が見つかりません: 99");
+            when(orderRepository.findByIdWithItems(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> orderService.cancel(99L))
                     .isInstanceOf(OrderNotFoundException.class);

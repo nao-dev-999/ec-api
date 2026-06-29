@@ -8,7 +8,7 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
-    show-sql: true
+    show-sql: false
     properties:
       hibernate:
         format_sql: true
@@ -44,10 +44,8 @@ server:
 
 logging:
   level:
-    root: off
-    com.example: INFO # DEBUG から INFO に変更
-    org.hibernate.SQL: DEBUG
-    org.hibernate.orm.jdbc.bind: TRACE  # バインドパラメータをログ出力
+    root: WARN
+    com.example.ecapi: INFO
 
 springdoc:
   swagger-ui:

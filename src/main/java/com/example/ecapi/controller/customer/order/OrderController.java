@@ -41,9 +41,8 @@ public class OrderController {
      */
     @GetMapping
     public ResponseEntity<List<OrderResponse>> getAll() {
-        List<OrderResult> result = orderService.findAll();
-        List<OrderResponse> responses = result.stream().map(this::toOrderResponse).toList();
-        return ResponseEntity.ok(responses);
+        return ResponseEntity.ok(
+                orderService.findAll().stream().map(this::toOrderResponse).toList());
     }
 
     /**
@@ -54,8 +53,7 @@ public class OrderController {
      */
     @GetMapping("/{id}")
     public ResponseEntity<OrderResponse> getById(@PathVariable Long id) {
-        OrderResult result = orderService.findById(id);
-        return ResponseEntity.ok(toOrderResponse(result));
+        return ResponseEntity.ok(toOrderResponse(orderService.findById(id)));
     }
 
     /**
@@ -66,8 +64,7 @@ public class OrderController {
      */
     @PostMapping
     public ResponseEntity<OrderResponse> create(@Valid @RequestBody OrderRequest request) {
-        CreateOrder createOrder = toCreateOrder(request);
-        OrderResult result = orderService.create(createOrder);
+        OrderResult result = orderService.create(toCreateOrder(request));
         return ResponseEntity.status(HttpStatus.CREATED).body(toOrderResponse(result));
     }
 
@@ -90,12 +87,6 @@ public class OrderController {
         return ResponseEntity.ok(toOrderResponse(result));
     }
 
-    /**
-     * Convert OrderResult to OrderResponse
-     *
-     * @param result
-     * @return
-     */
     private OrderResponse toOrderResponse(OrderResult result) {
         return new OrderResponse(
                 result.id(),
@@ -117,12 +108,6 @@ public class OrderController {
                 result.version());
     }
 
-    /**
-     * Convert OrderRequest to CreateOrder
-     *
-     * @param request
-     * @return
-     */
     private CreateOrder toCreateOrder(OrderRequest request) {
         return new CreateOrder(
                 request.customerId(),

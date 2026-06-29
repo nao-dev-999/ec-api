@@ -1,8 +1,8 @@
 package com.example.ecapi.controller.admin.order;
 
 import com.example.ecapi.constant.OrderStatus;
-import com.example.ecapi.controller.customer.order.dto.OrderItemResponse;
-import com.example.ecapi.controller.customer.order.dto.OrderResponse;
+import com.example.ecapi.controller.admin.order.dto.AdminOrderItemResponse;
+import com.example.ecapi.controller.admin.order.dto.AdminOrderResponse;
 import com.example.ecapi.service.order.OrderService;
 import com.example.ecapi.service.order.dto.OrderResult;
 import java.util.List;
@@ -18,19 +18,18 @@ public class AdminOrderController {
     private final OrderService orderService;
 
     @GetMapping
-    public ResponseEntity<List<OrderResponse>> getAll() {
-        List<OrderResult> results = orderService.findAll();
-        List<OrderResponse> response = results.stream().map(this::toOrderResponse).toList();
-        return ResponseEntity.ok(response);
+    public ResponseEntity<List<AdminOrderResponse>> getAll() {
+        return ResponseEntity.ok(
+                orderService.findAll().stream().map(this::toAdminOrderResponse).toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(toOrderResponse(orderService.findById(id)));
+    public ResponseEntity<AdminOrderResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(toAdminOrderResponse(orderService.findById(id)));
     }
 
     @PatchMapping("/{id}/status")
-    public ResponseEntity<OrderResponse> updateStatus(
+    public ResponseEntity<AdminOrderResponse> updateStatus(
             @PathVariable Long id, @RequestParam OrderStatus status) {
         OrderResult result =
                 switch (status) {
@@ -38,17 +37,11 @@ public class AdminOrderController {
                             orderService.updateStatus(id, status);
                     case CANCELLED -> orderService.cancel(id);
                 };
-        return ResponseEntity.ok(toOrderResponse(result));
+        return ResponseEntity.ok(toAdminOrderResponse(result));
     }
 
-    /**
-     * Convert OrderResult to OrderResponse
-     *
-     * @param result
-     * @return
-     */
-    private OrderResponse toOrderResponse(OrderResult result) {
-        return new OrderResponse(
+    private AdminOrderResponse toAdminOrderResponse(OrderResult result) {
+        return new AdminOrderResponse(
                 result.id(),
                 result.customerName(),
                 result.status(),
@@ -56,7 +49,7 @@ public class AdminOrderController {
                 result.items().stream()
                         .map(
                                 i ->
-                                        new OrderItemResponse(
+                                        new AdminOrderItemResponse(
                                                 i.productId(),
                                                 i.productName(),
                                                 i.quantity(),

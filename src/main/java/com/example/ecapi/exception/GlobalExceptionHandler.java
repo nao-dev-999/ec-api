@@ -1,27 +1,18 @@
 package com.example.ecapi.exception;
 
 import com.example.ecapi.helper.MessageHelper;
-import jakarta.persistence.OptimisticLockException;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-/**
- * グローバル例外ハンドラー
- *
- * <p>API で発生した例外を適切な HTTP ステータスと JSON レスポンスに統一して変換する。 全ハンドラーが {@link ErrorResponse} を返す。
- */
 @Slf4j
 @RestControllerAdvice
 @RequiredArgsConstructor
@@ -29,87 +20,81 @@ public class GlobalExceptionHandler {
 
     private final MessageHelper messageHelper;
 
+    /**
+     * ビジネス例外（BusinessException のサブクラス全て）→ 各 status
+     *
+     * <p>ただし JPA の OptimisticLockException は BusinessException ではないため、別ハンドラーで処理する。
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusiness(BusinessException ex) {
+        log.warn("{}: code={}", ex.getClass().getSimpleName(), ex.getErrorCode());
+        String message = messageHelper.get(ex.getErrorCode().getMessageKey(), ex.getArgs());
+        return buildError(ex.getErrorCode(), message);
+    }
+
+    /**
+     * JPA の楽観ロック例外 → 409 Conflict
+     *
+     * <p>jakarta.persistence.OptimisticLockException は JPA フレームワークがスローするため
+     * BusinessException 階層の外にある。ここでメッセージを付与して 409 として返す。
+     */
+    @ExceptionHandler(jakarta.persistence.OptimisticLockException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(
+            jakarta.persistence.OptimisticLockException ex) {
+        log.warn("OptimisticLockException: {}", ex.getMessage());
+        return buildError(
+                ErrorCode.OPTIMISTIC_LOCK_CONFLICT,
+                messageHelper.get(ErrorCode.OPTIMISTIC_LOCK_CONFLICT.getMessageKey()));
+    }
+
     /** バリデーションエラー → 400 Bad Request */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse> handleValidation(
-            MethodArgumentNotValidException ex, WebRequest request) {
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
         Map<String, String> details =
                 ex.getBindingResult().getFieldErrors().stream()
                         .collect(
                                 Collectors.toMap(
                                         FieldError::getField,
                                         FieldError::getDefaultMessage,
-                                        (existing, duplicate) ->
-                                                existing)); // 同一フィールドに複数エラーがある場合は先勝ち
+                                        (existing, duplicate) -> existing));
         log.warn("Validation error: {}", details);
-        return buildError(HttpStatus.BAD_REQUEST, messageHelper.get("error.validation"), details);
-    }
-
-    /** 商品が見つからないエラー → 404 Not Found */
-    @ExceptionHandler(ProductNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleProductNotFoundException(
-            ProductNotFoundException ex, WebRequest request) {
-        log.warn("ProductNotFoundException: {}", ex.getMessage());
-        return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
-    }
-
-    /** 注文が見つからないエラー → 404 Not Found */
-    @ExceptionHandler(OrderNotFoundException.class)
-    public ResponseEntity<ErrorResponse> handleOrderNotFoundException(
-            OrderNotFoundException ex, WebRequest request) {
-        log.warn("OrderNotFoundException: {}", ex.getMessage());
-        return buildError(HttpStatus.NOT_FOUND, ex.getMessage());
-    }
-
-    /** 在庫不足エラー → 409 Conflict */
-    @ExceptionHandler(InsufficientStockException.class)
-    public ResponseEntity<ErrorResponse> handleInsufficientStockException(
-            InsufficientStockException ex, WebRequest request) {
-        log.warn("InsufficientStockException: {}", ex.getMessage());
-        return buildError(HttpStatus.CONFLICT, ex.getMessage());
+        return buildError(
+                ErrorCode.VALIDATION_ERROR,
+                messageHelper.get(ErrorCode.VALIDATION_ERROR.getMessageKey()),
+                details);
     }
 
     /** パスパラメータの型不正 → 400 Bad Request */
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(
-            MethodArgumentTypeMismatchException ex, WebRequest request) {
+            MethodArgumentTypeMismatchException ex) {
         log.warn("MethodArgumentTypeMismatchException: {}", ex.getMessage());
-        return buildError(HttpStatus.BAD_REQUEST, messageHelper.get("error.badRequest"));
+        return buildError(
+                ErrorCode.BAD_REQUEST, messageHelper.get(ErrorCode.BAD_REQUEST.getMessageKey()));
     }
 
-    /** 楽観的ロックエラー → 409 Conflict */
-    @ExceptionHandler(OptimisticLockException.class)
-    public ResponseEntity<ErrorResponse> handleBusiness(
-            OptimisticLockException ex, WebRequest request) {
-        log.warn("OptimisticLockException: {}", ex.getMessage());
-        return buildError(HttpStatus.CONFLICT, ex.getMessage());
-    }
-
-    /** その他サーバーエラー → 500 Internal Server Error */
+    /** 予期しない例外 → 500 Internal Server Error（詳細は隠してログに残す） */
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneral(Exception ex, WebRequest request) {
+    public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
         log.error("Unexpected exception occurred", ex);
-        return buildError(HttpStatus.INTERNAL_SERVER_ERROR, messageHelper.get("error.system"));
+        return buildError(
+                ErrorCode.SYSTEM_ERROR, messageHelper.get(ErrorCode.SYSTEM_ERROR.getMessageKey()));
     }
 
-    @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ErrorResponse> handleAuthException(AuthenticationException ex) {
-        return buildError(HttpStatus.UNAUTHORIZED, "error.authentication");
-    }
-
-    private ResponseEntity<ErrorResponse> buildError(HttpStatus status, String message) {
-        return buildError(status, message, null);
+    private ResponseEntity<ErrorResponse> buildError(ErrorCode code, String message) {
+        return buildError(code, message, null);
     }
 
     private ResponseEntity<ErrorResponse> buildError(
-            HttpStatus status, String message, Map<String, String> details) {
-        ErrorResponse body =
+            ErrorCode code, String message, Map<String, String> details) {
+        var body =
                 new ErrorResponse(
-                        LocalDateTime.now(),
-                        status.value(),
-                        status.getReasonPhrase(),
+                        Instant.now(),
+                        code.getStatus().value(),
+                        code.getStatus().getReasonPhrase(),
+                        code.name(),
                         message,
                         details);
-        return ResponseEntity.status(status).body(body);
+        return ResponseEntity.status(code.getStatus()).body(body);
     }
 }

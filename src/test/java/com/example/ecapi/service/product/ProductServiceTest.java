@@ -8,7 +8,6 @@ import static org.mockito.Mockito.when;
 
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.ProductNotFoundException;
-import com.example.ecapi.helper.MessageHelper;
 import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
@@ -29,12 +28,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class ProductServiceTest {
 
     @Mock private ProductRepository productRepository;
-    @Mock private MessageHelper messageHelper;
 
     @InjectMocks private ProductService productService;
 
@@ -49,8 +48,8 @@ class ProductServiceTest {
         product.setDescription("Description");
         product.setPrice(BigDecimal.valueOf(100.00));
         product.setStock(10);
-        product.setCreatedAt(Instant.now());
-        product.setUpdatedAt(Instant.now());
+        ReflectionTestUtils.setField(product, "createdAt", Instant.now());
+        ReflectionTestUtils.setField(product, "updatedAt", Instant.now());
         product.setVersion(1);
 
         productResult =
@@ -111,7 +110,6 @@ class ProductServiceTest {
         @DisplayName("指定したIDの商品が見つからない場合、ProductNotFoundException をスローすること")
         void shouldThrowExceptionWhenProductNotFound() {
             when(productRepository.findById(99L)).thenReturn(Optional.empty());
-            when(messageHelper.get(any(), any())).thenReturn("商品が見つかりません: 99");
 
             assertThatThrownBy(() -> productService.findById(99L))
                     .isInstanceOf(ProductNotFoundException.class);
@@ -215,7 +213,6 @@ class ProductServiceTest {
                             1);
 
             when(productRepository.findById(99L)).thenReturn(Optional.empty());
-            when(messageHelper.get(any(), any())).thenReturn("商品が見つかりません: 99");
 
             assertThatThrownBy(() -> productService.update(updateProduct))
                     .isInstanceOf(ProductNotFoundException.class);
@@ -240,7 +237,6 @@ class ProductServiceTest {
         @DisplayName("指定したIDの商品が見つからない場合、ProductNotFoundException をスローすること")
         void shouldThrowExceptionWhenProductNotFound() {
             when(productRepository.existsById(99L)).thenReturn(false);
-            when(messageHelper.get(any(), any())).thenReturn("商品が見つかりません: 99");
 
             assertThatThrownBy(() -> productService.delete(99L))
                     .isInstanceOf(ProductNotFoundException.class);

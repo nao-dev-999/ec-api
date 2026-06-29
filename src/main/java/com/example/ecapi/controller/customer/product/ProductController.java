@@ -10,20 +10,17 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /**
- * 商品 REST コントローラー
+ * 商品 REST コントローラー（顧客向け参照専用）
  *
- * <p>商品に関するCRUD操作と検索機能を提供するRESTful API。
+ * <p>商品の参照・検索機能を提供するRESTful API。
  *
  * <pre>
- * GET    /api/products                      全商品取得、または検索条件に合致する商品を取得
- * GET    /api/products?name=xxx             商品名で部分一致検索（大文字小文字無視）
- * GET    /api/products?description=xxx      商品説明で部分一致検索（大文字小文字無視）
- * GET    /api/products?price=xxx            価格が指定値以下の商品を検索
- *                                         （name, description, price はAND条件で検索）
- * GET    /api/products/{id}                 商品詳細
- * POST   /api/products                      商品登録
- * PUT    /api/products/{id}                 商品更新
- * DELETE /api/products/{id}                 商品削除
+ * GET    /api/customer/products                      全商品取得、または検索条件に合致する商品を取得
+ * GET    /api/customer/products?name=xxx             商品名で部分一致検索（大文字小文字無視）
+ * GET    /api/customer/products?description=xxx      商品説明で部分一致検索（大文字小文字無視）
+ * GET    /api/customer/products?price=xxx            価格が指定値以下の商品を検索
+ *                                                   （name, description, price はAND条件で検索）
+ * GET    /api/customer/products/{id}                 商品詳細
  * </pre>
  */
 @RestController
@@ -48,8 +45,10 @@ public class ProductController {
             @RequestParam(required = false) BigDecimal price) {
         name = name == null ? null : name.trim();
         description = description == null ? null : description.trim();
-        List<ProductResult> results = productService.searchProducts(name, description, price);
-        return ResponseEntity.ok(results.stream().map(this::toProductResponse).toList());
+        return ResponseEntity.ok(
+                productService.searchProducts(name, description, price).stream()
+                        .map(this::toProductResponse)
+                        .toList());
     }
 
     @GetMapping("/{id}")

@@ -6,9 +6,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.ecapi.controller.customer.product.dto.CreateProductRequest;
-import com.example.ecapi.controller.customer.product.dto.ProductResponse;
-import com.example.ecapi.controller.customer.product.dto.UpdateProductRequest;
+import com.example.ecapi.controller.admin.product.dto.AdminProductResponse;
+import com.example.ecapi.controller.admin.product.dto.CreateProductRequest;
+import com.example.ecapi.controller.admin.product.dto.UpdateProductRequest;
 import com.example.ecapi.exception.GlobalExceptionHandler;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.helper.MessageHelper;
@@ -45,7 +45,7 @@ class AdminProductControllerTest {
     @Autowired private MockMvc mockMvc;
 
     private ProductResult productResult;
-    private ProductResponse productResponse;
+    private AdminProductResponse productResponse;
 
     @BeforeEach
     void setUp() {
@@ -60,7 +60,7 @@ class AdminProductControllerTest {
                         LocalDateTime.now(),
                         1);
         productResponse =
-                new ProductResponse(
+                new AdminProductResponse(
                         1L,
                         "Test Product",
                         "Description",

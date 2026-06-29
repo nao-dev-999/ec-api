@@ -1,8 +1,8 @@
 package com.example.ecapi.controller.admin.product;
 
-import com.example.ecapi.controller.customer.product.dto.CreateProductRequest;
-import com.example.ecapi.controller.customer.product.dto.ProductResponse;
-import com.example.ecapi.controller.customer.product.dto.UpdateProductRequest;
+import com.example.ecapi.controller.admin.product.dto.AdminProductResponse;
+import com.example.ecapi.controller.admin.product.dto.CreateProductRequest;
+import com.example.ecapi.controller.admin.product.dto.UpdateProductRequest;
 import com.example.ecapi.service.product.ProductService;
 import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
@@ -31,36 +31,37 @@ public class AdminProductController {
      * @return 検索結果の商品リスト
      */
     @GetMapping
-    public ResponseEntity<List<ProductResponse>> getAll(
+    public ResponseEntity<List<AdminProductResponse>> getAll(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String description,
             @RequestParam(required = false) BigDecimal price) {
         name = name == null ? null : name.trim();
         description = description == null ? null : description.trim();
-        List<ProductResult> results = productService.searchProducts(name, description, price);
-        return ResponseEntity.ok(results.stream().map(this::toProductResponse).toList());
+        return ResponseEntity.ok(
+                productService.searchProducts(name, description, price).stream()
+                        .map(this::toAdminProductResponse)
+                        .toList());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ProductResponse> getById(@PathVariable Long id) {
-        return ResponseEntity.ok(toProductResponse(productService.findById(id)));
+    public ResponseEntity<AdminProductResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(toAdminProductResponse(productService.findById(id)));
     }
 
     @PostMapping
-    public ResponseEntity<ProductResponse> create(
+    public ResponseEntity<AdminProductResponse> create(
             @Valid @RequestBody CreateProductRequest request) {
         ProductResult result = productService.create(toCreateProduct(request));
-        return ResponseEntity.status(HttpStatus.CREATED).body(toProductResponse(result));
+        return ResponseEntity.status(HttpStatus.CREATED).body(toAdminProductResponse(result));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ProductResponse> update(
+    public ResponseEntity<AdminProductResponse> update(
             @PathVariable Long id, @Valid @RequestBody UpdateProductRequest request) {
         if (!id.equals(request.id())) {
             throw new IllegalArgumentException("Path variable id and request body id must match.");
         }
-        ProductResult result = productService.update(toUpdateProduct(request));
-        return ResponseEntity.ok(toProductResponse(result));
+        return ResponseEntity.ok(toAdminProductResponse(productService.update(toUpdateProduct(id, request))));
     }
 
     @DeleteMapping("/{id}")
@@ -69,14 +70,8 @@ public class AdminProductController {
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * ProductResultをProductResponseに変換します。
-     *
-     * @param result
-     * @return
-     */
-    private ProductResponse toProductResponse(ProductResult result) {
-        return new ProductResponse(
+    private AdminProductResponse toAdminProductResponse(ProductResult result) {
+        return new AdminProductResponse(
                 result.id(),
                 result.name(),
                 result.description(),
@@ -87,26 +82,14 @@ public class AdminProductController {
                 result.version());
     }
 
-    /**
-     * CreateProductRequestをCreateProductに変換します。
-     *
-     * @param request
-     * @return
-     */
     private CreateProduct toCreateProduct(CreateProductRequest request) {
         return new CreateProduct(
                 request.name(), request.description(), request.price(), request.stock());
     }
 
-    /**
-     * UpdateProductRequestをUpdateProductに変換します。
-     *
-     * @param request
-     * @return
-     */
-    private UpdateProduct toUpdateProduct(UpdateProductRequest request) {
+    private UpdateProduct toUpdateProduct(Long id, UpdateProductRequest request) {
         return new UpdateProduct(
-                request.id(),
+                id,
                 request.name(),
                 request.description(),
                 request.price(),

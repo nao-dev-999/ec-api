@@ -39,7 +39,7 @@ public class SecurityConfig {
                                         .requestMatchers("/api/auth/**")
                                         .permitAll()
                                         // 商品参照は全員可（作成・更新・削除は ADMIN のみ）
-                                        .requestMatchers("/api/products/**")
+                                        .requestMatchers("/api/customer/products/**")
                                         .permitAll()
                                         .requestMatchers("/api/orders/**")
                                         .authenticated()

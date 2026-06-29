@@ -47,3 +47,10 @@ public class ProductEntityMapper {
 
 - MapStructは使用しない（Spring Boot 4 + Java record との相性を慎重に評価するまで）
 - マッパーは `@Component` の POJO。ロジックを持たない変換のみ
+
+### マッパーを切り出す基準
+
+| 状況 | 方針 |
+|------|------|
+| 同じ変換ロジックが複数のクラスで使われる | `@Component` マッパークラスに切り出す |
+| 1つのクラスでしか使わない | コントローラーのプライベートメソッドで可 |
