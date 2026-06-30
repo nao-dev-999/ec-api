@@ -187,7 +187,7 @@ class OrderServiceTest {
             when(orderRepository.findById(1L)).thenReturn(Optional.of(customerOrder));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
 
-            OrderResult result = orderService.updateStatus(1L, OrderStatus.CONFIRMED);
+            OrderResult result = orderService.updateStatus(1L, OrderStatus.CONFIRMED, 0);
 
             assertThat(result).isNotNull();
             verify(orderRepository).save(customerOrder);
@@ -198,7 +198,7 @@ class OrderServiceTest {
         void shouldThrowExceptionWhenOrderNotFound() {
             when(orderRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> orderService.updateStatus(99L, OrderStatus.CONFIRMED))
+            assertThatThrownBy(() -> orderService.updateStatus(99L, OrderStatus.CONFIRMED, 0))
                     .isInstanceOf(OrderNotFoundException.class);
         }
     }
@@ -213,7 +213,7 @@ class OrderServiceTest {
             when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
 
-            OrderResult result = orderService.cancel(1L);
+            OrderResult result = orderService.cancel(1L, 0);
 
             assertThat(result.status()).isEqualTo(OrderStatus.CANCELLED);
             verify(orderRepository).save(customerOrder);
@@ -224,7 +224,7 @@ class OrderServiceTest {
         void shouldThrowExceptionWhenOrderNotFound() {
             when(orderRepository.findByIdWithItems(99L)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> orderService.cancel(99L))
+            assertThatThrownBy(() -> orderService.cancel(99L, 0))
                     .isInstanceOf(OrderNotFoundException.class);
         }
     }

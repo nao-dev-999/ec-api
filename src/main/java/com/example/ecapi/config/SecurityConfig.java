@@ -1,5 +1,7 @@
 package com.example.ecapi.config;
 
+import com.example.ecapi.filter.RequestLoggingFilter;
+import com.example.ecapi.filter.RequestTracingFilter;
 import com.example.ecapi.helper.MessageHelper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +18,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextHolderFilter;
 
 @Configuration
 @EnableWebSecurity
@@ -54,7 +57,7 @@ public class SecurityConfig {
                                                     response.setStatus(
                                                             HttpServletResponse.SC_UNAUTHORIZED);
                                                     response.setContentType(
-                                                            "application/json;charset=UTF-8");
+                                                            "application/json");
                                                     response.getWriter()
                                                             .write(
                                                                     """
@@ -70,7 +73,7 @@ public class SecurityConfig {
                                                     response.setStatus(
                                                             HttpServletResponse.SC_FORBIDDEN);
                                                     response.setContentType(
-                                                            "application/json;charset=UTF-8");
+                                                            "application/json");
                                                     response.getWriter()
                                                             .write(
                                                                     """
@@ -81,6 +84,9 @@ public class SecurityConfig {
                                                                                             .get(
                                                                                                     "error.forbidden")));
                                                 }));
+
+        http.addFilterBefore(new RequestTracingFilter(), SecurityContextHolderFilter.class);
+        http.addFilterAfter(new RequestLoggingFilter(), RequestTracingFilter.class);
 
         return http.build();
     }

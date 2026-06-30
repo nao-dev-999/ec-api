@@ -1,9 +1,6 @@
 spring:
   datasource:
     url: jdbc:postgresql://localhost:5432/ec_db
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
@@ -40,17 +37,9 @@ server:
         name: SESSION
         http-only: true
         secure: true
-        same-site: Lax  # 要件により Strict/None
+        same-site: Lax
 
 logging:
   level:
     root: WARN
     com.example.ecapi: INFO
-
-springdoc:
-  swagger-ui:
-    path: /swagger-ui.html      # アクセスURL
-    tags-sorter: alpha           # タグをアルファベット順に並べる
-    operations-sorter: method    # GET→POST→PUT→DELETE順に並べる
-  api-docs:
-    path: /v3/api-docs

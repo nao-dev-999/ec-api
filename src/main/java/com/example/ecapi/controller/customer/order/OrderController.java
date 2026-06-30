@@ -77,12 +77,12 @@ public class OrderController {
      */
     @PatchMapping("/{id}/status")
     public ResponseEntity<OrderResponse> updateStatus(
-            @PathVariable Long id, @RequestParam OrderStatus status) {
+            @PathVariable Long id, @RequestParam OrderStatus status, @RequestParam int version) {
         OrderResult result =
                 switch (status) {
                     case PENDING, CONFIRMED, SHIPPED, DELIVERED ->
-                            orderService.updateStatus(id, status);
-                    case CANCELLED -> orderService.cancel(id);
+                            orderService.updateStatus(id, status, version);
+                    case CANCELLED -> orderService.cancel(id, version);
                 };
         return ResponseEntity.ok(toOrderResponse(result));
     }

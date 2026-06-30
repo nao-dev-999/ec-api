@@ -13,11 +13,13 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -45,7 +47,9 @@ public class ProductService {
 
     @Transactional
     public ProductResult create(CreateProduct createProduct) {
-        return toProductResult(productRepository.save(toProduct(createProduct)));
+        Product saved = productRepository.save(toProduct(createProduct));
+        log.info("Product created productId={} name={}", saved.getId(), saved.getName());
+        return toProductResult(saved);
     }
 
     /**
@@ -66,6 +70,7 @@ public class ProductService {
         if (updateProduct.price() != null) product.setPrice(updateProduct.price());
         if (updateProduct.stock() != null) product.setStock(updateProduct.stock());
         product.setVersion(updateProduct.version());
+        log.info("Product updated productId={}", updateProduct.id());
         return toProductResult(productRepository.save(product));
     }
 
@@ -74,6 +79,7 @@ public class ProductService {
         if (!productRepository.existsById(id)) {
             throw new ProductNotFoundException(id);
         }
+        log.info("Product deleted productId={}", id);
         productRepository.deleteById(id);
     }
 

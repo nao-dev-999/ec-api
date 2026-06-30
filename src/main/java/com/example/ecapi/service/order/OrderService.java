@@ -20,9 +20,11 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -86,7 +88,10 @@ public class OrderService {
                         .map(CustomerOrderDetail::getSubtotal)
                         .reduce(BigDecimal.ZERO, BigDecimal::add));
 
-        return toOrderResult(orderRepository.save(order));
+        CustomerOrder saved = orderRepository.save(order);
+        log.info("Order created orderId={} customerName={} totalAmount={}",
+                saved.getId(), saved.getCustomerName(), saved.getTotalAmount());
+        return toOrderResult(saved);
     }
 
     /**
@@ -94,12 +99,14 @@ public class OrderService {
      * @throws OptimisticLockException 楽観ロックの競合が発生した場合
      */
     @Transactional
-    public OrderResult updateStatus(Long id, OrderStatus newStatus) {
+    public OrderResult updateStatus(Long id, OrderStatus newStatus, int version) {
         CustomerOrder order =
                 orderRepository
                         .findById(id)
                         .orElseThrow(() -> new OrderNotFoundException(id));
         order.setStatus(newStatus);
+        order.setVersion(version);
+        log.info("Order status updated orderId={} status={}", id, newStatus);
         return toOrderResult(orderRepository.save(order));
     }
 
@@ -107,14 +114,17 @@ public class OrderService {
      * JOIN FETCH 済みの Product を直接更新します（N+1 回避、JPA dirty checking で保存されます）。
      *
      * @throws OrderNotFoundException 指定されたIDの注文が見つからない場合
+     * @throws OptimisticLockException 楽観ロックの競合が発生した場合
      */
     @Transactional
-    public OrderResult cancel(Long id) {
+    public OrderResult cancel(Long id, int version) {
         CustomerOrder order =
                 orderRepository
                         .findByIdWithItems(id)
                         .orElseThrow(() -> new OrderNotFoundException(id));
         order.setStatus(OrderStatus.CANCELLED);
+        order.setVersion(version);
+        log.info("Order cancelled orderId={}", id);
         order.getItems()
                 .forEach(e -> e.getProduct().setStock(e.getProduct().getStock() + e.getQuantity()));
         return toOrderResult(orderRepository.save(order));

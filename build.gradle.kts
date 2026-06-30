@@ -39,6 +39,9 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-flyway")
     implementation("org.flywaydb:flyway-database-postgresql")
 
+    // ─── Logstash (JSON 構造化ログ) ─────────────
+    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
+
     // ─── Lombok ────────────────────────────────
     compileOnly("org.projectlombok:lombok")
     annotationProcessor("org.projectlombok:lombok")

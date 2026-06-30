@@ -1,11 +1,11 @@
-# 11. ログ設計
+# 12. ログ設計
 
 > **方針:** 本番運用を想定した JSON 構造化ログ。リクエスト単位でトレース可能な設計とし、
 > 機密情報は絶対にログに出力しない。
 
 ---
 
-## 11.1 ログカテゴリ
+## 12.1 ログカテゴリ
 
 本プロジェクトのログは以下の3カテゴリで考える。
 **「誰が、何のために出すか」** を明確にし、出力責務を分散させる。
@@ -50,7 +50,7 @@ HTTP レスポンス送信
 
 ---
 
-## 11.2 ログレベルの使い分け
+## 12.2 ログレベルの使い分け
 
 | レベル | 用途 | 出力例 |
 |--------|------|--------|
@@ -68,7 +68,7 @@ HTTP レスポンス送信
 
 ---
 
-## 11.3 MDC によるリクエスト ID 伝播
+## 12.3 MDC によるリクエスト ID 伝播
 
 ### 設計
 
@@ -95,9 +95,9 @@ MDC.clear()  ← RequestLoggingFilter の finally でクリア
 
 ---
 
-## 11.4 レイヤー別のログ出力責務
+## 12.4 レイヤー別のログ出力責務
 
-### 11.4.1 アクセスログ（RequestLoggingFilter）
+### 12.4.1 アクセスログ（RequestLoggingFilter）
 
 全 HTTP リクエスト・レスポンスを記録する。`HandlerInterceptor` ではなく
 `OncePerRequestFilter` を使う理由は、Spring Security の 401/403 など
@@ -161,7 +161,7 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
 
 ---
 
-### 11.4.2 Controller 層
+### 12.4.2 Controller 層
 
 **原則としてログを出力しない。** アクセスログ（RequestLoggingFilter）で
 method / path / status / responseTimeMs は記録済みのため、Controller での追加ログは重複になる。
@@ -179,7 +179,7 @@ log.debug("createProduct request={}", request);
 
 ---
 
-### 11.4.3 Service 層（AOP による自動ログ）
+### 12.4.3 Service 層（AOP による自動ログ）
 
 `ServiceLoggingAspect` が全 Service メソッドの処理時間を **`DEBUG`** レベルで自動記録する。
 本番では出力されないため、パフォーマンス影響はない。
@@ -223,7 +223,7 @@ log.info("result: {}", result);
 
 ---
 
-### 11.4.4 Service 層（手動ログ）
+### 12.4.4 Service 層（手動ログ）
 
 AOP の自動ログ（DEBUG）とは別に、**ビジネス的に意味のある処理** は開発者が手動で `INFO` ログを出す。
 
@@ -259,7 +259,7 @@ public void cancelOrder(Long orderId) {
 
 ---
 
-### 11.4.5 外部 API 呼び出し
+### 12.4.5 外部 API 呼び出し
 
 外部 API（決済サービス・通知サービス・社内マイクロサービス等）の呼び出しは
 **必ず前後にログを出す**。外部依存は障害の起点になりやすく、
@@ -316,7 +316,7 @@ public class PaymentService {
 
 ---
 
-### 11.4.6 エラーログ（GlobalExceptionHandler）
+### 12.4.6 エラーログ（GlobalExceptionHandler）
 
 エラーログは `GlobalExceptionHandler` が一元的に出力する。
 個々の Service・Controller でエラーログを出すと二重ログになるため禁止。
@@ -352,7 +352,7 @@ try {
 
 ---
 
-## 11.5 JSON 構造化ログの設定
+## 12.5 JSON 構造化ログの設定
 
 ### logback-spring.xml
 
@@ -430,7 +430,7 @@ logging:
 
 ---
 
-## 11.6 機密情報のマスキング規則
+## 12.6 機密情報のマスキング規則
 
 以下のフィールドはログに**絶対に出力しない**。
 
@@ -450,7 +450,7 @@ logging:
 
 ---
 
-## 11.7 ログ設計チェックリスト
+## 12.7 ログ設計チェックリスト
 
 - [ ] アクセスログ: `RequestLoggingFilter` が `method` / `path` / `status` / `responseTimeMs` を出している
 - [ ] アプリログ: ビジネスイベント（リソース作成・状態遷移）に `INFO` ログがある

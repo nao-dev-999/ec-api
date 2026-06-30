@@ -61,9 +61,8 @@ module "ecs" {
   app_image_url = module.ecr.app_repository_url
   app_image_tag = "latest"
 
-  db_host     = module.rds.rds_endpoint
-  db_name     = var.rds_database_name
-  db_username = var.rds_master_username
+  db_host                = module.rds.rds_endpoint
+  db_name                = var.rds_database_name
   db_password_secret_arn = module.rds.rds_secret_arn
 
   task_cpu      = "512"
