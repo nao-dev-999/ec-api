@@ -3,11 +3,14 @@ package com.example.ecapi.config;
 import com.example.ecapi.filter.RequestLoggingFilter;
 import com.example.ecapi.filter.RequestTracingFilter;
 import com.example.ecapi.helper.MessageHelper;
+import com.example.ecapi.service.auth.CustomerUserDetailsService;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -44,6 +47,12 @@ public class SecurityConfig {
                                         // 商品参照は全員可（作成・更新・削除は ADMIN のみ）
                                         .requestMatchers("/api/customer/products/**")
                                         .permitAll()
+                                        .requestMatchers("/api/customer/auth/**")
+                                        .permitAll()
+                                        .requestMatchers("/api/customer/cart/**")
+                                        .hasRole("CUSTOMER")
+                                        .requestMatchers("/api/customer/me/**")
+                                        .hasRole("CUSTOMER")
                                         .requestMatchers("/api/orders/**")
                                         .authenticated()
                                         .requestMatchers("/api/admin/**")
@@ -56,8 +65,7 @@ public class SecurityConfig {
                                                 (request, response, authException) -> {
                                                     response.setStatus(
                                                             HttpServletResponse.SC_UNAUTHORIZED);
-                                                    response.setContentType(
-                                                            "application/json");
+                                                    response.setContentType("application/json");
                                                     response.getWriter()
                                                             .write(
                                                                     """
@@ -72,8 +80,7 @@ public class SecurityConfig {
                                                 (request, response, accessDeniedException) -> {
                                                     response.setStatus(
                                                             HttpServletResponse.SC_FORBIDDEN);
-                                                    response.setContentType(
-                                                            "application/json");
+                                                    response.setContentType("application/json");
                                                     response.getWriter()
                                                             .write(
                                                                     """
@@ -105,5 +112,15 @@ public class SecurityConfig {
     @Bean
     public HttpSessionSecurityContextRepository securityContextRepository() {
         return new HttpSessionSecurityContextRepository();
+    }
+
+    @Bean("customerAuthenticationManager")
+    public AuthenticationManager customerAuthenticationManager(
+            CustomerUserDetailsService customerUserDetailsService,
+            PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider =
+                new DaoAuthenticationProvider(customerUserDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return new ProviderManager(provider);
     }
 }

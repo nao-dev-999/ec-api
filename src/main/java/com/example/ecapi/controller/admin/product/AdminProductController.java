@@ -61,7 +61,8 @@ public class AdminProductController {
         if (!id.equals(request.id())) {
             throw new IllegalArgumentException("Path variable id and request body id must match.");
         }
-        return ResponseEntity.ok(toAdminProductResponse(productService.update(toUpdateProduct(id, request))));
+        return ResponseEntity.ok(
+                toAdminProductResponse(productService.update(toUpdateProduct(id, request))));
     }
 
     @DeleteMapping("/{id}")

@@ -35,8 +35,8 @@ public class GlobalExceptionHandler {
     /**
      * JPA の楽観ロック例外 → 409 Conflict
      *
-     * <p>jakarta.persistence.OptimisticLockException は JPA フレームワークがスローするため
-     * BusinessException 階層の外にある。ここでメッセージを付与して 409 として返す。
+     * <p>jakarta.persistence.OptimisticLockException は JPA フレームワークがスローするため BusinessException
+     * 階層の外にある。ここでメッセージを付与して 409 として返す。
      */
     @ExceptionHandler(jakarta.persistence.OptimisticLockException.class)
     public ResponseEntity<ErrorResponse> handleOptimisticLock(

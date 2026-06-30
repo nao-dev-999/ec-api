@@ -7,14 +7,22 @@ public enum ErrorCode {
     // 404 Not Found
     PRODUCT_NOT_FOUND("product.notFound", HttpStatus.NOT_FOUND),
     ORDER_NOT_FOUND("order.notFound", HttpStatus.NOT_FOUND),
+    CUSTOMER_NOT_FOUND("customer.notFound", HttpStatus.NOT_FOUND),
+    EMPLOYEE_NOT_FOUND("employee.notFound", HttpStatus.NOT_FOUND),
+    CATEGORY_NOT_FOUND("category.notFound", HttpStatus.NOT_FOUND),
+    CART_ITEM_NOT_FOUND("cart.item.notFound", HttpStatus.NOT_FOUND),
 
     // 409 Conflict
     INSUFFICIENT_STOCK("order.insufficientStock", HttpStatus.CONFLICT),
     OPTIMISTIC_LOCK_CONFLICT("error.conflict.optimisticLock", HttpStatus.CONFLICT),
+    EMPLOYEE_EMAIL_DUPLICATE("employee.email.duplicate", HttpStatus.CONFLICT),
+    CUSTOMER_EMAIL_DUPLICATE("customer.email.duplicate", HttpStatus.CONFLICT),
+    CATEGORY_NAME_DUPLICATE("category.name.duplicate", HttpStatus.CONFLICT),
 
     // 400 Bad Request
     VALIDATION_ERROR("error.validation", HttpStatus.BAD_REQUEST),
     BAD_REQUEST("error.badRequest", HttpStatus.BAD_REQUEST),
+    INVALID_CURRENT_PASSWORD("customer.password.invalid", HttpStatus.BAD_REQUEST),
 
     // 500 Internal Server Error
     SYSTEM_ERROR("error.system", HttpStatus.INTERNAL_SERVER_ERROR);

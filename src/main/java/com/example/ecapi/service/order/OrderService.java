@@ -89,8 +89,11 @@ public class OrderService {
                         .reduce(BigDecimal.ZERO, BigDecimal::add));
 
         CustomerOrder saved = orderRepository.save(order);
-        log.info("Order created orderId={} customerName={} totalAmount={}",
-                saved.getId(), saved.getCustomerName(), saved.getTotalAmount());
+        log.info(
+                "Order created orderId={} customerName={} totalAmount={}",
+                saved.getId(),
+                saved.getCustomerName(),
+                saved.getTotalAmount());
         return toOrderResult(saved);
     }
 
@@ -101,9 +104,7 @@ public class OrderService {
     @Transactional
     public OrderResult updateStatus(Long id, OrderStatus newStatus, int version) {
         CustomerOrder order =
-                orderRepository
-                        .findById(id)
-                        .orElseThrow(() -> new OrderNotFoundException(id));
+                orderRepository.findById(id).orElseThrow(() -> new OrderNotFoundException(id));
         order.setStatus(newStatus);
         order.setVersion(version);
         log.info("Order status updated orderId={} status={}", id, newStatus);

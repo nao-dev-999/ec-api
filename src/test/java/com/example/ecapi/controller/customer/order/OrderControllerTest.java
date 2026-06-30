@@ -197,7 +197,10 @@ class OrderControllerTest {
         @DisplayName("PENDING ステータスに更新できること")
         void shouldUpdateStatusToPending() throws Exception {
             when(orderService.updateStatus(1L, OrderStatus.PENDING, 0)).thenReturn(orderResult);
-            mockMvc.perform(patch("/api/orders/{id}/status", 1L).param("status", "PENDING").param("version", "0"))
+            mockMvc.perform(
+                            patch("/api/orders/{id}/status", 1L)
+                                    .param("status", "PENDING")
+                                    .param("version", "0"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("PENDING"));
         }
@@ -216,7 +219,10 @@ class OrderControllerTest {
                             LocalDateTime.now(),
                             1);
             when(orderService.cancel(1L, 0)).thenReturn(cancelledResult);
-            mockMvc.perform(patch("/api/orders/{id}/status", 1L).param("status", "CANCELLED").param("version", "0"))
+            mockMvc.perform(
+                            patch("/api/orders/{id}/status", 1L)
+                                    .param("status", "CANCELLED")
+                                    .param("version", "0"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("CANCELLED"));
         }
@@ -227,7 +233,10 @@ class OrderControllerTest {
             when(orderService.updateStatus(eq(99L), any(OrderStatus.class), anyInt()))
                     .thenThrow(new OrderNotFoundException("Order not found"));
 
-            mockMvc.perform(patch("/api/orders/{id}/status", 99L).param("status", "CONFIRMED").param("version", "0"))
+            mockMvc.perform(
+                            patch("/api/orders/{id}/status", 99L)
+                                    .param("status", "CONFIRMED")
+                                    .param("version", "0"))
                     .andExpect(status().isNotFound());
         }
 

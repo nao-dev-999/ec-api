@@ -7,8 +7,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 public class LoginUserDetails implements UserDetails {
 
-    @Getter
-    private final Long userId;
+    @Getter private final Long userId;
     private final String username;
     private final String password;
     private final Collection<? extends GrantedAuthority> authorities;
