@@ -10,7 +10,6 @@
 // ✅ Controllerの責務: HTTP入力受け取り → ServiceDTOに変換 → Service呼び出し → レスポンスDTO返却
 @RestController
 @RequestMapping("/api/admin/products")
-@PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'ROLE_PRODUCT_MANAGER')")
 public class AdminProductController {
 
     private final ProductService productService;

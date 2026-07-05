@@ -9,9 +9,11 @@ import com.example.ecapi.exception.CustomerNotFoundException;
 import com.example.ecapi.exception.InsufficientStockException;
 import com.example.ecapi.exception.OrderNotFoundException;
 import com.example.ecapi.exception.ProductNotFoundException;
+import com.example.ecapi.repository.CustomerOrderDetailRepository;
 import com.example.ecapi.repository.CustomerOrderRepository;
 import com.example.ecapi.repository.CustomerRepository;
 import com.example.ecapi.repository.ProductRepository;
+import com.example.ecapi.service.cart.CartService;
 import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.CreateOrderItem;
 import com.example.ecapi.service.order.dto.OrderResult;
@@ -22,8 +24,14 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,18 +42,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderService {
 
     private final CustomerOrderRepository orderRepository;
+    private final CustomerOrderDetailRepository orderDetailRepository;
     private final ProductRepository productRepository;
     private final CustomerRepository customerRepository;
+    private final CartService cartService;
 
-    public List<OrderResult> findAll() {
-        return orderRepository.findAll().stream().map(this::toOrderResult).toList();
+    public Page<OrderResult> findAll(Pageable pageable) {
+        return toOrderResultPage(orderRepository.findAll(pageable));
     }
 
-    /** ログイン中の顧客自身の注文のみを取得します。 */
-    public List<OrderResult> findAllByCustomerId(Long customerId) {
-        return orderRepository.findAllByCustomerId(customerId).stream()
-                .map(this::toOrderResult)
-                .toList();
+    /** ログイン中の顧客自身の注文のみを、新しい順に取得します。 */
+    public Page<OrderResult> findAllByCustomerId(Long customerId, Pageable pageable) {
+        return toOrderResultPage(orderRepository.findAllByCustomerId(customerId, pageable));
     }
 
     /**
@@ -87,8 +95,7 @@ public class OrderService {
                         .orElseThrow(() -> new CustomerNotFoundException(createOrder.customerId()));
 
         CustomerOrder order = new CustomerOrder();
-        order.setCustomerId(customer.getId());
-        order.setCustomerName(customer.getEmail());
+        order.setCustomer(customer);
         order.setStatus(OrderStatus.PENDING);
         order.setOrderedAt(Instant.now());
 
@@ -119,10 +126,11 @@ public class OrderService {
                         .reduce(BigDecimal.ZERO, BigDecimal::add));
 
         CustomerOrder saved = orderRepository.save(order);
+        cartService.clearCart(customer.getId());
         log.info(
-                "Order created orderId={} customerName={} totalAmount={}",
+                "Order created orderId={} customerId={} totalAmount={}",
                 saved.getId(),
-                saved.getCustomerName(),
+                saved.getCustomer().getId(),
                 saved.getTotalAmount());
         return toOrderResult(saved);
     }
@@ -162,12 +170,23 @@ public class OrderService {
     }
 
     private OrderResult toOrderResult(CustomerOrder customerOrder) {
+        return toOrderResult(customerOrder, customerOrder.getItems());
+    }
+
+    /**
+     * 一覧系クエリでは items コレクションを JOIN FETCH しない（Pageable と併用するとメモリ上でページングされてしまうため）。
+     * そのため、注文IDごとに別クエリで取得した明細を引数で受け取る。
+     */
+    private OrderResult toOrderResult(
+            CustomerOrder customerOrder, List<CustomerOrderDetail> items) {
+        Customer customer = customerOrder.getCustomer();
         return new OrderResult(
                 customerOrder.getId(),
-                customerOrder.getCustomerName(),
+                customer.getId(),
+                resolveCustomerName(customer),
                 customerOrder.getStatus(),
                 customerOrder.getTotalAmount(),
-                customerOrder.getItems().stream()
+                items.stream()
                         .map(
                                 item ->
                                         new OrderResultItem(
@@ -180,5 +199,26 @@ public class OrderService {
                 LocalDateTime.ofInstant(customerOrder.getOrderedAt(), ZoneId.systemDefault()),
                 LocalDateTime.ofInstant(customerOrder.getUpdatedAt(), ZoneId.systemDefault()),
                 customerOrder.getVersion());
+    }
+
+    private Page<OrderResult> toOrderResultPage(Page<CustomerOrder> orders) {
+        List<Long> orderIds = orders.getContent().stream().map(CustomerOrder::getId).toList();
+        Map<Long, List<CustomerOrderDetail>> itemsByOrderId =
+                orderIds.isEmpty()
+                        ? Map.of()
+                        : orderDetailRepository.findAllByOrderIdIn(orderIds).stream()
+                                .collect(Collectors.groupingBy(d -> d.getOrder().getId()));
+        return orders.map(o -> toOrderResult(o, itemsByOrderId.getOrDefault(o.getId(), List.of())));
+    }
+
+    private String resolveCustomerName(Customer customer) {
+        String lastName = customer.getLastName();
+        String firstName = customer.getFirstName();
+        if (lastName == null && firstName == null) {
+            return customer.getEmail();
+        }
+        return Stream.of(lastName, firstName)
+                .filter(Objects::nonNull)
+                .collect(Collectors.joining(" "));
     }
 }

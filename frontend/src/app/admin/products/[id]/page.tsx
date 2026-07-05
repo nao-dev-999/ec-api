@@ -1,7 +1,13 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
-import { getAdminProduct, updateAdminProduct, type AdminProduct } from "@/lib/api/adminProducts";
+import Link from "next/link";
+import { ArrowLeft, X } from "lucide-react";
+import {
+  getAdminProduct,
+  updateAdminProduct,
+  type AdminProduct,
+} from "@/lib/api/adminProducts";
 import {
   getAdminCategories,
   getProductCategories,
@@ -9,6 +15,7 @@ import {
   removeCategoryFromProduct,
   type AdminCategory,
 } from "@/lib/api/adminCategories";
+import { useToast } from "../../Toast";
 
 export default function AdminProductDetailPage({
   params,
@@ -17,6 +24,7 @@ export default function AdminProductDetailPage({
 }) {
   const { id } = use(params);
   const productId = Number(id);
+  const { showToast } = useToast();
 
   const [product, setProduct] = useState<AdminProduct | null>(null);
   const [name, setName] = useState("");
@@ -27,9 +35,10 @@ export default function AdminProductDetailPage({
   const [submitting, setSubmitting] = useState(false);
 
   const [allCategories, setAllCategories] = useState<AdminCategory[]>([]);
-  const [productCategories, setProductCategories] = useState<AdminCategory[]>([]);
+  const [productCategories, setProductCategories] = useState<AdminCategory[]>(
+    [],
+  );
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
-  const [categoryError, setCategoryError] = useState<string | null>(null);
 
   useEffect(() => {
     getAdminProduct(productId)
@@ -41,8 +50,12 @@ export default function AdminProductDetailPage({
         setStock(String(p.stock ?? ""));
       })
       .catch(() => setError("商品の取得に失敗しました"));
-    getAdminCategories().then(setAllCategories).catch(() => {});
-    getProductCategories(productId).then(setProductCategories).catch(() => {});
+    getAdminCategories()
+      .then(setAllCategories)
+      .catch(() => {});
+    getProductCategories(productId)
+      .then(setProductCategories)
+      .catch(() => {});
   }, [productId]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -60,8 +73,10 @@ export default function AdminProductDetailPage({
         version: product.version!,
       });
       setProduct(updated);
+      showToast("商品を更新しました");
     } catch {
       setError("更新に失敗しました。画面を更新して再度お試しください");
+      showToast("更新に失敗しました", "error");
     } finally {
       setSubmitting(false);
     }
@@ -69,23 +84,22 @@ export default function AdminProductDetailPage({
 
   async function handleAddCategory() {
     if (!selectedCategoryId) return;
-    setCategoryError(null);
     try {
       await addCategoryToProduct(productId, Number(selectedCategoryId));
       const updated = await getProductCategories(productId);
       setProductCategories(updated);
+      setSelectedCategoryId("");
     } catch {
-      setCategoryError("カテゴリの追加に失敗しました");
+      showToast("カテゴリの追加に失敗しました", "error");
     }
   }
 
   async function handleRemoveCategory(categoryId: number) {
-    setCategoryError(null);
     try {
       await removeCategoryFromProduct(productId, categoryId);
       setProductCategories((prev) => prev.filter((c) => c.id !== categoryId));
     } catch {
-      setCategoryError("カテゴリの削除に失敗しました");
+      showToast("カテゴリの削除に失敗しました", "error");
     }
   }
 
@@ -97,78 +111,104 @@ export default function AdminProductDetailPage({
   );
 
   return (
-    <main style={{ padding: 24, maxWidth: 400 }}>
-      <h1>商品編集</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 8 }}>
-          <label htmlFor="name">商品名</label>
-          <input
-            id="name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{ display: "block", width: "100%" }}
-          />
-        </div>
-        <div style={{ marginBottom: 8 }}>
-          <label htmlFor="description">説明</label>
-          <textarea
-            id="description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            style={{ display: "block", width: "100%" }}
-          />
-        </div>
-        <div style={{ marginBottom: 8 }}>
-          <label htmlFor="price">価格</label>
-          <input
-            id="price"
-            type="number"
-            min="0.01"
-            step="0.01"
-            required
-            value={price}
-            onChange={(e) => setPrice(e.target.value)}
-            style={{ display: "block", width: "100%" }}
-          />
-        </div>
-        <div style={{ marginBottom: 8 }}>
-          <label htmlFor="stock">在庫数</label>
-          <input
-            id="stock"
-            type="number"
-            min="0"
-            required
-            value={stock}
-            onChange={(e) => setStock(e.target.value)}
-            style={{ display: "block", width: "100%" }}
-          />
-        </div>
-        <button type="submit" disabled={submitting}>
-          {submitting ? "更新中..." : "更新"}
-        </button>
-      </form>
+    <main>
+      <Link href="/admin/products" className="back-link">
+        <ArrowLeft size={14} />
+        商品一覧に戻る
+      </Link>
+      <div className="form-card">
+        <h1>商品編集</h1>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 16 }}>
+            <label htmlFor="name">商品名</label>
+            <input
+              id="name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              style={{ display: "block", width: "100%" }}
+            />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label htmlFor="description">説明</label>
+            <textarea
+              id="description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              style={{ display: "block", width: "100%" }}
+            />
+          </div>
+          <div style={{ marginBottom: 16 }}>
+            <label htmlFor="price">価格</label>
+            <input
+              id="price"
+              type="number"
+              min="0.01"
+              step="0.01"
+              required
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              style={{ display: "block", width: "100%" }}
+            />
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <label htmlFor="stock">在庫数</label>
+            <input
+              id="stock"
+              type="number"
+              min="0"
+              required
+              value={stock}
+              onChange={(e) => setStock(e.target.value)}
+              style={{ display: "block", width: "100%" }}
+            />
+          </div>
+          <button type="submit" disabled={submitting}>
+            {submitting ? "更新中..." : "更新"}
+          </button>
+        </form>
 
-      <section style={{ marginTop: 32 }}>
-        <h2>カテゴリ</h2>
-        <ul>
-          {productCategories.map((c) => (
-            <li key={c.id}>
-              {c.name} <button onClick={() => handleRemoveCategory(c.id!)}>削除</button>
-            </li>
-          ))}
-        </ul>
-        <select value={selectedCategoryId} onChange={(e) => setSelectedCategoryId(e.target.value)}>
-          <option value="">カテゴリを選択</option>
-          {unassignedCategories.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </select>
-        <button onClick={handleAddCategory}>追加</button>
-        {categoryError && <p style={{ color: "red" }}>{categoryError}</p>}
-      </section>
+        <section style={{ marginTop: 32 }}>
+          <h2>カテゴリ</h2>
+          {productCategories.length > 0 && (
+            <div className="card-tags" style={{ marginBottom: 16 }}>
+              {productCategories.map((c) => (
+                <span key={c.id} className="card-tag">
+                  {c.name}
+                  <button
+                    onClick={() => handleRemoveCategory(c.id!)}
+                    title="削除"
+                    style={{
+                      background: "transparent",
+                      color: "inherit",
+                      padding: 0,
+                      marginLeft: 6,
+                      display: "inline-flex",
+                    }}
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <select
+              value={selectedCategoryId}
+              onChange={(e) => setSelectedCategoryId(e.target.value)}
+              style={{ flex: 1 }}
+            >
+              <option value="">カテゴリを選択</option>
+              {unassignedCategories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <button onClick={handleAddCategory}>追加</button>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }

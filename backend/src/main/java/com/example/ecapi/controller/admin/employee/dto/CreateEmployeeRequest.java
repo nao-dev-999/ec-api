@@ -11,4 +11,14 @@ public record CreateEmployeeRequest(
         @NotBlank(message = "{validation.employee.password.notBlank}")
                 @Size(min = 8, message = "{validation.employee.password.size}")
                 String password,
-        @NotNull(message = "{validation.employee.role.notBlank}") EmployeeRole role) {}
+        @NotNull(message = "{validation.employee.role.notBlank}") EmployeeRole role,
+        String lastName,
+        String firstName,
+        String lastNameKana,
+        String firstNameKana,
+        String phoneNumber,
+        String postalCode,
+        String prefecture,
+        String city,
+        String addressLine1,
+        String addressLine2) {}

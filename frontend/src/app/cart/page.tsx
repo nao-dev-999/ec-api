@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getCart, updateCartItemQuantity, removeCartItem, type CartItem } from "@/lib/api/cart";
+import {
+  getCart,
+  updateCartItemQuantity,
+  removeCartItem,
+  type CartItem,
+} from "@/lib/api/cart";
 import { createOrder } from "@/lib/api/orders";
 import { ApiError } from "@/lib/api/client";
 
@@ -31,7 +36,9 @@ export default function CartPage() {
         quantity,
         version: item.version!,
       });
-      setItems((prev) => prev!.map((i) => (i.productId === updated.productId ? updated : i)));
+      setItems((prev) =>
+        prev!.map((i) => (i.productId === updated.productId ? updated : i)),
+      );
     } catch {
       setError("数量の更新に失敗しました。画面を更新して再度お試しください");
     }
@@ -52,7 +59,10 @@ export default function CartPage() {
     setPlacingOrder(true);
     try {
       const order = await createOrder({
-        items: items.map((i) => ({ productId: i.productId!, quantity: i.quantity! })),
+        items: items.map((i) => ({
+          productId: i.productId!,
+          quantity: i.quantity!,
+        })),
       });
       router.push(`/orders/${order.id}`);
     } catch {
@@ -68,7 +78,7 @@ export default function CartPage() {
   const total = items.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
 
   return (
-    <main style={{ padding: 24 }}>
+    <main>
       <h1>カート</h1>
       {items.length === 0 ? (
         <p>カートは空です</p>
@@ -76,23 +86,36 @@ export default function CartPage() {
         <>
           <ul>
             {items.map((item) => (
-              <li key={item.productId} style={{ marginBottom: 8 }}>
-                {item.productName} — ¥{item.unitPrice} ×{" "}
-                <input
-                  type="number"
-                  min={1}
-                  value={item.quantity}
-                  onChange={(e) => handleQuantityChange(item, Number(e.target.value))}
-                  style={{ width: 50 }}
-                />
-                {" "}= ¥{item.subtotal}{" "}
-                <button onClick={() => handleRemove(item.productId!)}>削除</button>
+              <li key={item.productId}>
+                <span>
+                  {item.productName}{" "}
+                  <span className="badge">¥{item.unitPrice}</span> ×{" "}
+                  <input
+                    type="number"
+                    min={1}
+                    value={item.quantity}
+                    onChange={(e) =>
+                      handleQuantityChange(item, Number(e.target.value))
+                    }
+                    style={{ width: 50 }}
+                  />
+                </span>
+                <span
+                  style={{ display: "flex", alignItems: "center", gap: 12 }}
+                >
+                  <span className="price">¥{item.subtotal}</span>
+                  <button onClick={() => handleRemove(item.productId!)}>
+                    削除
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
-          <p>合計: ¥{total}</p>
+          <p style={{ margin: "16px 0", textAlign: "right" }}>
+            合計: <span className="price price-lg">¥{total}</span>
+          </p>
           <button onClick={handleCheckout} disabled={placingOrder}>
-            {placingOrder ? "注文中..." : "注文する"}
+            {placingOrder ? "注文中..." : "購入する"}
           </button>
         </>
       )}

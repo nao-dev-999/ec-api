@@ -50,7 +50,21 @@ class CustomerMeControllerTest {
     void setUp() {
         customerResult =
                 new CustomerResult(
-                        1L, "test@example.com", LocalDateTime.now(), LocalDateTime.now(), 0);
+                        1L,
+                        "test@example.com",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        LocalDateTime.now(),
+                        LocalDateTime.now(),
+                        0);
     }
 
     @Nested
@@ -79,7 +93,21 @@ class CustomerMeControllerTest {
             UpdateEmailRequest request = new UpdateEmailRequest("new@example.com", 0);
             CustomerResult updated =
                     new CustomerResult(
-                            1L, "new@example.com", LocalDateTime.now(), LocalDateTime.now(), 0);
+                            1L,
+                            "new@example.com",
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            LocalDateTime.now(),
+                            LocalDateTime.now(),
+                            0);
             when(customerMeService.updateEmail(anyLong(), any(UpdateCustomerEmail.class)))
                     .thenReturn(updated);
 

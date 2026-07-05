@@ -1,14 +1,29 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import {
   getAdminOrder,
   updateAdminOrderStatus,
   type AdminOrder,
   type OrderStatus,
 } from "@/lib/api/adminOrders";
+import OrderStatusBadge from "../../../OrderStatusBadge";
+import { useToast } from "../../Toast";
 
-const STATUS_OPTIONS: OrderStatus[] = ["PENDING", "CONFIRMED", "SHIPPED", "DELIVERED", "CANCELLED"];
+const STATUS_OPTIONS: OrderStatus[] = [
+  "PENDING",
+  "CONFIRMED",
+  "SHIPPED",
+  "DELIVERED",
+  "CANCELLED",
+];
+
+function formatDate(value: string | undefined) {
+  if (!value) return "";
+  return new Date(value).toLocaleDateString("ja-JP");
+}
 
 export default function AdminOrderDetailPage({
   params,
@@ -17,6 +32,7 @@ export default function AdminOrderDetailPage({
 }) {
   const { id } = use(params);
   const orderId = Number(id);
+  const { showToast } = useToast();
 
   const [order, setOrder] = useState<AdminOrder | null>(null);
   const [status, setStatus] = useState<OrderStatus>("PENDING");
@@ -38,10 +54,18 @@ export default function AdminOrderDetailPage({
     setError(null);
     setSubmitting(true);
     try {
-      const updated = await updateAdminOrderStatus(orderId, status, order.version!);
+      const updated = await updateAdminOrderStatus(
+        orderId,
+        status,
+        order.version!,
+      );
       setOrder(updated);
+      showToast("ステータスを更新しました");
     } catch {
-      setError("ステータスの更新に失敗しました。画面を更新して再度お試しください");
+      setError(
+        "ステータスの更新に失敗しました。画面を更新して再度お試しください",
+      );
+      showToast("ステータスの更新に失敗しました", "error");
     } finally {
       setSubmitting(false);
     }
@@ -51,36 +75,67 @@ export default function AdminOrderDetailPage({
   if (!order) return <p style={{ padding: 24 }}>読み込み中...</p>;
 
   return (
-    <main style={{ padding: 24 }}>
-      <h1>注文詳細</h1>
-      <p>注文番号: {order.id}</p>
-      <p>顧客: {order.customerName}</p>
-      <ul>
-        {order.items?.map((item) => (
-          <li key={item.productId}>
-            {item.productName} × {item.quantity} = ¥{item.subtotal}
-          </li>
-        ))}
-      </ul>
-      <p>合計: ¥{order.totalAmount}</p>
+    <main>
+      <Link href="/admin/orders" className="back-link">
+        <ArrowLeft size={14} />
+        注文一覧に戻る
+      </Link>
+      <div className="form-card">
+        <h1>注文詳細</h1>
+        <p>注文番号: #{order.id}</p>
+        <p>顧客: {order.customerName}</p>
+        <p style={{ margin: "8px 0 16px" }}>
+          注文日: {formatDate(order.orderedAt)}
+        </p>
+        <OrderStatusBadge status={order.status} />
 
-      <form onSubmit={handleStatusChange}>
-        <label htmlFor="status">ステータス</label>
-        <select
-          id="status"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as OrderStatus)}
-        >
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s} value={s}>
-              {s}
-            </option>
-          ))}
-        </select>
-        <button type="submit" disabled={submitting}>
-          {submitting ? "更新中..." : "ステータスを更新"}
-        </button>
-      </form>
+        <table className="order-table">
+          <thead>
+            <tr>
+              <th>商品名</th>
+              <th className="num">数量</th>
+              <th className="num">単価</th>
+              <th className="num">小計</th>
+            </tr>
+          </thead>
+          <tbody>
+            {order.items?.map((item) => (
+              <tr key={item.productId}>
+                <td>{item.productName}</td>
+                <td className="num">{item.quantity}</td>
+                <td className="num">¥{item.unitPrice?.toLocaleString()}</td>
+                <td className="num">¥{item.subtotal?.toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={3}>合計</td>
+              <td className="num">¥{order.totalAmount?.toLocaleString()}</td>
+            </tr>
+          </tfoot>
+        </table>
+
+        <form onSubmit={handleStatusChange} style={{ marginTop: 24 }}>
+          <div style={{ marginBottom: 16 }}>
+            <label htmlFor="status">ステータス</label>
+            <select
+              id="status"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as OrderStatus)}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" disabled={submitting}>
+            {submitting ? "更新中..." : "ステータスを更新"}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }

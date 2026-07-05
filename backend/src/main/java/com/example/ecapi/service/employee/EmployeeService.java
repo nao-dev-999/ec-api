@@ -45,6 +45,16 @@ public class EmployeeService {
         employee.setEmail(createEmployee.email());
         employee.setPassword(passwordEncoder.encode(createEmployee.password()));
         employee.setRole(createEmployee.role());
+        employee.setLastName(createEmployee.lastName());
+        employee.setFirstName(createEmployee.firstName());
+        employee.setLastNameKana(createEmployee.lastNameKana());
+        employee.setFirstNameKana(createEmployee.firstNameKana());
+        employee.setPhoneNumber(createEmployee.phoneNumber());
+        employee.setPostalCode(createEmployee.postalCode());
+        employee.setPrefecture(createEmployee.prefecture());
+        employee.setCity(createEmployee.city());
+        employee.setAddressLine1(createEmployee.addressLine1());
+        employee.setAddressLine2(createEmployee.addressLine2());
         Employee saved = employeeRepository.save(employee);
         log.info("Employee created employeeId={} role={}", saved.getId(), saved.getRole());
         return toEmployeeResult(saved);
@@ -79,6 +89,16 @@ public class EmployeeService {
                 employee.getId(),
                 employee.getEmail(),
                 employee.getRole(),
+                employee.getLastName(),
+                employee.getFirstName(),
+                employee.getLastNameKana(),
+                employee.getFirstNameKana(),
+                employee.getPhoneNumber(),
+                employee.getPostalCode(),
+                employee.getPrefecture(),
+                employee.getCity(),
+                employee.getAddressLine1(),
+                employee.getAddressLine2(),
                 LocalDateTime.ofInstant(employee.getCreatedAt(), ZoneId.systemDefault()),
                 LocalDateTime.ofInstant(employee.getUpdatedAt(), ZoneId.systemDefault()),
                 employee.getVersion());

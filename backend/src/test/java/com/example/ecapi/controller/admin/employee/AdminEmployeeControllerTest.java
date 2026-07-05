@@ -54,6 +54,16 @@ class AdminEmployeeControllerTest {
                         1L,
                         "admin@example.com",
                         EmployeeRole.ADMIN,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         0);
@@ -62,6 +72,16 @@ class AdminEmployeeControllerTest {
                         1L,
                         "admin@example.com",
                         EmployeeRole.ADMIN,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         0);
@@ -129,7 +149,20 @@ class AdminEmployeeControllerTest {
         @DisplayName("従業員を新規登録できること")
         void shouldCreateEmployee() throws Exception {
             CreateEmployeeRequest request =
-                    new CreateEmployeeRequest("new@example.com", "password123", EmployeeRole.SALES);
+                    new CreateEmployeeRequest(
+                            "new@example.com",
+                            "password123",
+                            EmployeeRole.SALES,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null);
 
             when(employeeService.create(any(CreateEmployee.class))).thenReturn(employeeResult);
 
@@ -165,7 +198,19 @@ class AdminEmployeeControllerTest {
         void shouldReturnConflictWhenEmailDuplicate() throws Exception {
             CreateEmployeeRequest request =
                     new CreateEmployeeRequest(
-                            "admin@example.com", "password123", EmployeeRole.ADMIN);
+                            "admin@example.com",
+                            "password123",
+                            EmployeeRole.ADMIN,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null);
 
             doThrow(new EmployeeEmailDuplicateException("admin@example.com"))
                     .when(employeeService)

@@ -116,7 +116,20 @@ class EmployeeServiceTest {
             when(employeeRepository.save(any(Employee.class))).thenReturn(employee);
 
             CreateEmployee createEmployee =
-                    new CreateEmployee("new@example.com", "password123", EmployeeRole.SALES);
+                    new CreateEmployee(
+                            "new@example.com",
+                            "password123",
+                            EmployeeRole.SALES,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null);
             EmployeeResult result = employeeService.create(createEmployee);
 
             assertThat(result.id()).isEqualTo(1L);
@@ -130,7 +143,20 @@ class EmployeeServiceTest {
                     .thenReturn(Optional.of(employee));
 
             CreateEmployee createEmployee =
-                    new CreateEmployee("admin@example.com", "password123", EmployeeRole.ADMIN);
+                    new CreateEmployee(
+                            "admin@example.com",
+                            "password123",
+                            EmployeeRole.ADMIN,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null);
 
             assertThatThrownBy(() -> employeeService.create(createEmployee))
                     .isInstanceOf(EmployeeEmailDuplicateException.class);

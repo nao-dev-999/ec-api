@@ -3,10 +3,13 @@ import type { components } from "./schema.d.ts";
 
 export type CustomerMe = components["schemas"]["CustomerMeResponse"];
 export type UpdateEmailRequest = components["schemas"]["UpdateEmailRequest"];
-export type UpdatePasswordRequest = components["schemas"]["UpdatePasswordRequest"];
+export type UpdatePasswordRequest =
+  components["schemas"]["UpdatePasswordRequest"];
 
-export function getMe(): Promise<CustomerMe> {
-  return apiFetch<CustomerMe>("/api/customer/me");
+export function getMe(options?: {
+  suppressAuthRedirect?: boolean;
+}): Promise<CustomerMe> {
+  return apiFetch<CustomerMe>("/api/customer/me", options);
 }
 
 export function updateEmail(req: UpdateEmailRequest): Promise<CustomerMe> {

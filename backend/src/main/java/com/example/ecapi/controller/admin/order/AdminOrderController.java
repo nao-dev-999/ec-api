@@ -3,10 +3,14 @@ package com.example.ecapi.controller.admin.order;
 import com.example.ecapi.constant.OrderStatus;
 import com.example.ecapi.controller.admin.order.dto.AdminOrderItemResponse;
 import com.example.ecapi.controller.admin.order.dto.AdminOrderResponse;
+import com.example.ecapi.controller.common.dto.PageResponse;
 import com.example.ecapi.service.order.OrderService;
 import com.example.ecapi.service.order.dto.OrderResult;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,12 +19,23 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AdminOrderController {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final OrderService orderService;
 
+    /** 全顧客の注文を新しい順にページング取得します。 */
     @GetMapping
-    public ResponseEntity<List<AdminOrderResponse>> getAll() {
-        return ResponseEntity.ok(
-                orderService.findAll().stream().map(this::toAdminOrderResponse).toList());
+    public ResponseEntity<PageResponse<AdminOrderResponse>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable =
+                PageRequest.of(
+                        Math.max(page, 0),
+                        Math.clamp(size, 1, MAX_PAGE_SIZE),
+                        Sort.by(Sort.Direction.DESC, "orderedAt"));
+        Page<AdminOrderResponse> result =
+                orderService.findAll(pageable).map(this::toAdminOrderResponse);
+        return ResponseEntity.ok(PageResponse.from(result));
     }
 
     @GetMapping("/{id}")
@@ -43,6 +58,7 @@ public class AdminOrderController {
     private AdminOrderResponse toAdminOrderResponse(OrderResult result) {
         return new AdminOrderResponse(
                 result.id(),
+                result.customerId(),
                 result.customerName(),
                 result.status(),
                 result.totalAmount(),

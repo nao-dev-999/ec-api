@@ -1,11 +1,14 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import {
   getAdminCategory,
   updateAdminCategory,
   type AdminCategory,
 } from "@/lib/api/adminCategories";
+import { useToast } from "../../Toast";
 
 export default function AdminCategoryDetailPage({
   params,
@@ -14,6 +17,7 @@ export default function AdminCategoryDetailPage({
 }) {
   const { id } = use(params);
   const categoryId = Number(id);
+  const { showToast } = useToast();
 
   const [category, setCategory] = useState<AdminCategory | null>(null);
   const [name, setName] = useState("");
@@ -40,8 +44,10 @@ export default function AdminCategoryDetailPage({
         version: category.version!,
       });
       setCategory(updated);
+      showToast("カテゴリを更新しました");
     } catch {
       setError("更新に失敗しました。画面を更新して再度お試しください");
+      showToast("更新に失敗しました", "error");
     } finally {
       setSubmitting(false);
     }
@@ -51,23 +57,29 @@ export default function AdminCategoryDetailPage({
   if (!category) return <p style={{ padding: 24 }}>読み込み中...</p>;
 
   return (
-    <main style={{ padding: 24, maxWidth: 400 }}>
-      <h1>カテゴリ編集</h1>
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: 8 }}>
-          <label htmlFor="name">カテゴリ名</label>
-          <input
-            id="name"
-            required
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            style={{ display: "block", width: "100%" }}
-          />
-        </div>
-        <button type="submit" disabled={submitting}>
-          {submitting ? "更新中..." : "更新"}
-        </button>
-      </form>
+    <main>
+      <Link href="/admin/categories" className="back-link">
+        <ArrowLeft size={14} />
+        カテゴリ一覧に戻る
+      </Link>
+      <div className="form-card">
+        <h1>カテゴリ編集</h1>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 24 }}>
+            <label htmlFor="name">カテゴリ名</label>
+            <input
+              id="name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              style={{ display: "block", width: "100%" }}
+            />
+          </div>
+          <button type="submit" disabled={submitting}>
+            {submitting ? "更新中..." : "更新"}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }

@@ -13,9 +13,11 @@ import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.InsufficientStockException;
 import com.example.ecapi.exception.OrderNotFoundException;
 import com.example.ecapi.exception.ProductNotFoundException;
+import com.example.ecapi.repository.CustomerOrderDetailRepository;
 import com.example.ecapi.repository.CustomerOrderRepository;
 import com.example.ecapi.repository.CustomerRepository;
 import com.example.ecapi.repository.ProductRepository;
+import com.example.ecapi.service.cart.CartService;
 import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.CreateOrderItem;
 import com.example.ecapi.service.order.dto.OrderResult;
@@ -32,14 +34,20 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class OrderServiceTest {
 
     @Mock private CustomerOrderRepository orderRepository;
+    @Mock private CustomerOrderDetailRepository orderDetailRepository;
     @Mock private ProductRepository productRepository;
     @Mock private CustomerRepository customerRepository;
+    @Mock private CartService cartService;
 
     @InjectMocks private OrderService orderService;
 
@@ -63,7 +71,7 @@ class OrderServiceTest {
 
         customerOrder = new CustomerOrder();
         customerOrder.setId(1L);
-        customerOrder.setCustomerName("Test Customer");
+        customerOrder.setCustomer(customer);
         customerOrder.setStatus(OrderStatus.PENDING);
         customerOrder.setTotalAmount(BigDecimal.valueOf(200.00));
         customerOrder.setOrderedAt(Instant.now());
@@ -73,6 +81,7 @@ class OrderServiceTest {
 
         orderResult =
                 new OrderResult(
+                        1L,
                         1L,
                         "Test Customer",
                         OrderStatus.PENDING,
@@ -90,18 +99,22 @@ class OrderServiceTest {
         @Test
         @DisplayName("全注文を取得できること")
         void shouldReturnAllOrders() {
-            when(orderRepository.findAll()).thenReturn(List.of(customerOrder));
-            List<OrderResult> result = orderService.findAll();
-            assertThat(result).hasSize(1);
-            assertThat(result.getFirst().id()).isEqualTo(1L);
-            assertThat(result.getFirst().customerName()).isEqualTo("Test Customer");
+            Pageable pageable = PageRequest.of(0, 20);
+            when(orderRepository.findAll(pageable))
+                    .thenReturn(new PageImpl<>(List.of(customerOrder), pageable, 1));
+            Page<OrderResult> result = orderService.findAll(pageable);
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().getFirst().id()).isEqualTo(1L);
+            assertThat(result.getContent().getFirst().customerName()).isEqualTo("Test Customer");
         }
 
         @Test
-        @DisplayName("注文が0件の場合、空のリストを返すこと")
+        @DisplayName("注文が0件の場合、空のページを返すこと")
         void shouldReturnEmptyListWhenNoOrders() {
-            List<OrderResult> result = orderService.findAll();
-            assertThat(result).isEmpty();
+            Pageable pageable = PageRequest.of(0, 20);
+            when(orderRepository.findAll(pageable)).thenReturn(Page.empty(pageable));
+            Page<OrderResult> result = orderService.findAll(pageable);
+            assertThat(result.getContent()).isEmpty();
         }
     }
 
@@ -135,9 +148,11 @@ class OrderServiceTest {
         @Test
         @DisplayName("指定した顧客の注文のみを取得できること")
         void shouldReturnOrdersForCustomer() {
-            when(orderRepository.findAllByCustomerId(1L)).thenReturn(List.of(customerOrder));
-            List<OrderResult> result = orderService.findAllByCustomerId(1L);
-            assertThat(result).hasSize(1);
+            Pageable pageable = PageRequest.of(0, 20);
+            when(orderRepository.findAllByCustomerId(1L, pageable))
+                    .thenReturn(new PageImpl<>(List.of(customerOrder), pageable, 1));
+            Page<OrderResult> result = orderService.findAllByCustomerId(1L, pageable);
+            assertThat(result.getContent()).hasSize(1);
         }
     }
 

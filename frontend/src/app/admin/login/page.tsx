@@ -31,7 +31,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 360 }}>
+    <main>
       <h1>管理者ログイン</h1>
       <form onSubmit={handleSubmit}>
         <div style={{ marginBottom: 12 }}>

@@ -7,6 +7,7 @@ import java.util.List;
 
 public record AdminOrderResponse(
         Long id,
+        Long customerId,
         String customerName,
         OrderStatus status,
         BigDecimal totalAmount,

@@ -2,7 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getMe, updateEmail, updatePassword, type CustomerMe } from "@/lib/api/me";
+import {
+  getMe,
+  updateEmail,
+  updatePassword,
+  type CustomerMe,
+} from "@/lib/api/me";
 import { ApiError } from "@/lib/api/client";
 
 export default function MyPage() {
@@ -60,7 +65,11 @@ export default function MyPage() {
     setPasswordMessage(null);
     setPasswordSubmitting(true);
     try {
-      await updatePassword({ currentPassword, newPassword, version: me.version! });
+      await updatePassword({
+        currentPassword,
+        newPassword,
+        version: me.version!,
+      });
       const refreshed = await getMe();
       setMe(refreshed);
       setCurrentPassword("");
@@ -77,7 +86,8 @@ export default function MyPage() {
     }
   }
 
-  if (loadError) return <p style={{ padding: 24, color: "red" }}>{loadError}</p>;
+  if (loadError)
+    return <p style={{ padding: 24, color: "red" }}>{loadError}</p>;
   if (!me) return <p style={{ padding: 24 }}>読み込み中...</p>;
 
   return (

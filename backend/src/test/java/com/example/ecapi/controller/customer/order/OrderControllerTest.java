@@ -31,6 +31,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -62,6 +67,7 @@ class OrderControllerTest {
         orderResult =
                 new OrderResult(
                         1L,
+                        1L,
                         "Test Customer",
                         OrderStatus.PENDING,
                         BigDecimal.valueOf(200.00),
@@ -72,6 +78,7 @@ class OrderControllerTest {
 
         orderResponse =
                 new OrderResponse(
+                        1L,
                         1L,
                         "Test Customer",
                         OrderStatus.PENDING,
@@ -90,21 +97,28 @@ class OrderControllerTest {
         @WithMockLoginUser
         @DisplayName("ログイン中の顧客自身の注文を取得できること")
         void shouldGetAllOrders() throws Exception {
-            when(orderService.findAllByCustomerId(anyLong())).thenReturn(List.of(orderResult));
+            Pageable pageable = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "orderedAt"));
+            when(orderService.findAllByCustomerId(anyLong(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(orderResult), pageable, 1));
             mockMvc.perform(get("/api/orders"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[0].id").value(orderResponse.id()))
-                    .andExpect(jsonPath("$[0].customerName").value(orderResponse.customerName()))
-                    .andExpect(jsonPath("$[0].status").value(orderResponse.status().name()));
+                    .andExpect(jsonPath("$.content[0].id").value(orderResponse.id()))
+                    .andExpect(
+                            jsonPath("$.content[0].customerName")
+                                    .value(orderResponse.customerName()))
+                    .andExpect(
+                            jsonPath("$.content[0].status").value(orderResponse.status().name()));
         }
 
         @Test
         @WithMockLoginUser
         @DisplayName("注文が0件の場合、空のリストを返すこと")
         void shouldReturnEmptyListWhenNoOrdersExist() throws Exception {
+            when(orderService.findAllByCustomerId(anyLong(), any(Pageable.class)))
+                    .thenReturn(Page.empty());
             mockMvc.perform(get("/api/orders"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$").isEmpty());
+                    .andExpect(jsonPath("$.content").isEmpty());
         }
     }
 
@@ -207,6 +221,7 @@ class OrderControllerTest {
         void shouldCallCancelWhenStatusIsCancelled() throws Exception {
             OrderResult cancelledResult =
                     new OrderResult(
+                            1L,
                             1L,
                             "Test Customer",
                             OrderStatus.CANCELLED,

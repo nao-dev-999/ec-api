@@ -53,6 +53,16 @@ public class CustomerMeController {
         return new CustomerMeResponse(
                 result.id(),
                 result.email(),
+                result.lastName(),
+                result.firstName(),
+                result.lastNameKana(),
+                result.firstNameKana(),
+                result.phoneNumber(),
+                result.postalCode(),
+                result.prefecture(),
+                result.city(),
+                result.addressLine1(),
+                result.addressLine2(),
                 result.createdAt(),
                 result.updatedAt(),
                 result.version());

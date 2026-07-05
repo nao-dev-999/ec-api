@@ -36,7 +36,20 @@ public class AdminEmployeeController {
             @Valid @RequestBody CreateEmployeeRequest request) {
         EmployeeResult result =
                 employeeService.create(
-                        new CreateEmployee(request.email(), request.password(), request.role()));
+                        new CreateEmployee(
+                                request.email(),
+                                request.password(),
+                                request.role(),
+                                request.lastName(),
+                                request.firstName(),
+                                request.lastNameKana(),
+                                request.firstNameKana(),
+                                request.phoneNumber(),
+                                request.postalCode(),
+                                request.prefecture(),
+                                request.city(),
+                                request.addressLine1(),
+                                request.addressLine2()));
         return ResponseEntity.status(HttpStatus.CREATED).body(toResponse(result));
     }
 
@@ -60,6 +73,16 @@ public class AdminEmployeeController {
                 result.id(),
                 result.email(),
                 result.role(),
+                result.lastName(),
+                result.firstName(),
+                result.lastNameKana(),
+                result.firstNameKana(),
+                result.phoneNumber(),
+                result.postalCode(),
+                result.prefecture(),
+                result.city(),
+                result.addressLine1(),
+                result.addressLine2(),
                 result.createdAt(),
                 result.updatedAt(),
                 result.version());

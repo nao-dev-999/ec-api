@@ -1,6 +1,7 @@
 package com.example.ecapi.controller.customer.order;
 
 import com.example.ecapi.constant.OrderStatus;
+import com.example.ecapi.controller.common.dto.PageResponse;
 import com.example.ecapi.controller.customer.order.dto.OrderItemResponse;
 import com.example.ecapi.controller.customer.order.dto.OrderRequest;
 import com.example.ecapi.controller.customer.order.dto.OrderResponse;
@@ -10,8 +11,11 @@ import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.CreateOrderItem;
 import com.example.ecapi.service.order.dto.OrderResult;
 import jakarta.validation.Valid;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,20 +38,30 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class OrderController {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final OrderService orderService;
 
     /**
-     * ログイン中の顧客自身の注文を全て取得します。
+     * ログイン中の顧客自身の注文を新しい順にページング取得します。
      *
-     * @return 注文のリスト {@link OrderResponse}
+     * @return 注文のページ {@link OrderResponse}
      */
     @GetMapping
-    public ResponseEntity<List<OrderResponse>> getAll(
+    public ResponseEntity<PageResponse<OrderResponse>> getAll(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
             @AuthenticationPrincipal LoginUserDetails loginUser) {
-        return ResponseEntity.ok(
-                orderService.findAllByCustomerId(loginUser.getUserId()).stream()
-                        .map(this::toOrderResponse)
-                        .toList());
+        Pageable pageable =
+                PageRequest.of(
+                        Math.max(page, 0),
+                        Math.clamp(size, 1, MAX_PAGE_SIZE),
+                        Sort.by(Sort.Direction.DESC, "orderedAt"));
+        Page<OrderResponse> result =
+                orderService
+                        .findAllByCustomerId(loginUser.getUserId(), pageable)
+                        .map(this::toOrderResponse);
+        return ResponseEntity.ok(PageResponse.from(result));
     }
 
     /**
@@ -104,6 +118,7 @@ public class OrderController {
     private OrderResponse toOrderResponse(OrderResult result) {
         return new OrderResponse(
                 result.id(),
+                result.customerId(),
                 result.customerName(),
                 result.status(),
                 result.totalAmount(),

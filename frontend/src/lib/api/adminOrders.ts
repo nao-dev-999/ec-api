@@ -3,9 +3,13 @@ import type { components } from "./schema.d.ts";
 
 export type AdminOrder = components["schemas"]["AdminOrderResponse"];
 export type OrderStatus = NonNullable<AdminOrder["status"]>;
+export type AdminOrderPage =
+  components["schemas"]["PageResponseAdminOrderResponse"];
 
-export function getAdminOrders(): Promise<AdminOrder[]> {
-  return apiFetch<AdminOrder[]>("/api/admin/orders");
+export function getAdminOrders(page = 0, size = 20): Promise<AdminOrderPage> {
+  return apiFetch<AdminOrderPage>(
+    `/api/admin/orders?page=${page}&size=${size}`,
+  );
 }
 
 export function getAdminOrder(id: number): Promise<AdminOrder> {

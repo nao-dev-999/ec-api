@@ -1,9 +1,9 @@
 plugins {
-    java
+    id("java")
     id("org.springframework.boot") version "4.0.1"
     id("io.spring.dependency-management") version "1.1.7"
     id("com.diffplug.spotless") version "8.4.0"
-    jacoco
+    id("jacoco")
 }
 
 group = "com.example"

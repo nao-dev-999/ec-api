@@ -3,6 +3,9 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:postgres}
 
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed
+
 server:
   servlet:
     session:

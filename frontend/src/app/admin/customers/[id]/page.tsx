@@ -1,6 +1,8 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowLeft } from "lucide-react";
 import { getAdminCustomer, type AdminCustomer } from "@/lib/api/adminCustomers";
 
 export default function AdminCustomerDetailPage({
@@ -22,7 +24,11 @@ export default function AdminCustomerDetailPage({
   if (!customer) return <p style={{ padding: 24 }}>読み込み中...</p>;
 
   return (
-    <main style={{ padding: 24 }}>
+    <main>
+      <Link href="/admin/customers" className="back-link">
+        <ArrowLeft size={14} />
+        顧客一覧に戻る
+      </Link>
       <h1>顧客詳細</h1>
       <p>ID: {customer.id}</p>
       <p>メールアドレス: {customer.email}</p>
