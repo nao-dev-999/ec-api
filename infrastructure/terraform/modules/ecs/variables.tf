@@ -15,7 +15,6 @@ variable "app_image_tag" {
 
 variable "db_host" { type = string }
 variable "db_name" { type = string }
-variable "db_username" { type = string }
 variable "db_password_secret_arn" {
   type      = string
   description = "RDS managed Secrets Manager ARN"

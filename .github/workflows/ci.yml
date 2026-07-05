@@ -36,6 +36,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+    defaults:
+      run:
+        working-directory: backend
+
     steps:
       - uses: actions/checkout@v4
 
@@ -45,6 +49,7 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: gradle
+          cache-dependency-path: backend/*.gradle*
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -67,4 +72,4 @@ jobs:
         if: failure()
         with:
           name: test-report
-          path: build/reports/tests/test/
+          path: backend/build/reports/tests/test/

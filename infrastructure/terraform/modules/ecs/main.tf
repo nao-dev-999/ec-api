@@ -236,7 +236,6 @@ resource "aws_ecs_task_definition" "app" {
       environment = [
         { name = "SPRING_PROFILES_ACTIVE", value = var.env },
         { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${var.db_host}:5432/${var.db_name}" },
-        { name = "SPRING_DATASOURCE_USERNAME", value = var.db_username },
         { name = "SPRING_DATA_REDIS_HOST", value = aws_elasticache_cluster.this.cache_nodes[0].address },
         { name = "SPRING_DATA_REDIS_PORT", value = "6379" },
         # Flywayはアプリ起動時には無効化（別タスクで実行）
@@ -244,6 +243,10 @@ resource "aws_ecs_task_definition" "app" {
       ]
 
       secrets = [
+        {
+          name      = "SPRING_DATASOURCE_USERNAME"
+          valueFrom = "${var.db_password_secret_arn}:username::"
+        },
         {
           name      = "SPRING_DATASOURCE_PASSWORD"
           valueFrom = "${var.db_password_secret_arn}:password::"
@@ -305,7 +308,6 @@ resource "aws_ecs_task_definition" "flyway" {
 
       environment = [
         { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${var.db_host}:5432/${var.db_name}" },
-        { name = "SPRING_DATASOURCE_USERNAME", value = var.db_username },
         { name = "SPRING_FLYWAY_ENABLED", value = "true" },
         { name = "SPRING_FLYWAY_LOCATIONS", value = "classpath:db/migration" },
         { name = "SPRING_FLYWAY_BASELINE_ON_MIGRATE", value = "true" },
@@ -313,8 +315,12 @@ resource "aws_ecs_task_definition" "flyway" {
 
       secrets = [
         {
+          name      = "SPRING_DATASOURCE_USERNAME"
+          valueFrom = "${var.db_password_secret_arn}:username::"
+        },
+        {
           name      = "SPRING_DATASOURCE_PASSWORD"
-          valueFrom = var.db_password_secret_arn
+          valueFrom = "${var.db_password_secret_arn}:password::"
         }
       ]
 

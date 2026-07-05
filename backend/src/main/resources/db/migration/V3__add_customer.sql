@@ -1,0 +1,22 @@
+CREATE TABLE customer (
+    id              BIGSERIAL PRIMARY KEY,
+    email           VARCHAR(255) NOT NULL UNIQUE,
+    password        VARCHAR(255) NOT NULL,
+    last_name       VARCHAR(255),
+    first_name      VARCHAR(255),
+    last_name_kana  VARCHAR(255),
+    first_name_kana VARCHAR(255),
+    phone_number    VARCHAR(20),
+    postal_code     VARCHAR(10),
+    prefecture      VARCHAR(255),
+    city            VARCHAR(255),
+    address_line1   VARCHAR(255),
+    address_line2   VARCHAR(255),
+    created_at  TIMESTAMPTZ    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMPTZ    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at  TIMESTAMPTZ    NULL,
+    created_by  VARCHAR(255),
+    updated_by  VARCHAR(255),
+    deleted_by  VARCHAR(255),
+    version     INT NOT NULL DEFAULT 0
+);

@@ -1,0 +1,27 @@
+spring:
+  datasource:
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+
+  flyway:
+    locations: classpath:db/migration,classpath:db/seed
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: false # ローカル環境のみfalse
+
+logging:
+  level:
+    com.example.ecapi: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method
+  api-docs:
+    path: /v3/api-docs
