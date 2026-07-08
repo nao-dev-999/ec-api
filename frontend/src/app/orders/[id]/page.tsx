@@ -22,6 +22,7 @@ export default function OrderDetailPage({
   const router = useRouter();
   const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     getOrder(Number(id))
@@ -31,10 +32,26 @@ export default function OrderDetailPage({
           router.push("/login");
           return;
         }
+        if (err instanceof ApiError && err.status === 404) {
+          setNotFound(true);
+          return;
+        }
         setError("注文の取得に失敗しました");
       });
   }, [id, router]);
 
+  if (notFound) {
+    return (
+      <main>
+        <Link href="/orders" className="back-link">
+          <ArrowLeft size={14} />
+          注文履歴に戻る
+        </Link>
+        <h1>注文が見つかりません</h1>
+        <p>指定された注文は存在しないか、削除された可能性があります。</p>
+      </main>
+    );
+  }
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
   if (!order) return <p style={{ padding: 24 }}>読み込み中...</p>;
 

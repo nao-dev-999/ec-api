@@ -9,7 +9,7 @@ import {
   EMPLOYEE_ROLES,
   type EmployeeRole,
 } from "@/lib/api/adminEmployees";
-import { useToast } from "../../Toast";
+import { useToast } from "@/app/Toast";
 
 export default function NewAdminEmployeePage() {
   const router = useRouter();

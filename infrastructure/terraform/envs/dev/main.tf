@@ -61,6 +61,9 @@ module "ecs" {
   app_image_url = module.ecr.app_repository_url
   app_image_tag = "latest"
 
+  flyway_image_url = module.ecr.flyway_repository_url
+  flyway_image_tag = "latest"
+
   db_host                = module.rds.rds_endpoint
   db_name                = var.rds_database_name
   db_password_secret_arn = module.rds.rds_secret_arn
@@ -83,9 +86,10 @@ module "codepipeline" {
   github_repository       = var.github_repository
   github_branch           = var.github_branch
 
-  app_repository_url = module.ecr.app_repository_url
-  ecs_cluster_name   = module.ecs.cluster_name
-  ecs_service_name   = module.ecs.service_name
+  app_repository_url    = module.ecr.app_repository_url
+  flyway_repository_url = module.ecr.flyway_repository_url
+  ecs_cluster_name      = module.ecs.cluster_name
+  ecs_service_name      = module.ecs.service_name
 
   task_execution_role_arn = module.ecs.task_execution_role_arn
   task_role_arn           = module.ecs.task_role_arn

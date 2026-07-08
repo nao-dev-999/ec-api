@@ -10,9 +10,11 @@ import {
 } from "@/lib/api/cart";
 import { createOrder } from "@/lib/api/orders";
 import { ApiError } from "@/lib/api/client";
+import { useToast } from "@/app/Toast";
 
 export default function CartPage() {
   const router = useRouter();
+  const { showToast } = useToast();
   const [items, setItems] = useState<CartItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [placingOrder, setPlacingOrder] = useState(false);
@@ -40,7 +42,10 @@ export default function CartPage() {
         prev!.map((i) => (i.productId === updated.productId ? updated : i)),
       );
     } catch {
-      setError("数量の更新に失敗しました。画面を更新して再度お試しください");
+      showToast(
+        "数量の更新に失敗しました。画面を更新して再度お試しください",
+        "error",
+      );
     }
   }
 
@@ -49,13 +54,12 @@ export default function CartPage() {
       await removeCartItem(productId);
       setItems((prev) => prev!.filter((i) => i.productId !== productId));
     } catch {
-      setError("削除に失敗しました");
+      showToast("削除に失敗しました", "error");
     }
   }
 
   async function handleCheckout() {
     if (!items || items.length === 0) return;
-    setError(null);
     setPlacingOrder(true);
     try {
       const order = await createOrder({
@@ -66,7 +70,7 @@ export default function CartPage() {
       });
       router.push(`/orders/${order.id}`);
     } catch {
-      setError("注文の作成に失敗しました");
+      showToast("注文の作成に失敗しました", "error");
     } finally {
       setPlacingOrder(false);
     }

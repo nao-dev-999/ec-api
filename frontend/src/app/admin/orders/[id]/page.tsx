@@ -9,8 +9,9 @@ import {
   type AdminOrder,
   type OrderStatus,
 } from "@/lib/api/adminOrders";
+import { ApiError } from "@/lib/api/client";
 import OrderStatusBadge from "../../../OrderStatusBadge";
-import { useToast } from "../../Toast";
+import { useToast } from "@/app/Toast";
 
 const STATUS_OPTIONS: OrderStatus[] = [
   "PENDING",
@@ -37,6 +38,7 @@ export default function AdminOrderDetailPage({
   const [order, setOrder] = useState<AdminOrder | null>(null);
   const [status, setStatus] = useState<OrderStatus>("PENDING");
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -45,7 +47,10 @@ export default function AdminOrderDetailPage({
         setOrder(o);
         setStatus(o.status ?? "PENDING");
       })
-      .catch(() => setError("注文の取得に失敗しました"));
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 404) setNotFound(true);
+        else setError("注文の取得に失敗しました");
+      });
   }, [orderId]);
 
   async function handleStatusChange(e: React.FormEvent) {
@@ -71,6 +76,18 @@ export default function AdminOrderDetailPage({
     }
   }
 
+  if (notFound) {
+    return (
+      <main>
+        <Link href="/admin/orders" className="back-link">
+          <ArrowLeft size={14} />
+          注文一覧に戻る
+        </Link>
+        <h1>注文が見つかりません</h1>
+        <p>指定された注文は存在しないか、削除された可能性があります。</p>
+      </main>
+    );
+  }
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
   if (!order) return <p style={{ padding: 24 }}>読み込み中...</p>;
 

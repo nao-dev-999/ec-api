@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createAdminProduct } from "@/lib/api/adminProducts";
-import { useToast } from "../../Toast";
+import { useToast } from "@/app/Toast";
 
 export default function NewAdminProductPage() {
   const router = useRouter();
