@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Inter, Noto_Sans_JP } from "next/font/google";
 import "./globals.css";
 import SiteNav from "./SiteNav";
+import { ToastProvider } from "./Toast";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -40,8 +41,10 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${inter.variable} ${notoSansJP.variable}`}
     >
       <body>
-        <SiteNav />
-        {children}
+        <ToastProvider>
+          <SiteNav />
+          {children}
+        </ToastProvider>
       </body>
     </html>
   );

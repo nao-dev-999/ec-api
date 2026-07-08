@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { getAdminCustomer, type AdminCustomer } from "@/lib/api/adminCustomers";
+import { ApiError } from "@/lib/api/client";
 
 export default function AdminCustomerDetailPage({
   params,
@@ -13,12 +14,29 @@ export default function AdminCustomerDetailPage({
   const { id } = use(params);
   const [customer, setCustomer] = useState<AdminCustomer | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     getAdminCustomer(Number(id))
       .then(setCustomer)
-      .catch(() => setError("顧客情報の取得に失敗しました"));
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 404) setNotFound(true);
+        else setError("顧客情報の取得に失敗しました");
+      });
   }, [id]);
+
+  if (notFound) {
+    return (
+      <main>
+        <Link href="/admin/customers" className="back-link">
+          <ArrowLeft size={14} />
+          顧客一覧に戻る
+        </Link>
+        <h1>顧客が見つかりません</h1>
+        <p>指定された顧客は存在しないか、削除された可能性があります。</p>
+      </main>
+    );
+  }
 
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
   if (!customer) return <p style={{ padding: 24 }}>読み込み中...</p>;

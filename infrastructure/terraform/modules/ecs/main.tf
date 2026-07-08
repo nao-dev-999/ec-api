@@ -293,33 +293,25 @@ resource "aws_ecs_task_definition" "flyway" {
   container_definitions = jsonencode([
     {
       name      = "flyway"
-      # appと同じイメージを使用し、ENTRYPOINTをFlywayに上書き
-      image     = "${var.app_image_url}:${var.app_image_tag}"
+      # Flyway公式CLIイメージ（マイグレーションSQLを同梱してビルド）を使用
+      image     = "${var.flyway_image_url}:${var.flyway_image_tag}"
       essential = true
 
-      # Spring Boot JARにバンドルされたFlywayをCLIとして起動
-      command = [
-        "java",
-        "-cp", "app.jar",
-        "-Dloader.main=org.flywaydb.core.Flyway",
-        "org.springframework.boot.loader.launch.PropertiesLauncher",
-        "migrate"
-      ]
+      command = ["migrate"]
 
       environment = [
-        { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${var.db_host}:5432/${var.db_name}" },
-        { name = "SPRING_FLYWAY_ENABLED", value = "true" },
-        { name = "SPRING_FLYWAY_LOCATIONS", value = "classpath:db/migration" },
-        { name = "SPRING_FLYWAY_BASELINE_ON_MIGRATE", value = "true" },
+        { name = "FLYWAY_URL", value = "jdbc:postgresql://${var.db_host}:5432/${var.db_name}" },
+        { name = "FLYWAY_LOCATIONS", value = "filesystem:/flyway/sql" },
+        { name = "FLYWAY_BASELINE_ON_MIGRATE", value = "true" },
       ]
 
       secrets = [
         {
-          name      = "SPRING_DATASOURCE_USERNAME"
+          name      = "FLYWAY_USER"
           valueFrom = "${var.db_password_secret_arn}:username::"
         },
         {
-          name      = "SPRING_DATASOURCE_PASSWORD"
+          name      = "FLYWAY_PASSWORD"
           valueFrom = "${var.db_password_secret_arn}:password::"
         }
       ]

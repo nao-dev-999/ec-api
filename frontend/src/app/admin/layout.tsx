@@ -40,11 +40,9 @@ export default function AdminLayout({
 
   if (pathname === "/admin/login") {
     return (
-      <ToastProvider>
-        <div className="admin-shell admin-login-shell">
-          <div className="admin-login-card">{children}</div>
-        </div>
-      </ToastProvider>
+      <div className="admin-shell admin-login-shell">
+        <div className="admin-login-card">{children}</div>
+      </div>
     );
   }
 
@@ -62,24 +60,6 @@ export default function AdminLayout({
               <LogOut size={16} />
               <span>ログアウト</span>
             </button>
-          </div>
-        </header>
-        <nav className="admin-nav">
-          {NAV_ITEMS.map(({ href, label, Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={
-                "admin-nav-link" + (pathname === href ? " active" : "")
-              }
-            >
-              <Icon size={16} />
-              <span>{label}</span>
-            </Link>
-          ))}
-        </nav>
-        {children}
-      </div>
     </ToastProvider>
   );
 }

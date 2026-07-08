@@ -1,6 +1,8 @@
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getProduct } from "@/lib/api/products";
+import { ApiError } from "@/lib/api/client";
 import AddToCartButton from "./AddToCartButton";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +13,14 @@ export default async function ProductDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = await getProduct(Number(id));
+
+  let product;
+  try {
+    product = await getProduct(Number(id));
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) notFound();
+    throw e;
+  }
 
   return (
     <main style={{ maxWidth: 480 }}>

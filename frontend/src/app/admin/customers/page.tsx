@@ -9,7 +9,7 @@ import {
   type AdminCustomer,
 } from "@/lib/api/adminCustomers";
 import ConfirmModal from "../ConfirmModal";
-import { useToast } from "../Toast";
+import { useToast } from "@/app/Toast";
 
 export default function AdminCustomersPage() {
   const { showToast } = useToast();

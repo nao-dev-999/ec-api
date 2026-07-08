@@ -15,7 +15,8 @@ import {
   removeCategoryFromProduct,
   type AdminCategory,
 } from "@/lib/api/adminCategories";
-import { useToast } from "../../Toast";
+import { ApiError } from "@/lib/api/client";
+import { useToast } from "@/app/Toast";
 
 export default function AdminProductDetailPage({
   params,
@@ -32,6 +33,7 @@ export default function AdminProductDetailPage({
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [allCategories, setAllCategories] = useState<AdminCategory[]>([]);
@@ -49,14 +51,17 @@ export default function AdminProductDetailPage({
         setPrice(String(p.price ?? ""));
         setStock(String(p.stock ?? ""));
       })
-      .catch(() => setError("商品の取得に失敗しました"));
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 404) setNotFound(true);
+        else setError("商品の取得に失敗しました");
+      });
     getAdminCategories()
       .then(setAllCategories)
-      .catch(() => {});
+      .catch(() => showToast("カテゴリ一覧の取得に失敗しました", "error"));
     getProductCategories(productId)
       .then(setProductCategories)
-      .catch(() => {});
-  }, [productId]);
+      .catch(() => showToast("設定済みカテゴリの取得に失敗しました", "error"));
+  }, [productId, showToast]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -101,6 +106,19 @@ export default function AdminProductDetailPage({
     } catch {
       showToast("カテゴリの削除に失敗しました", "error");
     }
+  }
+
+  if (notFound) {
+    return (
+      <main>
+        <Link href="/admin/products" className="back-link">
+          <ArrowLeft size={14} />
+          商品一覧に戻る
+        </Link>
+        <h1>商品が見つかりません</h1>
+        <p>指定された商品は存在しないか、削除された可能性があります。</p>
+      </main>
+    );
   }
 
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;

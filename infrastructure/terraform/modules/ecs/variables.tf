@@ -13,6 +13,12 @@ variable "app_image_tag" {
   default = "latest"
 }
 
+variable "flyway_image_url" { type = string }
+variable "flyway_image_tag" {
+  type    = string
+  default = "latest"
+}
+
 variable "db_host" { type = string }
 variable "db_name" { type = string }
 variable "db_password_secret_arn" {

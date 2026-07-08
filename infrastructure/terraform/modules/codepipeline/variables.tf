@@ -18,6 +18,11 @@ variable "app_repository_url" {
   type        = string
 }
 
+variable "flyway_repository_url" {
+  description = "ECR repository URL for the flyway migration image"
+  type        = string
+}
+
 variable "ecs_cluster_name" {
   description = "ECS cluster name"
   type        = string

@@ -9,7 +9,7 @@ import {
   type AdminCategory,
 } from "@/lib/api/adminCategories";
 import ConfirmModal from "../ConfirmModal";
-import { useToast } from "../Toast";
+import { useToast } from "@/app/Toast";
 
 export default function AdminCategoriesPage() {
   const { showToast } = useToast();

@@ -22,7 +22,7 @@ import {
   type AdminCategory,
 } from "@/lib/api/adminCategories";
 import ConfirmModal from "../ConfirmModal";
-import { useToast } from "../Toast";
+import { useToast } from "@/app/Toast";
 
 const PAGE_SIZE = 9;
 

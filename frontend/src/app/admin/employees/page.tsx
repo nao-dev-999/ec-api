@@ -9,7 +9,7 @@ import {
   type AdminEmployee,
 } from "@/lib/api/adminEmployees";
 import ConfirmModal from "../ConfirmModal";
-import { useToast } from "../Toast";
+import { useToast } from "@/app/Toast";
 
 export default function AdminEmployeesPage() {
   const { showToast } = useToast();

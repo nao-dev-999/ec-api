@@ -8,7 +8,8 @@ import {
   updateAdminCategory,
   type AdminCategory,
 } from "@/lib/api/adminCategories";
-import { useToast } from "../../Toast";
+import { ApiError } from "@/lib/api/client";
+import { useToast } from "@/app/Toast";
 
 export default function AdminCategoryDetailPage({
   params,
@@ -22,6 +23,7 @@ export default function AdminCategoryDetailPage({
   const [category, setCategory] = useState<AdminCategory | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -30,7 +32,10 @@ export default function AdminCategoryDetailPage({
         setCategory(c);
         setName(c.name ?? "");
       })
-      .catch(() => setError("カテゴリの取得に失敗しました"));
+      .catch((e) => {
+        if (e instanceof ApiError && e.status === 404) setNotFound(true);
+        else setError("カテゴリの取得に失敗しました");
+      });
   }, [categoryId]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -53,6 +58,19 @@ export default function AdminCategoryDetailPage({
     }
   }
 
+  if (notFound) {
+    return (
+      <main>
+        <Link href="/admin/categories" className="back-link">
+          <ArrowLeft size={14} />
+          カテゴリ一覧に戻る
+        </Link>
+        <h1>カテゴリが見つかりません</h1>
+        <p>指定されたカテゴリは存在しないか、削除された可能性があります。</p>
+      </main>
+    );
+  }
+  
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
   if (!category) return <p style={{ padding: 24 }}>読み込み中...</p>;
 

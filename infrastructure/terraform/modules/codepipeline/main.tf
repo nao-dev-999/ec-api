@@ -186,6 +186,10 @@ resource "aws_codebuild_project" "build" {
       value = var.app_repository_url
     }
     environment_variable {
+      name  = "FLYWAY_ECR_REPO_URI"
+      value = var.flyway_repository_url
+    }
+    environment_variable {
       name  = "ECS_CLUSTER"
       value = var.ecs_cluster_name
     }

@@ -7,19 +7,27 @@ phases:
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
       - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-8)
       - IMAGE_URI="$ECR_REPO_URI:$IMAGE_TAG"
+      - FLYWAY_IMAGE_URI="$FLYWAY_ECR_REPO_URI:$IMAGE_TAG"
       - echo "Image URI = $IMAGE_URI"
+      - echo "Flyway image URI = $FLYWAY_IMAGE_URI"
 
   build:
     commands:
       - echo "=== Building Docker image ==="
       - docker build -t $IMAGE_URI backend
       - docker tag $IMAGE_URI $ECR_REPO_URI:latest
+      - echo "=== Building Flyway migration image ==="
+      - docker build -f backend/Dockerfile.flyway -t $FLYWAY_IMAGE_URI backend
+      - docker tag $FLYWAY_IMAGE_URI $FLYWAY_ECR_REPO_URI:latest
 
   post_build:
     commands:
       - echo "=== Pushing image to ECR ==="
       - docker push $IMAGE_URI
       - docker push $ECR_REPO_URI:latest
+      - echo "=== Pushing Flyway image to ECR ==="
+      - docker push $FLYWAY_IMAGE_URI
+      - docker push $FLYWAY_ECR_REPO_URI:latest
       - echo "=== Running Flyway migration ==="
       - |
         TASK_ARN=$(aws ecs run-task \
