@@ -88,6 +88,7 @@ export default function AdminOrderDetailPage({
       </main>
     );
   }
+
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
   if (!order) return <p style={{ padding: 24 }}>読み込み中...</p>;
 

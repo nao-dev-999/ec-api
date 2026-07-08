@@ -120,6 +120,7 @@ export default function AdminProductDetailPage({
       </main>
     );
   }
+
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
   if (!product) return <p style={{ padding: 24 }}>読み込み中...</p>;
 
