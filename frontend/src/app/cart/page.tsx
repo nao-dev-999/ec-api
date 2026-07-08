@@ -60,6 +60,7 @@ export default function CartPage() {
 
   async function handleCheckout() {
     if (!items || items.length === 0) return;
+    setError(null);
     setPlacingOrder(true);
     try {
       const order = await createOrder({
