@@ -62,7 +62,7 @@ resource "aws_iam_role_policy" "pipeline" {
       },
       {
         Effect   = "Allow"
-        Action   = ["ecs:DescribeServices", "ecs:DescribeTaskDefinition", "ecs:RegisterTaskDefinition", "ecs:UpdateService"]
+        Action   = ["ecs:DescribeServices", "ecs:DescribeTaskDefinition", "ecs:DescribeTasks", "ecs:ListTasks", "ecs:RegisterTaskDefinition", "ecs:UpdateService", "ecs:TagResource"]
         Resource = "*"
       },
       {
@@ -77,7 +77,7 @@ resource "aws_iam_role_policy" "pipeline" {
       },
       {
         Effect   = "Allow"
-        Action   = ["ecs:RunTask", "ecs:DescribeTasks"]
+        Action   = ["ecs:RunTask"]
         Resource = "*"
       }
     ]
