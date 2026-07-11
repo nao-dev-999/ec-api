@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { adminLogin } from "@/lib/api/auth";
-import { ApiError } from "@/lib/api/client";
+import { getErrorMessage } from "@/lib/errors/messages";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -20,11 +20,7 @@ export default function AdminLoginPage() {
       await adminLogin({ email, password });
       router.push("/admin");
     } catch (err) {
-      setError(
-        err instanceof ApiError && err.status === 401
-          ? "メールアドレスまたはパスワードが正しくありません"
-          : "ログインに失敗しました",
-      );
+      setError(getErrorMessage(err, "ログインに失敗しました"));
     } finally {
       setSubmitting(false);
     }

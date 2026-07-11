@@ -9,6 +9,7 @@ import {
   type CustomerMe,
 } from "@/lib/api/me";
 import { ApiError } from "@/lib/api/client";
+import { getErrorMessage } from "@/lib/errors/messages";
 
 export default function MyPage() {
   const router = useRouter();
@@ -49,11 +50,7 @@ export default function MyPage() {
       setMe(updated);
       setEmailMessage("メールアドレスを更新しました");
     } catch (err) {
-      setEmailMessage(
-        err instanceof ApiError && err.status === 409
-          ? "他の変更と競合しました。画面を更新して再度お試しください"
-          : "メールアドレスの更新に失敗しました",
-      );
+      setEmailMessage(getErrorMessage(err, "メールアドレスの更新に失敗しました"));
     } finally {
       setEmailSubmitting(false);
     }
@@ -76,11 +73,7 @@ export default function MyPage() {
       setNewPassword("");
       setPasswordMessage("パスワードを更新しました");
     } catch (err) {
-      setPasswordMessage(
-        err instanceof ApiError && err.status === 400
-          ? "現在のパスワードが正しくありません"
-          : "パスワードの更新に失敗しました",
-      );
+      setPasswordMessage(getErrorMessage(err, "パスワードの更新に失敗しました"));
     } finally {
       setPasswordSubmitting(false);
     }
