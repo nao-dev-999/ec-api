@@ -210,6 +210,28 @@ resource "aws_iam_role" "task" {
   }
 }
 
+# ECS Exec（execute-command）でコンテナにシェル接続するために必要
+resource "aws_iam_role_policy" "task_exec_ssm" {
+  name = "ecs-exec-ssmmessages"
+  role = aws_iam_role.task.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ssmmessages:CreateControlChannel",
+          "ssmmessages:CreateDataChannel",
+          "ssmmessages:OpenControlChannel",
+          "ssmmessages:OpenDataChannel"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
 # ---------------------------------------------------------------------------
 # ECS Task Definition - App
 # ---------------------------------------------------------------------------
@@ -334,6 +356,71 @@ resource "aws_ecs_task_definition" "flyway" {
 }
 
 # ---------------------------------------------------------------------------
+# ECS Task Definition - DB Debug（psqlでのDB確認用。一時利用）
+# ---------------------------------------------------------------------------
+resource "aws_cloudwatch_log_group" "db_debug" {
+  name              = "/ecs/${var.project}-${var.env}/db-debug"
+  retention_in_days = 7
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+resource "aws_ecs_task_definition" "db_debug" {
+  family                   = "${var.project}-${var.env}-db-debug"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "256"
+  memory                   = "512"
+  execution_role_arn       = aws_iam_role.task_execution.arn
+  task_role_arn            = aws_iam_role.task.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "psql"
+      image     = "postgres:16-alpine"
+      essential = true
+
+      # ECS Execでシェル接続してpsqlを手動実行するためコンテナを起動させ続ける
+      command = ["sleep", "infinity"]
+
+      environment = [
+        { name = "PGHOST", value = var.db_host },
+        { name = "PGPORT", value = "5432" },
+        { name = "PGDATABASE", value = var.db_name },
+      ]
+
+      secrets = [
+        {
+          name      = "PGUSER"
+          valueFrom = "${var.db_password_secret_arn}:username::"
+        },
+        {
+          name      = "PGPASSWORD"
+          valueFrom = "${var.db_password_secret_arn}:password::"
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.db_debug.name
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "db-debug"
+        }
+      }
+    }
+  ])
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+# ---------------------------------------------------------------------------
 # ECS Service
 # ---------------------------------------------------------------------------
 resource "aws_ecs_service" "app" {
@@ -346,6 +433,12 @@ resource "aws_ecs_service" "app" {
   # デプロイ設定（ローリングアップデート）
   deployment_minimum_healthy_percent = 50
   deployment_maximum_percent         = 200
+
+  # アプリ起動が完了する前にALBヘルスチェック失敗でタスクが強制終了されないよう、起動猶予期間を設ける
+  health_check_grace_period_seconds = 120
+
+  # タスクをAZ間で常に均等配置（1AZ1タスク）に保つ
+  availability_zone_rebalancing = "ENABLED"
 
   network_configuration {
     subnets          = var.private_subnet_ids
