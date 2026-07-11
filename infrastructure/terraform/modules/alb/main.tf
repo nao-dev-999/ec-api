@@ -3,6 +3,7 @@ resource "aws_lb" "this" {
   internal           = false
   load_balancer_type = "application"
   subnets            = var.public_subnet_ids
+  security_groups    = [aws_security_group.alb.id]
   enable_deletion_protection = false
   tags = {
     Name = "${var.project}-${var.env}-alb"

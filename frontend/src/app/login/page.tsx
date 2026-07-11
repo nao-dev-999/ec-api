@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { customerLogin } from "@/lib/api/customerAuth";
-import { ApiError } from "@/lib/api/client";
+import { getErrorMessage } from "@/lib/errors/messages";
 
 export default function CustomerLoginPage() {
   const router = useRouter();
@@ -20,11 +20,7 @@ export default function CustomerLoginPage() {
       await customerLogin({ email, password });
       router.push("/products");
     } catch (err) {
-      setError(
-        err instanceof ApiError && err.status === 401
-          ? "メールアドレスまたはパスワードが正しくありません"
-          : "ログインに失敗しました",
-      );
+      setError(getErrorMessage(err, "ログインに失敗しました"));
     } finally {
       setSubmitting(false);
     }

@@ -48,6 +48,9 @@ public class SecurityConfig {
                                         // Swagger UI を認証不要に追加
                                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**")
                                         .permitAll()
+                                        // ALB/ECSのヘルスチェック
+                                        .requestMatchers("/actuator/health/**")
+                                        .permitAll()
                                         .requestMatchers("/api/auth/**")
                                         .permitAll()
                                         // 商品参照は全員可（作成・更新・削除は ADMIN のみ）
