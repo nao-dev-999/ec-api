@@ -347,6 +347,12 @@ resource "aws_ecs_service" "app" {
   deployment_minimum_healthy_percent = 50
   deployment_maximum_percent         = 200
 
+  # アプリ起動が完了する前にALBヘルスチェック失敗でタスクが強制終了されないよう、起動猶予期間を設ける
+  health_check_grace_period_seconds = 120
+
+  # タスクをAZ間で常に均等配置（1AZ1タスク）に保つ
+  availability_zone_rebalancing = "ENABLED"
+
   network_configuration {
     subnets          = var.private_subnet_ids
     security_groups  = [aws_security_group.ecs.id]
