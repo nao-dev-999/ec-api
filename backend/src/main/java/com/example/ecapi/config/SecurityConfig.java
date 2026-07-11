@@ -74,7 +74,8 @@ public class SecurityConfig {
                                                 (request, response, authException) -> {
                                                     response.setStatus(
                                                             HttpServletResponse.SC_UNAUTHORIZED);
-                                                    response.setContentType("application/json");
+                                                    response.setContentType(
+                                                            "application/json;charset=UTF-8");
                                                     response.getWriter()
                                                             .write(
                                                                     """
@@ -89,7 +90,8 @@ public class SecurityConfig {
                                                 (request, response, accessDeniedException) -> {
                                                     response.setStatus(
                                                             HttpServletResponse.SC_FORBIDDEN);
-                                                    response.setContentType("application/json");
+                                                    response.setContentType(
+                                                            "application/json;charset=UTF-8");
                                                     response.getWriter()
                                                             .write(
                                                                     """

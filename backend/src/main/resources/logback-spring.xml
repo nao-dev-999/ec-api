@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
 
+    <logger name="com.example.ecapi" level="INFO"/>
+
     <!-- プロファイル未指定時のフォールバック: 起動エラー等が握りつぶされないようにする -->
     <springProfile name="!local &amp; !test &amp; !dev &amp; !prod &amp; !staging">
         <appender name="FALLBACK_CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
@@ -8,7 +10,7 @@
                 <pattern>%d{HH:mm:ss.SSS} [%level] %logger{36} - %msg%n</pattern>
             </encoder>
         </appender>
-        <root level="INFO">
+        <root level="WARN">
             <appender-ref ref="FALLBACK_CONSOLE"/>
         </root>
     </springProfile>
@@ -20,7 +22,7 @@
                 <pattern>%d{HH:mm:ss.SSS} [%level] [%X{requestId}] [userId:%X{userId}] %logger{36} - %msg%n</pattern>
             </encoder>
         </appender>
-        <root level="INFO">
+        <root level="WARN">
             <appender-ref ref="CONSOLE"/>
         </root>
     </springProfile>
@@ -34,9 +36,25 @@
                 <timeZone>${LOG_TIMEZONE:-Asia/Tokyo}</timeZone>
             </encoder>
         </appender>
-        <root level="INFO">
+        <root level="WARN">
             <appender-ref ref="JSON_CONSOLE"/>
         </root>
+    </springProfile>
+
+    <!-- local: 詳細ログ -->
+    <springProfile name="local">
+        <logger name="com.example.ecapi" level="DEBUG"/>
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+        <logger name="org.hibernate.orm.jdbc.bind" level="TRACE"/>
+    </springProfile>
+
+    <!-- dev: SQLログを有効化 -->
+    <springProfile name="dev">
+        <logger name="org.hibernate.SQL" level="DEBUG"/>
+    </springProfile>
+
+    <!-- 本番・ステージングのみ: SQLログを抑制 -->
+    <springProfile name="prod,staging">
         <logger name="org.hibernate.SQL" level="OFF"/>
         <logger name="org.hibernate.orm.jdbc.bind" level="OFF"/>
     </springProfile>

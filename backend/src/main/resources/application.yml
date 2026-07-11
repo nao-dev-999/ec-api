@@ -38,8 +38,3 @@ server:
         http-only: true
         secure: true
         same-site: Lax
-
-logging:
-  level:
-    root: WARN
-    com.example.ecapi: INFO
