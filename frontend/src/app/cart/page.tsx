@@ -11,6 +11,8 @@ import {
 import { createOrder } from "@/lib/api/orders";
 import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/app/Toast";
+import { getErrorMessage } from "@/lib/errors/messages";
+import { parseQuantity } from "@/lib/validation";
 
 export default function CartPage() {
   const router = useRouter();
@@ -27,12 +29,12 @@ export default function CartPage() {
           router.push("/login");
           return;
         }
-        setError("カートの取得に失敗しました");
+        setError(getErrorMessage(err, "カートの取得に失敗しました"));
       });
   }, [router]);
 
   async function handleQuantityChange(item: CartItem, quantity: number) {
-    if (quantity < 1) return;
+    if (parseQuantity(quantity) === null) return;
     try {
       const updated = await updateCartItemQuantity(item.productId!, {
         quantity,
@@ -41,9 +43,12 @@ export default function CartPage() {
       setItems((prev) =>
         prev!.map((i) => (i.productId === updated.productId ? updated : i)),
       );
-    } catch {
+    } catch (err) {
       showToast(
-        "数量の更新に失敗しました。画面を更新して再度お試しください",
+        getErrorMessage(
+          err,
+          "数量の更新に失敗しました。画面を更新して再度お試しください",
+        ),
         "error",
       );
     }
@@ -53,8 +58,8 @@ export default function CartPage() {
     try {
       await removeCartItem(productId);
       setItems((prev) => prev!.filter((i) => i.productId !== productId));
-    } catch {
-      showToast("削除に失敗しました", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "削除に失敗しました"), "error");
     }
   }
 
@@ -70,8 +75,8 @@ export default function CartPage() {
         })),
       });
       router.push(`/orders/${order.id}`);
-    } catch {
-      showToast("注文の作成に失敗しました", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "注文の作成に失敗しました"), "error");
     } finally {
       setPlacingOrder(false);
     }

@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowLeft, X } from "lucide-react";
 import {
   getAdminProduct,
@@ -17,6 +18,8 @@ import {
 } from "@/lib/api/adminCategories";
 import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/app/Toast";
+import { getErrorMessage } from "@/lib/errors/messages";
+import { parsePrice, parseStock } from "@/lib/validation";
 
 export default function AdminProductDetailPage({
   params,
@@ -33,7 +36,7 @@ export default function AdminProductDetailPage({
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  const [isNotFound, setIsNotFound] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [allCategories, setAllCategories] = useState<AdminCategory[]>([]);
@@ -52,36 +55,62 @@ export default function AdminProductDetailPage({
         setStock(String(p.stock ?? ""));
       })
       .catch((e) => {
-        if (e instanceof ApiError && e.status === 404) setNotFound(true);
-        else setError("商品の取得に失敗しました");
+        if (e instanceof ApiError && e.status === 404) setIsNotFound(true);
+        else setError(getErrorMessage(e, "商品の取得に失敗しました"));
       });
     getAdminCategories()
       .then(setAllCategories)
-      .catch(() => showToast("カテゴリ一覧の取得に失敗しました", "error"));
+      .catch((err) =>
+        showToast(
+          getErrorMessage(err, "カテゴリ一覧の取得に失敗しました"),
+          "error",
+        ),
+      );
     getProductCategories(productId)
       .then(setProductCategories)
-      .catch(() => showToast("設定済みカテゴリの取得に失敗しました", "error"));
+      .catch((err) =>
+        showToast(
+          getErrorMessage(err, "設定済みカテゴリの取得に失敗しました"),
+          "error",
+        ),
+      );
   }, [productId, showToast]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!product) return;
     setError(null);
+
+    const priceValue = parsePrice(price);
+    if (priceValue === null) {
+      setError("価格は0より大きい数値を入力してください");
+      return;
+    }
+    const stockValue = parseStock(stock);
+    if (stockValue === null) {
+      setError("在庫数は0以上の数値を入力してください");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const updated = await updateAdminProduct(productId, {
         id: productId,
         name,
         description,
-        price: Number(price),
-        stock: Number(stock),
+        price: priceValue,
+        stock: stockValue,
         version: product.version!,
       });
       setProduct(updated);
       showToast("商品を更新しました");
-    } catch {
-      setError("更新に失敗しました。画面を更新して再度お試しください");
-      showToast("更新に失敗しました", "error");
+    } catch (err) {
+      const message = getErrorMessage(
+        err,
+        "更新に失敗しました。画面を更新して再度お試しください",
+      );
+      setError(message);
+      showToast(message, "error");
     } finally {
       setSubmitting(false);
     }
@@ -94,8 +123,8 @@ export default function AdminProductDetailPage({
       const updated = await getProductCategories(productId);
       setProductCategories(updated);
       setSelectedCategoryId("");
-    } catch {
-      showToast("カテゴリの追加に失敗しました", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "カテゴリの追加に失敗しました"), "error");
     }
   }
 
@@ -103,23 +132,12 @@ export default function AdminProductDetailPage({
     try {
       await removeCategoryFromProduct(productId, categoryId);
       setProductCategories((prev) => prev.filter((c) => c.id !== categoryId));
-    } catch {
-      showToast("カテゴリの削除に失敗しました", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "カテゴリの削除に失敗しました"), "error");
     }
   }
 
-  if (notFound) {
-    return (
-      <main>
-        <Link href="/admin/products" className="back-link">
-          <ArrowLeft size={14} />
-          商品一覧に戻る
-        </Link>
-        <h1>商品が見つかりません</h1>
-        <p>指定された商品は存在しないか、削除された可能性があります。</p>
-      </main>
-    );
-  }
+  if (isNotFound) notFound();
 
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
   if (!product) return <p style={{ padding: 24 }}>読み込み中...</p>;

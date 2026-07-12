@@ -66,9 +66,12 @@ resource "aws_iam_role_policy" "pipeline" {
         Resource = "*"
       },
       {
-        Effect   = "Allow"
-        Action   = ["iam:PassRole"]
-        Resource = "*"
+        Effect = "Allow"
+        Action = ["iam:PassRole"]
+        Resource = [
+          var.task_execution_role_arn,
+          var.task_role_arn
+        ]
       },
       {
         Effect   = "Allow"

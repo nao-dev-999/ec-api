@@ -434,6 +434,12 @@ resource "aws_ecs_service" "app" {
   deployment_minimum_healthy_percent = 50
   deployment_maximum_percent         = 200
 
+  # 新タスクがヘルスチェックに失敗し続ける場合、自動的に直前のタスク定義へロールバック
+  deployment_circuit_breaker {
+    enable   = true
+    rollback = true
+  }
+
   # アプリ起動が完了する前にALBヘルスチェック失敗でタスクが強制終了されないよう、起動猶予期間を設ける
   health_check_grace_period_seconds = 120
 

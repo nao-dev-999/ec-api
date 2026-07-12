@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getProduct } from "@/lib/api/products";
@@ -6,6 +7,20 @@ import { ApiError } from "@/lib/api/client";
 import AddToCartButton from "./AddToCartButton";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  try {
+    const product = await getProduct(Number(id));
+    return { title: product.name };
+  } catch {
+    return { title: "商品詳細" };
+  }
+}
 
 export default async function ProductDetailPage({
   params,

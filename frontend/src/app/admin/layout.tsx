@@ -14,7 +14,6 @@ import {
   Receipt,
 } from "lucide-react";
 import "./admin.css";
-import { ToastProvider } from "./Toast";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "管理トップ", Icon: LayoutDashboard },
@@ -47,19 +46,35 @@ export default function AdminLayout({
   }
 
   return (
-    <ToastProvider>
-      <div className="admin-shell">
-        <header className="admin-header">
-          <Link href="/admin" className="admin-brand">
-            <ShoppingCart size={20} />
-            <span>テックプラザ管理</span>
+    <div className="admin-shell">
+      <header className="admin-header">
+        <Link href="/admin" className="admin-brand">
+          <ShoppingCart size={20} />
+          <span>テックプラザ管理</span>
+        </Link>
+        <div className="admin-header-right">
+          <span className="admin-user">管理者</span>
+          <button className="admin-logout" onClick={handleLogout}>
+            <LogOut size={16} />
+            <span>ログアウト</span>
+          </button>
+        </div>
+      </header>
+      <nav className="admin-nav">
+        {NAV_ITEMS.map(({ href, label, Icon }) => (
+          <Link
+            key={href}
+            href={href}
+            className={
+              "admin-nav-link" + (pathname === href ? " active" : "")
+            }
+          >
+            <Icon size={16} />
+            <span>{label}</span>
           </Link>
-          <div className="admin-header-right">
-            <span className="admin-user">管理者</span>
-            <button className="admin-logout" onClick={handleLogout}>
-              <LogOut size={16} />
-              <span>ログアウト</span>
-            </button>
-    </ToastProvider>
+        ))}
+      </nav>
+      {children}
+    </div>
   );
 }

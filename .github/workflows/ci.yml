@@ -4,8 +4,10 @@ name: CI
 on:
   push:
     branches: [ main ]
+    paths: [ 'backend/**' ]
   pull_request:
     branches: [ main ]
+    paths: [ 'backend/**' ]
 
 jobs:
   test:
@@ -13,7 +15,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16
+        image: postgres:17
         env:
           POSTGRES_DB: ecapi_test
           POSTGRES_USER: postgres
@@ -65,7 +67,6 @@ jobs:
           SPRING_DATASOURCE_PASSWORD: postgres
           SPRING_DATA_REDIS_HOST: localhost
           SPRING_DATA_REDIS_PORT: 6379
-          JWT_SECRET: test-secret-key-that-is-long-enough-for-hs256
 
       - name: Upload test report
         uses: actions/upload-artifact@v4
@@ -73,3 +74,6 @@ jobs:
         with:
           name: test-report
           path: backend/build/reports/tests/test/
+
+      - name: Build Docker image
+        run: docker build -t ec-api-backend:ci .

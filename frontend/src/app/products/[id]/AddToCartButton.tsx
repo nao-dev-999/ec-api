@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { addCartItem } from "@/lib/api/cart";
 import { ApiError } from "@/lib/api/client";
+import { getErrorMessage } from "@/lib/errors/messages";
+import { parseQuantity } from "@/lib/validation";
 
 export default function AddToCartButton({ productId }: { productId: number }) {
   const router = useRouter();
@@ -13,6 +15,10 @@ export default function AddToCartButton({ productId }: { productId: number }) {
 
   async function handleAdd() {
     setMessage(null);
+    if (parseQuantity(quantity) === null) {
+      setMessage("数量は1以上を指定してください");
+      return;
+    }
     setSubmitting(true);
     try {
       await addCartItem({ productId, quantity });
@@ -22,7 +28,7 @@ export default function AddToCartButton({ productId }: { productId: number }) {
         router.push("/login");
         return;
       }
-      setMessage("カートへの追加に失敗しました");
+      setMessage(getErrorMessage(err, "カートへの追加に失敗しました"));
     } finally {
       setSubmitting(false);
     }

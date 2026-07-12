@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import {
   getAdminEmployee,
@@ -12,6 +13,7 @@ import {
 } from "@/lib/api/adminEmployees";
 import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/app/Toast";
+import { getErrorMessage } from "@/lib/errors/messages";
 
 export default function AdminEmployeeDetailPage({
   params,
@@ -25,7 +27,7 @@ export default function AdminEmployeeDetailPage({
   const [employee, setEmployee] = useState<AdminEmployee | null>(null);
   const [role, setRole] = useState<EmployeeRole>(EMPLOYEE_ROLES[0]);
   const [error, setError] = useState<string | null>(null);
-  const [notFound, setNotFound] = useState(false);
+  const [isNotFound, setIsNotFound] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -35,8 +37,8 @@ export default function AdminEmployeeDetailPage({
         setRole(e.role ?? EMPLOYEE_ROLES[0]);
       })
       .catch((e) => {
-        if (e instanceof ApiError && e.status === 404) setNotFound(true);
-        else setError("従業員情報の取得に失敗しました");
+        if (e instanceof ApiError && e.status === 404) setIsNotFound(true);
+        else setError(getErrorMessage(e, "従業員情報の取得に失敗しました"));
       });
   }, [employeeId]);
 
@@ -52,26 +54,19 @@ export default function AdminEmployeeDetailPage({
       });
       setEmployee(updated);
       showToast("従業員情報を更新しました");
-    } catch {
-      setError("更新に失敗しました。画面を更新して再度お試しください");
-      showToast("更新に失敗しました", "error");
+    } catch (err) {
+      const message = getErrorMessage(
+        err,
+        "更新に失敗しました。画面を更新して再度お試しください",
+      );
+      setError(message);
+      showToast(message, "error");
     } finally {
       setSubmitting(false);
     }
   }
 
-  if (notFound) {
-    return (
-      <main>
-        <Link href="/admin/employees" className="back-link">
-          <ArrowLeft size={14} />
-          従業員一覧に戻る
-        </Link>
-        <h1>従業員が見つかりません</h1>
-        <p>指定された従業員は存在しないか、削除された可能性があります。</p>
-      </main>
-    );
-  }
+  if (isNotFound) notFound();
 
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
   if (!employee) return <p style={{ padding: 24 }}>読み込み中...</p>;

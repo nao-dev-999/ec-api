@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createAdminProduct } from "@/lib/api/adminProducts";
 import { useToast } from "@/app/Toast";
+import { getErrorMessage } from "@/lib/errors/messages";
+import { parsePrice, parseStock } from "@/lib/validation";
 
 export default function NewAdminProductPage() {
   const router = useRouter();
@@ -20,19 +22,32 @@ export default function NewAdminProductPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const priceValue = parsePrice(price);
+    if (priceValue === null) {
+      setError("価格は0より大きい数値を入力してください");
+      return;
+    }
+    const stockValue = parseStock(stock);
+    if (stockValue === null) {
+      setError("在庫数は0以上の数値を入力してください");
+      return;
+    }
+
     setSubmitting(true);
     try {
       const product = await createAdminProduct({
         name,
         description,
-        price: Number(price),
-        stock: Number(stock),
+        price: priceValue,
+        stock: stockValue,
       });
       showToast("商品を作成しました");
       router.push(`/admin/products/${product.id}`);
-    } catch {
-      setError("商品の作成に失敗しました");
-      showToast("商品の作成に失敗しました", "error");
+    } catch (err) {
+      const message = getErrorMessage(err, "商品の作成に失敗しました");
+      setError(message);
+      showToast(message, "error");
     } finally {
       setSubmitting(false);
     }
