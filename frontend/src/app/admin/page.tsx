@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   LayoutDashboard,
   Package,
@@ -7,6 +8,10 @@ import {
   UserCog,
   Receipt,
 } from "lucide-react";
+
+export const metadata: Metadata = {
+  title: "管理画面",
+};
 
 export default function AdminPage() {
   return (

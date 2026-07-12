@@ -7,6 +7,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { getMyOrders, type Order } from "@/lib/api/orders";
 import { ApiError } from "@/lib/api/client";
 import OrderStatusBadge from "../OrderStatusBadge";
+import { getErrorMessage } from "@/lib/errors/messages";
 
 const PAGE_SIZE = 10;
 
@@ -33,7 +34,7 @@ export default function OrderHistoryPage() {
           router.push("/login");
           return;
         }
-        setError("注文履歴の取得に失敗しました");
+        setError(getErrorMessage(err, "注文履歴の取得に失敗しました"));
       });
   }, [page, router]);
 

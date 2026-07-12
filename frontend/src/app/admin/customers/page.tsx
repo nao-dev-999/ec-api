@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, Eye, Trash2 } from "lucide-react";
 import {
@@ -9,32 +8,22 @@ import {
   type AdminCustomer,
 } from "@/lib/api/adminCustomers";
 import ConfirmModal from "../ConfirmModal";
-import { useToast } from "@/app/Toast";
+import { useAdminList } from "../useAdminList";
 
 export default function AdminCustomersPage() {
-  const { showToast } = useToast();
-  const [customers, setCustomers] = useState<AdminCustomer[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<AdminCustomer | null>(null);
-
-  useEffect(() => {
-    getAdminCustomers()
-      .then(setCustomers)
-      .catch(() => setError("顧客一覧の取得に失敗しました"));
-  }, []);
-
-  async function handleDelete() {
-    if (!deleteTarget) return;
-    try {
-      await deleteAdminCustomer(deleteTarget.id!);
-      setCustomers((prev) => prev!.filter((c) => c.id !== deleteTarget.id));
-      showToast(`「${deleteTarget.email}」を削除しました`);
-    } catch {
-      showToast("削除に失敗しました", "error");
-    } finally {
-      setDeleteTarget(null);
-    }
-  }
+  const {
+    items: customers,
+    error,
+    deleteTarget,
+    setDeleteTarget,
+    handleDelete,
+  } = useAdminList<AdminCustomer>({
+    fetchList: getAdminCustomers,
+    deleteItem: deleteAdminCustomer,
+    getId: (c) => c.id!,
+    loadErrorMessage: "顧客一覧の取得に失敗しました",
+    deleteSuccessMessage: (c) => `「${c.email}」を削除しました`,
+  });
 
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
   if (customers === null) return <p style={{ padding: 24 }}>読み込み中...</p>;

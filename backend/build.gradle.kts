@@ -52,6 +52,13 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-webmvc-test")
     testImplementation("org.springframework.security:spring-security-test")
 
+    testImplementation("org.springframework.boot:spring-boot-data-jpa-test")
+
+    // ─── Testcontainers ─────────────────────────
+    testImplementation("org.springframework.boot:spring-boot-testcontainers")
+    testImplementation("org.testcontainers:testcontainers-junit-jupiter")
+    testImplementation("org.testcontainers:testcontainers-postgresql")
+
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8")
 }
 

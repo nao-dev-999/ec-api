@@ -23,6 +23,7 @@ import {
 } from "@/lib/api/adminCategories";
 import ConfirmModal from "../ConfirmModal";
 import { useToast } from "@/app/Toast";
+import { getErrorMessage } from "@/lib/errors/messages";
 
 const PAGE_SIZE = 9;
 
@@ -80,10 +81,12 @@ export default function AdminProductsPage() {
         );
         setCategoriesByProduct(Object.fromEntries(entries));
       })
-      .catch(() => setError("商品一覧の取得に失敗しました"));
+      .catch((err) => setError(getErrorMessage(err, "商品一覧の取得に失敗しました")));
     getAdminCategories()
       .then(setCategories)
-      .catch(() => {});
+      .catch(() => {
+        // カテゴリフィルターは任意情報のため、失敗してもエラー表示はしない
+      });
   }, []);
 
   const filtered = useMemo(() => {
@@ -144,8 +147,8 @@ export default function AdminProductsPage() {
       await deleteAdminProduct(deleteTarget.id!);
       setProducts((prev) => prev!.filter((p) => p.id !== deleteTarget.id));
       showToast(`「${deleteTarget.name}」を削除しました`);
-    } catch {
-      showToast("削除に失敗しました", "error");
+    } catch (err) {
+      showToast(getErrorMessage(err, "削除に失敗しました"), "error");
     } finally {
       setDeleteTarget(null);
     }

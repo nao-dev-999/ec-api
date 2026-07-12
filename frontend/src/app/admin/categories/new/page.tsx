@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { createAdminCategory } from "@/lib/api/adminCategories";
 import { useToast } from "@/app/Toast";
+import { getErrorMessage } from "@/lib/errors/messages";
 
 export default function NewAdminCategoryPage() {
   const router = useRouter();
@@ -22,9 +23,10 @@ export default function NewAdminCategoryPage() {
       await createAdminCategory({ name });
       showToast("カテゴリを作成しました");
       router.push("/admin/categories");
-    } catch {
-      setError("カテゴリの作成に失敗しました");
-      showToast("カテゴリの作成に失敗しました", "error");
+    } catch (err) {
+      const message = getErrorMessage(err, "カテゴリの作成に失敗しました");
+      setError(message);
+      showToast(message, "error");
     } finally {
       setSubmitting(false);
     }

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Receipt, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { getAdminOrders, type AdminOrder } from "@/lib/api/adminOrders";
 import OrderStatusBadge from "../../OrderStatusBadge";
+import { getErrorMessage } from "@/lib/errors/messages";
 
 const PAGE_SIZE = 20;
 
@@ -27,7 +28,7 @@ export default function AdminOrdersPage() {
         setTotalPages(Math.max(1, result.totalPages ?? 1));
         setTotalElements(result.totalElements ?? 0);
       })
-      .catch(() => setError("注文一覧の取得に失敗しました"));
+      .catch((err) => setError(getErrorMessage(err, "注文一覧の取得に失敗しました")));
   }, [page]);
 
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;

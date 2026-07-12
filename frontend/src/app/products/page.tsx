@@ -1,7 +1,12 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { getProducts } from "@/lib/api/products";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "商品一覧",
+};
 
 export default async function ProductsPage() {
   const products = await getProducts();

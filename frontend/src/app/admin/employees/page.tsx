@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { UserCog, Plus, PencilLine, Trash2 } from "lucide-react";
 import {
@@ -9,32 +8,22 @@ import {
   type AdminEmployee,
 } from "@/lib/api/adminEmployees";
 import ConfirmModal from "../ConfirmModal";
-import { useToast } from "@/app/Toast";
+import { useAdminList } from "../useAdminList";
 
 export default function AdminEmployeesPage() {
-  const { showToast } = useToast();
-  const [employees, setEmployees] = useState<AdminEmployee[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<AdminEmployee | null>(null);
-
-  useEffect(() => {
-    getAdminEmployees()
-      .then(setEmployees)
-      .catch(() => setError("従業員一覧の取得に失敗しました"));
-  }, []);
-
-  async function handleDelete() {
-    if (!deleteTarget) return;
-    try {
-      await deleteAdminEmployee(deleteTarget.id!);
-      setEmployees((prev) => prev!.filter((e) => e.id !== deleteTarget.id));
-      showToast(`「${deleteTarget.email}」を削除しました`);
-    } catch {
-      showToast("削除に失敗しました", "error");
-    } finally {
-      setDeleteTarget(null);
-    }
-  }
+  const {
+    items: employees,
+    error,
+    deleteTarget,
+    setDeleteTarget,
+    handleDelete,
+  } = useAdminList<AdminEmployee>({
+    fetchList: getAdminEmployees,
+    deleteItem: deleteAdminEmployee,
+    getId: (e) => e.id!,
+    loadErrorMessage: "従業員一覧の取得に失敗しました",
+    deleteSuccessMessage: (e) => `「${e.email}」を削除しました`,
+  });
 
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
   if (employees === null) return <p style={{ padding: 24 }}>読み込み中...</p>;

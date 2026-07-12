@@ -10,6 +10,7 @@ import {
   type EmployeeRole,
 } from "@/lib/api/adminEmployees";
 import { useToast } from "@/app/Toast";
+import { getErrorMessage } from "@/lib/errors/messages";
 
 export default function NewAdminEmployeePage() {
   const router = useRouter();
@@ -28,9 +29,10 @@ export default function NewAdminEmployeePage() {
       await createAdminEmployee({ email, password, role });
       showToast("従業員を作成しました");
       router.push("/admin/employees");
-    } catch {
-      setError("従業員の作成に失敗しました");
-      showToast("従業員の作成に失敗しました", "error");
+    } catch (err) {
+      const message = getErrorMessage(err, "従業員の作成に失敗しました");
+      setError(message);
+      showToast(message, "error");
     } finally {
       setSubmitting(false);
     }

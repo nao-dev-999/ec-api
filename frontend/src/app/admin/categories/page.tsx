@@ -1,6 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { FolderTree, Plus, PencilLine, Trash2 } from "lucide-react";
 import {
@@ -9,32 +8,22 @@ import {
   type AdminCategory,
 } from "@/lib/api/adminCategories";
 import ConfirmModal from "../ConfirmModal";
-import { useToast } from "@/app/Toast";
+import { useAdminList } from "../useAdminList";
 
 export default function AdminCategoriesPage() {
-  const { showToast } = useToast();
-  const [categories, setCategories] = useState<AdminCategory[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<AdminCategory | null>(null);
-
-  useEffect(() => {
-    getAdminCategories()
-      .then(setCategories)
-      .catch(() => setError("カテゴリ一覧の取得に失敗しました"));
-  }, []);
-
-  async function handleDelete() {
-    if (!deleteTarget) return;
-    try {
-      await deleteAdminCategory(deleteTarget.id!);
-      setCategories((prev) => prev!.filter((c) => c.id !== deleteTarget.id));
-      showToast(`「${deleteTarget.name}」を削除しました`);
-    } catch {
-      showToast("削除に失敗しました", "error");
-    } finally {
-      setDeleteTarget(null);
-    }
-  }
+  const {
+    items: categories,
+    error,
+    deleteTarget,
+    setDeleteTarget,
+    handleDelete,
+  } = useAdminList<AdminCategory>({
+    fetchList: getAdminCategories,
+    deleteItem: deleteAdminCategory,
+    getId: (c) => c.id!,
+    loadErrorMessage: "カテゴリ一覧の取得に失敗しました",
+    deleteSuccessMessage: (c) => `「${c.name}」を削除しました`,
+  });
 
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
   if (categories === null) return <p style={{ padding: 24 }}>読み込み中...</p>;
