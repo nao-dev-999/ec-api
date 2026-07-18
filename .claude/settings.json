@@ -29,6 +29,11 @@
       "Bash(npm run build)",
       "Bash(npm run dev)",
       "Bash(npm run lint)",
+      "Bash(npm run build *)",
+      "Bash(npm run dev *)",
+      "Bash(npx eslint *)",
+      "Bash(aws ecs describe-services *)",
+      "Bash(aws ec2 describe-security-groups *)",
       "Read",
       "Edit"
     ]

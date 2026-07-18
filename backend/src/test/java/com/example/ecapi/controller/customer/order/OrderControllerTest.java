@@ -1,8 +1,11 @@
 package com.example.ecapi.controller.customer.order;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -198,27 +201,13 @@ class OrderControllerTest {
     }
 
     @Nested
-    @DisplayName("PATCH /api/orders/{id}/status")
-    class UpdateOrderStatusTest {
+    @DisplayName("POST /api/orders/{id}/cancel")
+    class CancelOrderTest {
 
         @Test
         @WithMockLoginUser
-        @DisplayName("PENDING ステータスに更新できること")
-        void shouldUpdateStatusToPending() throws Exception {
-            when(orderService.findByIdForCustomer(eq(1L), anyLong())).thenReturn(orderResult);
-            when(orderService.updateStatus(1L, OrderStatus.PENDING, 0)).thenReturn(orderResult);
-            mockMvc.perform(
-                            patch("/api/orders/{id}/status", 1L)
-                                    .param("status", "PENDING")
-                                    .param("version", "0"))
-                    .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.status").value("PENDING"));
-        }
-
-        @Test
-        @WithMockLoginUser
-        @DisplayName("CANCELLED ステータスに更新すると cancel() が呼ばれること")
-        void shouldCallCancelWhenStatusIsCancelled() throws Exception {
+        @DisplayName("注文をキャンセルできること")
+        void shouldCancelOrder() throws Exception {
             OrderResult cancelledResult =
                     new OrderResult(
                             1L,
@@ -232,34 +221,21 @@ class OrderControllerTest {
                             1);
             when(orderService.findByIdForCustomer(eq(1L), anyLong())).thenReturn(orderResult);
             when(orderService.cancel(1L, 0)).thenReturn(cancelledResult);
-            mockMvc.perform(
-                            patch("/api/orders/{id}/status", 1L)
-                                    .param("status", "CANCELLED")
-                                    .param("version", "0"))
+            mockMvc.perform(post("/api/orders/{id}/cancel", 1L).param("version", "0"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.status").value("CANCELLED"));
         }
 
         @Test
         @WithMockLoginUser
-        @DisplayName("指定したIDの注文が見つからない場合、404を返すこと")
-        void shouldReturnNotFoundWhenUpdatingNonExistentOrder() throws Exception {
+        @DisplayName("指定したIDの注文が見つからない、または他顧客の注文の場合、404を返すこと")
+        void shouldReturnNotFoundWhenCancellingNonExistentOrder() throws Exception {
             when(orderService.findByIdForCustomer(anyLong(), anyLong()))
                     .thenThrow(new OrderNotFoundException("Order not found"));
 
-            mockMvc.perform(
-                            patch("/api/orders/{id}/status", 99L)
-                                    .param("status", "CONFIRMED")
-                                    .param("version", "0"))
+            mockMvc.perform(post("/api/orders/{id}/cancel", 99L).param("version", "0"))
                     .andExpect(status().isNotFound());
-        }
-
-        @Test
-        @WithMockLoginUser
-        @DisplayName("無効なステータス値の場合、400を返すこと")
-        void shouldReturnBadRequestWhenInvalidStatus() throws Exception {
-            mockMvc.perform(patch("/api/orders/{id}/status", 1L).param("status", "INVALID_STATUS"))
-                    .andExpect(status().isBadRequest());
+            verify(orderService, never()).cancel(anyLong(), anyInt());
         }
     }
 }

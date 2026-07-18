@@ -3,10 +3,12 @@ package com.example.ecapi.service.product;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.ecapi.entity.Product;
+import com.example.ecapi.exception.ProductInUseException;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.service.product.dto.CreateProduct;
@@ -240,6 +242,18 @@ class ProductServiceTest {
 
             assertThatThrownBy(() -> productService.delete(99L))
                     .isInstanceOf(ProductNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("注文で参照されている商品を削除しようとした場合、ProductInUseException をスローすること")
+        void shouldThrowExceptionWhenProductIsReferencedByOrder() {
+            when(productRepository.existsById(1L)).thenReturn(true);
+            doThrow(new org.springframework.dao.DataIntegrityViolationException("FK violation"))
+                    .when(productRepository)
+                    .flush();
+
+            assertThatThrownBy(() -> productService.delete(1L))
+                    .isInstanceOf(ProductInUseException.class);
         }
     }
 }

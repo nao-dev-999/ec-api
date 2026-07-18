@@ -7,6 +7,7 @@ import com.example.ecapi.entity.CustomerOrderDetail;
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.CustomerNotFoundException;
 import com.example.ecapi.exception.InsufficientStockException;
+import com.example.ecapi.exception.OrderCannotBeCancelledException;
 import com.example.ecapi.exception.OrderNotFoundException;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.repository.CustomerOrderDetailRepository;
@@ -153,6 +154,7 @@ public class OrderService {
      * JOIN FETCH 済みの Product を直接更新します（N+1 回避、JPA dirty checking で保存されます）。
      *
      * @throws OrderNotFoundException 指定されたIDの注文が見つからない場合
+     * @throws OrderCannotBeCancelledException 配達完了またはキャンセル済みの注文をキャンセルしようとした場合
      * @throws OptimisticLockException 楽観ロックの競合が発生した場合
      */
     @Transactional
@@ -161,6 +163,10 @@ public class OrderService {
                 orderRepository
                         .findByIdWithItems(id)
                         .orElseThrow(() -> new OrderNotFoundException(id));
+        if (order.getStatus() == OrderStatus.DELIVERED
+                || order.getStatus() == OrderStatus.CANCELLED) {
+            throw new OrderCannotBeCancelledException(id);
+        }
         order.setStatus(OrderStatus.CANCELLED);
         order.setVersion(version);
         log.info("Order cancelled orderId={}", id);

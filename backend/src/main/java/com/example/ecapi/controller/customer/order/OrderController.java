@@ -1,6 +1,5 @@
 package com.example.ecapi.controller.customer.order;
 
-import com.example.ecapi.constant.OrderStatus;
 import com.example.ecapi.controller.common.dto.PageResponse;
 import com.example.ecapi.controller.customer.order.dto.OrderItemResponse;
 import com.example.ecapi.controller.customer.order.dto.OrderRequest;
@@ -24,13 +23,13 @@ import org.springframework.web.bind.annotation.*;
 /**
  * 注文 REST コントローラー
  *
- * <p>注文に関するCRUD操作とステータス更新機能を提供するRESTful API。
+ * <p>注文に関するCRUD操作とキャンセル機能を提供するRESTful API。
  *
  * <pre>
  * GET   /api/orders                      全注文取得
  * GET   /api/orders/{id}                 注文詳細
  * POST  /api/orders                      注文作成（在庫チェックあり）
- * PATCH /api/orders/{id}/status          ステータス更新
+ * POST  /api/orders/{id}/cancel          注文キャンセル
  * </pre>
  */
 @RestController
@@ -92,26 +91,19 @@ public class OrderController {
     }
 
     /**
-     * 指定された注文のステータスを更新します。ログイン中の顧客自身の注文でない場合は404を返します。
+     * 指定された注文をキャンセルします。ログイン中の顧客自身の注文でない場合は404を返します。 配送状況の更新（出荷・配達完了等）は管理者専用であり、顧客はキャンセルのみ行えます。
      * サービス層で楽観ロックが適用され、他のトランザクションによる変更があった場合は競合エラーが発生する可能性があります。
      *
      * @param id 注文ID
-     * @param status 新しい注文ステータス {@link OrderStatus}
      * @return 更新された注文の詳細 {@link OrderResponse}
      */
-    @PatchMapping("/{id}/status")
-    public ResponseEntity<OrderResponse> updateStatus(
+    @PostMapping("/{id}/cancel")
+    public ResponseEntity<OrderResponse> cancel(
             @PathVariable Long id,
-            @RequestParam OrderStatus status,
             @RequestParam int version,
             @AuthenticationPrincipal LoginUserDetails loginUser) {
         orderService.findByIdForCustomer(id, loginUser.getUserId());
-        OrderResult result =
-                switch (status) {
-                    case PENDING, CONFIRMED, SHIPPED, DELIVERED ->
-                            orderService.updateStatus(id, status, version);
-                    case CANCELLED -> orderService.cancel(id, version);
-                };
+        OrderResult result = orderService.cancel(id, version);
         return ResponseEntity.ok(toOrderResponse(result));
     }
 

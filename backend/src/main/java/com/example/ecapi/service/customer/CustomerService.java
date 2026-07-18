@@ -1,6 +1,7 @@
 package com.example.ecapi.service.customer;
 
 import com.example.ecapi.entity.Customer;
+import com.example.ecapi.exception.CustomerInUseException;
 import com.example.ecapi.exception.CustomerNotFoundException;
 import com.example.ecapi.repository.CustomerRepository;
 import com.example.ecapi.service.customer.dto.CustomerResult;
@@ -9,6 +10,7 @@ import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,13 +33,22 @@ public class CustomerService {
                 .orElseThrow(() -> new CustomerNotFoundException(id));
     }
 
+    /**
+     * @throws CustomerNotFoundException 指定されたIDの顧客が見つからない場合
+     * @throws CustomerInUseException 顧客に注文履歴があり削除できない場合
+     */
     @Transactional
     public void delete(Long id) {
         if (!customerRepository.existsById(id)) {
             throw new CustomerNotFoundException(id);
         }
+        try {
+            customerRepository.deleteById(id);
+            customerRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new CustomerInUseException(id);
+        }
         log.info("Customer deleted customerId={}", id);
-        customerRepository.deleteById(id);
     }
 
     private CustomerResult toCustomerResult(Customer customer) {

@@ -18,6 +18,9 @@ public enum ErrorCode {
     EMPLOYEE_EMAIL_DUPLICATE("employee.email.duplicate", HttpStatus.CONFLICT),
     CUSTOMER_EMAIL_DUPLICATE("customer.email.duplicate", HttpStatus.CONFLICT),
     CATEGORY_NAME_DUPLICATE("category.name.duplicate", HttpStatus.CONFLICT),
+    ORDER_CANNOT_BE_CANCELLED("order.cancel.notAllowed", HttpStatus.CONFLICT),
+    PRODUCT_IN_USE("product.inUse", HttpStatus.CONFLICT),
+    CUSTOMER_IN_USE("customer.inUse", HttpStatus.CONFLICT),
 
     // 401 Unauthorized
     AUTHENTICATION_FAILED("error.authentication", HttpStatus.UNAUTHORIZED),
@@ -26,6 +29,7 @@ public enum ErrorCode {
     VALIDATION_ERROR("error.validation", HttpStatus.BAD_REQUEST),
     BAD_REQUEST("error.badRequest", HttpStatus.BAD_REQUEST),
     INVALID_CURRENT_PASSWORD("customer.password.invalid", HttpStatus.BAD_REQUEST),
+    PRODUCT_ID_MISMATCH("product.id.mismatch", HttpStatus.BAD_REQUEST),
 
     // 500 Internal Server Error
     SYSTEM_ERROR("error.system", HttpStatus.INTERNAL_SERVER_ERROR);

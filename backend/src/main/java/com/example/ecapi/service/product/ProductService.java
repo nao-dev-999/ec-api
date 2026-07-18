@@ -1,6 +1,7 @@
 package com.example.ecapi.service.product;
 
 import com.example.ecapi.entity.Product;
+import com.example.ecapi.exception.ProductInUseException;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.repository.ProductSpecification;
@@ -14,6 +15,7 @@ import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -74,13 +76,22 @@ public class ProductService {
         return toProductResult(productRepository.save(product));
     }
 
+    /**
+     * @throws ProductNotFoundException 指定されたIDの商品が見つからない場合
+     * @throws ProductInUseException 商品が注文で参照されているため削除できない場合
+     */
     @Transactional
     public void delete(Long id) {
         if (!productRepository.existsById(id)) {
             throw new ProductNotFoundException(id);
         }
+        try {
+            productRepository.deleteById(id);
+            productRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new ProductInUseException(id);
+        }
         log.info("Product deleted productId={}", id);
-        productRepository.deleteById(id);
     }
 
     private Product toProduct(CreateProduct createProduct) {

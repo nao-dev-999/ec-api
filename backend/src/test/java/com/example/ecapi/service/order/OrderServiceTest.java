@@ -11,6 +11,7 @@ import com.example.ecapi.entity.Customer;
 import com.example.ecapi.entity.CustomerOrder;
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.InsufficientStockException;
+import com.example.ecapi.exception.OrderCannotBeCancelledException;
 import com.example.ecapi.exception.OrderNotFoundException;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.repository.CustomerOrderDetailRepository;
@@ -285,6 +286,28 @@ class OrderServiceTest {
 
             assertThatThrownBy(() -> orderService.cancel(99L, 0))
                     .isInstanceOf(OrderNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("配達完了済みの注文はキャンセルできないこと")
+        void shouldThrowExceptionWhenOrderAlreadyDelivered() {
+            customerOrder.setStatus(OrderStatus.DELIVERED);
+            when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
+
+            assertThatThrownBy(() -> orderService.cancel(1L, 0))
+                    .isInstanceOf(OrderCannotBeCancelledException.class);
+            verify(orderRepository, org.mockito.Mockito.never()).save(any(CustomerOrder.class));
+        }
+
+        @Test
+        @DisplayName("キャンセル済みの注文を再度キャンセルできないこと")
+        void shouldThrowExceptionWhenOrderAlreadyCancelled() {
+            customerOrder.setStatus(OrderStatus.CANCELLED);
+            when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
+
+            assertThatThrownBy(() -> orderService.cancel(1L, 0))
+                    .isInstanceOf(OrderCannotBeCancelledException.class);
+            verify(orderRepository, org.mockito.Mockito.never()).save(any(CustomerOrder.class));
         }
     }
 }
