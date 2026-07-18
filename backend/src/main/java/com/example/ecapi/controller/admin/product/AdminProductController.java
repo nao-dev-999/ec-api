@@ -3,6 +3,7 @@ package com.example.ecapi.controller.admin.product;
 import com.example.ecapi.controller.admin.product.dto.AdminProductResponse;
 import com.example.ecapi.controller.admin.product.dto.CreateProductRequest;
 import com.example.ecapi.controller.admin.product.dto.UpdateProductRequest;
+import com.example.ecapi.exception.ProductIdMismatchException;
 import com.example.ecapi.service.product.ProductService;
 import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
@@ -59,7 +60,7 @@ public class AdminProductController {
     public ResponseEntity<AdminProductResponse> update(
             @PathVariable Long id, @Valid @RequestBody UpdateProductRequest request) {
         if (!id.equals(request.id())) {
-            throw new IllegalArgumentException("Path variable id and request body id must match.");
+            throw new ProductIdMismatchException();
         }
         return ResponseEntity.ok(
                 toAdminProductResponse(productService.update(toUpdateProduct(id, request))));

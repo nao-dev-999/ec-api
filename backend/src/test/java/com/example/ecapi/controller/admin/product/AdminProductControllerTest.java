@@ -252,6 +252,48 @@ class AdminProductControllerTest {
                                     .content(jsonMapper.writeValueAsString(request)))
                     .andExpect(status().isConflict());
         }
+
+        @Test
+        @DisplayName("versionが指定されない場合、500ではなく400を返すこと")
+        void shouldReturnBadRequestWhenVersionIsMissing() throws Exception {
+            UpdateProductRequest request =
+                    new UpdateProductRequest(
+                            1L,
+                            "Updated Product",
+                            "Updated Desc",
+                            BigDecimal.valueOf(120.00),
+                            15,
+                            null);
+
+            mockMvc.perform(
+                            put("/api/admin/products/{id}", 1L)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(jsonMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+
+            verify(productService, never()).update(any(UpdateProduct.class));
+        }
+
+        @Test
+        @DisplayName("パスとリクエストボディのIDが一致しない場合、400を返すこと")
+        void shouldReturnBadRequestWhenIdMismatch() throws Exception {
+            UpdateProductRequest request =
+                    new UpdateProductRequest(
+                            2L,
+                            "Updated Product",
+                            "Updated Desc",
+                            BigDecimal.valueOf(120.00),
+                            15,
+                            1);
+
+            mockMvc.perform(
+                            put("/api/admin/products/{id}", 1L)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(jsonMapper.writeValueAsString(request)))
+                    .andExpect(status().isBadRequest());
+
+            verify(productService, never()).update(any(UpdateProduct.class));
+        }
     }
 
     @Nested
