@@ -73,6 +73,10 @@ module "ecs" {
   desired_count = 2
   min_capacity  = 2
   max_capacity  = 4
+
+  batch_image_url          = module.ecr.batch_repository_url
+  batch_image_tag          = "latest"
+  batch_private_subnet_ids = module.vpc.private_subnet_ids
 }
 
 # CodePipeline
@@ -97,4 +101,7 @@ module "codepipeline" {
   flyway_task_definition_family = module.ecs.flyway_task_definition_family
   flyway_subnet_id              = module.vpc.private_subnet_ids[0]
   flyway_sg_id                  = module.ecs.ecs_sg_id
+
+  batch_repository_url         = module.ecr.batch_repository_url
+  batch_task_definition_family = module.ecs.batch_task_definition_family
 }

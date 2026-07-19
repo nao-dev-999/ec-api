@@ -43,7 +43,7 @@
 ```
 GitHub push
   │
-  ├─► GitHub Actions CI (backend/.github/workflows/ci.yml)
+  ├─► GitHub Actions CI (.github/workflows/ci.yml、リポジトリルート)
   │     └─ spotlessCheck → test（PostgreSQL/Redisサービスコンテナ使用）
   │
   └─► main へのマージ後: AWS CodePipeline（Terraform管理: infrastructure/terraform）
@@ -65,9 +65,12 @@ terraform apply
 
 ## 起動手順
 
+`gradlew`はGradleマルチモジュール化（`core`/`backend`/`batch`）に伴いリポジトリルート（`ec-api/`）直下に移動した。以下の`./gradlew`はリポジトリルートから、それ以外（`.env`・`docker-compose.yml`関連）は`backend/`ディレクトリから実行する。
+
 ### 1. 環境変数ファイルの準備
 
 ```bash
+# backend/ ディレクトリで
 cp .env.example .env
 # 必要に応じて POSTGRES_PASSWORD などを変更
 ```
@@ -75,13 +78,15 @@ cp .env.example .env
 ### 2. DB・Redisの起動
 
 ```bash
+# backend/ ディレクトリで
 docker-compose up -d
 ```
 
 ### 3. アプリ起動（localプロファイル）
 
 ```bash
-SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=changeme ./gradlew bootRun
+# リポジトリルートで
+SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=changeme ./gradlew :backend:bootRun
 ```
 
 起動時にFlywayが `src/main/resources/db/migration` のマイグレーションを自動適用してスキーマを構築する（`spring.jpa.hibernate.ddl-auto=validate` のためJPAはテーブルを作成しない）。`local`プロファイルでは併せて `src/main/resources/db/seed/V9__init_data.sql` が適用され、商品100件・顧客50件・従業員50件（いずれもパスワードは `password123`）が投入される。
@@ -90,10 +95,10 @@ SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=changeme ./gradlew bootR
 
 ### Git フック（任意）
 
-プッシュ前に自動チェックするフックを設定できます：
+プッシュ前に自動チェックするフックを設定できます（リポジトリルートで実行）：
 
 ```bash
-./gradlew spotlessInstallGitPrePushHook
+./gradlew :backend:spotlessInstallGitPrePushHook
 ```
 
 ---

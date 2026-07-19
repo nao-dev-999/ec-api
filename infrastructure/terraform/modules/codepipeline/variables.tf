@@ -55,3 +55,13 @@ variable "task_execution_role_arn" {
 variable "task_role_arn" {
   type = string
 }
+
+variable "batch_repository_url" {
+  description = "ECR repository URL for the batch image"
+  type        = string
+}
+
+variable "batch_task_definition_family" {
+  description = "Batch ECS task definition family name"
+  type        = string
+}

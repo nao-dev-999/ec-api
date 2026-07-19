@@ -37,3 +37,11 @@ output "redis_host" {
 output "db_debug_task_definition_family" {
   value = aws_ecs_task_definition.db_debug.family
 }
+
+output "batch_task_definition_arn" {
+  value = aws_ecs_task_definition.batch.arn
+}
+
+output "batch_task_definition_family" {
+  value = aws_ecs_task_definition.batch.family
+}

@@ -1,0 +1,41 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "=== Logging in to Amazon ECR ==="
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-8)
+      - IMAGE_URI="$ECR_REPO_URI:$IMAGE_TAG"
+      - echo "Image URI = $IMAGE_URI"
+
+  build:
+    commands:
+      - echo "=== Building Docker image ==="
+      - docker build -f batch/Dockerfile -t $IMAGE_URI .
+      - docker tag $IMAGE_URI $ECR_REPO_URI:latest
+
+  post_build:
+    commands:
+      - echo "=== Pushing image to ECR ==="
+      - docker push $IMAGE_URI
+      - docker push $ECR_REPO_URI:latest
+      - echo "=== Registering new batch task definition revision ==="
+      - |
+        aws ecs describe-task-definition \
+          --task-definition $BATCH_TASK_DEF_FAMILY \
+          --query 'taskDefinition' > task-def.json
+      - |
+        NEW_CONTAINER_DEFS=$(jq --arg IMAGE "$IMAGE_URI" \
+          '.containerDefinitions[0].image = $IMAGE | .containerDefinitions' task-def.json)
+      - |
+        aws ecs register-task-definition \
+          --family $BATCH_TASK_DEF_FAMILY \
+          --task-role-arn "$(jq -r '.taskRoleArn' task-def.json)" \
+          --execution-role-arn "$(jq -r '.executionRoleArn' task-def.json)" \
+          --network-mode "$(jq -r '.networkMode' task-def.json)" \
+          --requires-compatibilities FARGATE \
+          --cpu "$(jq -r '.cpu' task-def.json)" \
+          --memory "$(jq -r '.memory' task-def.json)" \
+          --container-definitions "$NEW_CONTAINER_DEFS"
+      - echo "=== batch task definition updated ==="

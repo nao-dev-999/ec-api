@@ -132,7 +132,8 @@ resource "aws_iam_role_policy" "codebuild" {
         Action = [
           "ecs:RunTask",
           "ecs:DescribeTasks",
-          "ecs:DescribeTaskDefinition"
+          "ecs:DescribeTaskDefinition",
+          "ecs:RegisterTaskDefinition"
         ]
         Resource = "*"
       },
@@ -296,6 +297,118 @@ resource "aws_codepipeline" "this" {
         ClusterName = var.ecs_cluster_name
         ServiceName = var.ecs_service_name
         FileName    = "imagedefinitions.json"
+      }
+    }
+  }
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+# ---------------------------------------------------------------------------
+# CodeBuild Project - Batch（Docker build & ECR push & タスク定義の新リビジョン登録）
+# ---------------------------------------------------------------------------
+resource "aws_codebuild_project" "batch_build" {
+  name          = "${var.project}-${var.env}-batch-build"
+  description   = "Build batch Docker image, push to ECR and register a new task definition revision"
+  build_timeout = 20
+  service_role  = aws_iam_role.codebuild.arn
+
+  artifacts {
+    type = "CODEPIPELINE"
+  }
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "aws/codebuild/standard:7.0"
+    type                        = "LINUX_CONTAINER"
+    image_pull_credentials_type = "CODEBUILD"
+    privileged_mode             = true # Docker-in-Docker に必要
+
+    environment_variable {
+      name  = "AWS_DEFAULT_REGION"
+      value = var.aws_region
+    }
+    environment_variable {
+      name  = "ECR_REPO_URI"
+      value = var.batch_repository_url
+    }
+    environment_variable {
+      name  = "BATCH_TASK_DEF_FAMILY"
+      value = var.batch_task_definition_family
+    }
+  }
+
+  source {
+    type      = "CODEPIPELINE"
+    buildspec = "batch/buildspec.yml"
+  }
+
+  logs_config {
+    cloudwatch_logs {
+      group_name = aws_cloudwatch_log_group.codebuild.name
+    }
+  }
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+# ---------------------------------------------------------------------------
+# CodePipeline - Batch
+#
+# APIとデプロイを完全に分離するため独立したパイプラインとする（14章の要件: デプロイ・設定・ソースをAPIと混在させない）。
+# batchはECS Serviceを持たない（EventBridge Schedulerが都度RunTaskする使い捨てタスクのため）、
+# Deployステージは持たず、CodeBuild内のregister-task-definitionで完結する2ステージ構成。
+# ---------------------------------------------------------------------------
+resource "aws_codepipeline" "batch" {
+  name     = "${var.project}-${var.env}-batch-pipeline"
+  role_arn = aws_iam_role.pipeline.arn
+
+  artifact_store {
+    location = aws_s3_bucket.artifacts.bucket
+    type     = "S3"
+  }
+
+  stage {
+    name = "Source"
+
+    action {
+      name             = "GitHub_Source"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "CodeStarSourceConnection"
+      version          = "1"
+      output_artifacts = ["source_output"]
+
+      configuration = {
+        ConnectionArn        = aws_codestarconnections_connection.github.arn
+        FullRepositoryId     = var.github_repository
+        BranchName           = var.github_branch
+        OutputArtifactFormat = "CODE_ZIP"
+        DetectChanges        = "true"
+      }
+    }
+  }
+
+  stage {
+    name = "Build"
+
+    action {
+      name             = "CodeBuild"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      version          = "1"
+      input_artifacts  = ["source_output"]
+      output_artifacts = ["build_output"]
+
+      configuration = {
+        ProjectName = aws_codebuild_project.batch_build.name
       }
     }
   }
