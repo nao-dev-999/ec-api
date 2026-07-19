@@ -14,10 +14,10 @@ phases:
   build:
     commands:
       - echo "=== Building Docker image ==="
-      - docker build -t $IMAGE_URI backend
+      - docker build -f backend/Dockerfile -t $IMAGE_URI .
       - docker tag $IMAGE_URI $ECR_REPO_URI:latest
       - echo "=== Building Flyway migration image ==="
-      - docker build -f backend/Dockerfile.flyway -t $FLYWAY_IMAGE_URI backend
+      - docker build -f backend/Dockerfile.flyway -t $FLYWAY_IMAGE_URI .
       - docker tag $FLYWAY_IMAGE_URI $FLYWAY_ECR_REPO_URI:latest
 
   post_build:

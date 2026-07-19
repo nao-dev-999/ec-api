@@ -1,0 +1,14 @@
+# testdata/product/get-product-mock.yml
+# DBを使わず、@MockitoBean で登録したリポジトリのスタブをデータ駆動で定義する例。
+# bean名は SecurityConfig 等のBean定義名ではなく、フィールド名（Spring既定の命名規則）に合わせる。
+
+mocks:
+  - bean: productRepository
+    method: findById
+    args: [1]
+    returnType: java.util.Optional
+    returns:
+      id: 1
+      name: "商品A"
+      price: 1000
+      stock: 10

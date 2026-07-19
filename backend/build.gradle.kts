@@ -1,25 +1,11 @@
 plugins {
-    id("java")
-    id("org.springframework.boot") version "4.0.1"
-    id("io.spring.dependency-management") version "1.1.7"
-    id("com.diffplug.spotless") version "8.4.0"
+    id("org.springframework.boot")
     id("jacoco")
 }
 
-group = "com.example"
-version = "0.0.1-SNAPSHOT"
-
-java {
-    toolchain {
-        languageVersion = JavaLanguageVersion.of(25)
-    }
-}
-
-repositories {
-    mavenCentral()
-}
-
 dependencies {
+    implementation(project(":core"))
+
     // ─── spring-boot ───────────────────────────────────
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.springframework.boot:spring-boot-starter-security")
@@ -59,45 +45,20 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-junit-jupiter")
     testImplementation("org.testcontainers:testcontainers-postgresql")
 
+    // ─── データ駆動テスト（testsupport.data）: Excel形式パーサーが使用 ─────
+    testImplementation("org.apache.poi:poi:5.4.0")
+    testImplementation("org.apache.poi:poi-ooxml:5.4.0")
+
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8")
 }
 
 tasks.withType<Test> {
-    useJUnitPlatform()
     finalizedBy(tasks.jacocoTestReport)
-    testLogging {
-        showStandardStreams = true
-        events("passed", "failed", "skipped")
-    }
-    // ルートスイート終了時にテスト実行件数・OK数・NG数のサマリーを表示
-    addTestListener(
-        object : TestListener {
-            override fun beforeSuite(suite: TestDescriptor) {}
-
-            override fun beforeTest(testDescriptor: TestDescriptor) {}
-
-            override fun afterTest(
-                testDescriptor: TestDescriptor,
-                result: TestResult,
-            ) {}
-
-            override fun afterSuite(
-                suite: TestDescriptor,
-                result: TestResult,
-            ) {
-                if (suite.parent == null) {
-                    println(
-                        "\nテスト結果: 実行=${result.testCount} OK=${result.successfulTestCount} NG=${result.failedTestCount} スキップ=${result.skippedTestCount}",
-                    )
-                }
-            }
-        },
-    )
 }
 
 // ─────────────────────────────────────────────
 // JaCoCo: カバレッジレポート設定
-//   ./gradlew test jacocoTestReport
+//   ./gradlew :backend:test :backend:jacocoTestReport
 //   レポート出力先: build/reports/jacoco/test/html/index.html
 // ─────────────────────────────────────────────
 jacoco {
@@ -119,7 +80,6 @@ tasks.jacocoTestReport {
                     exclude(
                         "**/EcApiApplication.class", // エントリポイント
                         "**/config/**", // 設定クラス
-                        "**/entity/**", // JPAエンティティ
                         "**/constant/**", // 定数
                         "**/exception/ErrorResponse.class", // 単純なデータクラス
                     )
@@ -128,32 +88,3 @@ tasks.jacocoTestReport {
         ),
     )
 }
-
-// ─────────────────────────────────────────────
-// Spotless: コードフォーマット設定
-//   ./gradlew spotlessApply  → 自動整形
-//   ./gradlew spotlessCheck  → フォーマット確認（CIで使用）
-// ─────────────────────────────────────────────
-spotless {
-    java {
-        // Google Java Format でコード整形
-        googleJavaFormat("1.28.0").aosp()
-        // import を自動削除
-        removeUnusedImports()
-        // 末尾空白を削除
-        trimTrailingWhitespace()
-        // ファイル末尾に改行を追加
-        endWithNewline()
-        // ライセンスヘッダー（任意）
-        // licenseHeader("/* (C) 2025 Example Corp */")
-    }
-    // Kotlin DSL ビルドファイルも整形対象
-    kotlinGradle {
-        ktlint("1.5.0")
-        trimTrailingWhitespace()
-        endWithNewline()
-    }
-}
-
-// ビルド前に Spotless チェックを実行（CI向け）
-tasks.named("check") { dependsOn("spotlessCheck") }

@@ -1,0 +1,30 @@
+spring:
+  batch:
+    job:
+      enabled: false # 起動時の自動実行を防止し、明示的な起動（コマンドライン引数/スケジューラ経由）のみ許可する
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ec_db
+    hikari:
+      maximum-pool-size: 10
+      pool-name: batch-hikari-pool
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          time_zone: Asia/Tokyo
+          batch_size: 50
+        order_inserts: true
+        order_updates: true
+    open-in-view: false
+
+batch:
+  input:
+    flag-file: /data/batch/input/daily-sales.done
+  output:
+    dir: /data/batch/output

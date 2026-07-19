@@ -1,0 +1,15 @@
+# testdata/product/get-product.yml
+# ProductServiceIntegrationTest#getProduct_returnsProduct が読み込むテストデータ。
+# ec-api の V1/V2 マイグレーションで定義されたカラムに合わせている。
+
+tables:
+  product:
+    - id: 1
+      name: "商品A"
+      price: 1000
+      stock: 10
+      version: 0
+      created_at: "2026-01-01T00:00:00Z"
+      updated_at: "2026-01-01T00:00:00Z"
+      created_by: 0
+      updated_by: 0

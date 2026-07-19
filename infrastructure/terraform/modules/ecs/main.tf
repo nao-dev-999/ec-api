@@ -356,6 +356,141 @@ resource "aws_ecs_task_definition" "flyway" {
 }
 
 # ---------------------------------------------------------------------------
+# ECS Task Definition - Batch（日次集計バッチ。ALB無し、EventBridge Schedulerから都度RunTask）
+# ---------------------------------------------------------------------------
+resource "aws_cloudwatch_log_group" "batch" {
+  name              = "/ecs/${var.project}-${var.env}/batch"
+  retention_in_days = 30
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+resource "aws_ecs_task_definition" "batch" {
+  family                   = "${var.project}-${var.env}-batch"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = var.batch_cpu
+  memory                   = var.batch_memory
+  execution_role_arn       = aws_iam_role.task_execution.arn
+  task_role_arn            = aws_iam_role.task.arn
+
+  container_definitions = jsonencode([
+    {
+      name      = "batch"
+      image     = "${var.batch_image_url}:${var.batch_image_tag}"
+      essential = true
+
+      environment = [
+        { name = "SPRING_PROFILES_ACTIVE", value = var.env },
+        { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${var.db_host}:5432/${var.db_name}" },
+      ]
+
+      secrets = [
+        {
+          name      = "SPRING_DATASOURCE_USERNAME"
+          valueFrom = "${var.db_password_secret_arn}:username::"
+        },
+        {
+          name      = "SPRING_DATASOURCE_PASSWORD"
+          valueFrom = "${var.db_password_secret_arn}:password::"
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.batch.name
+          "awslogs-region"        = var.aws_region
+          "awslogs-stream-prefix" = "batch"
+        }
+      }
+    }
+  ])
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+# EventBridge Scheduler が ecs:RunTask を呼び出すためのロール
+resource "aws_iam_role" "batch_scheduler" {
+  name = "${var.project}-${var.env}-batch-scheduler-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "scheduler.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+resource "aws_iam_role_policy" "batch_scheduler" {
+  name = "batch-run-task"
+  role = aws_iam_role.batch_scheduler.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ecs:RunTask"]
+        Resource = replace(aws_ecs_task_definition.batch.arn, "/:\\d+$/", ":*")
+      },
+      {
+        Effect = "Allow"
+        Action = ["iam:PassRole"]
+        Resource = [
+          aws_iam_role.task_execution.arn,
+          aws_iam_role.task.arn
+        ]
+      }
+    ]
+  })
+}
+
+# 日次売上集計バッチの起動スケジュール（14.6節: バッチウィンドウ 02:00〜05:00 JST）
+resource "aws_scheduler_schedule" "batch_daily" {
+  name       = "${var.project}-${var.env}-batch-daily"
+  group_name = "default"
+
+  flexible_time_window {
+    mode = "OFF"
+  }
+
+  schedule_expression          = var.batch_schedule_expression
+  schedule_expression_timezone = "UTC"
+
+  target {
+    arn      = aws_ecs_cluster.this.arn
+    role_arn = aws_iam_role.batch_scheduler.arn
+
+    ecs_parameters {
+      # revisionを固定せず family名を渡すことで、CodeBuildが register-task-definition で
+      # 新リビジョンを登録するたびTerraform再applyなしで自動的に最新版を実行する
+      task_definition_arn = aws_ecs_task_definition.batch.family
+      launch_type         = "FARGATE"
+
+      network_configuration {
+        subnets          = var.batch_private_subnet_ids
+        security_groups  = [aws_security_group.ecs.id]
+        assign_public_ip = false
+      }
+    }
+  }
+}
+
+# ---------------------------------------------------------------------------
 # ECS Task Definition - DB Debug（psqlでのDB確認用。一時利用）
 # ---------------------------------------------------------------------------
 resource "aws_cloudwatch_log_group" "db_debug" {

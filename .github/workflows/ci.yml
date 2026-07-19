@@ -4,10 +4,10 @@ name: CI
 on:
   push:
     branches: [ main ]
-    paths: [ 'backend/**' ]
+    paths: [ 'backend/**', 'core/**', 'batch/**' ]
   pull_request:
     branches: [ main ]
-    paths: [ 'backend/**' ]
+    paths: [ 'backend/**', 'core/**', 'batch/**' ]
 
 jobs:
   test:
@@ -38,10 +38,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-    defaults:
-      run:
-        working-directory: backend
-
     steps:
       - uses: actions/checkout@v4
 
@@ -51,7 +47,7 @@ jobs:
           java-version: '25'
           distribution: 'temurin'
           cache: gradle
-          cache-dependency-path: backend/*.gradle*
+          cache-dependency-path: '**/*.gradle*'
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
@@ -59,8 +55,8 @@ jobs:
       - name: Check code format
         run: ./gradlew spotlessCheck
 
-      - name: Run tests
-        run: ./gradlew test
+      - name: Run backend tests
+        run: ./gradlew :backend:test
         env:
           SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/ecapi_test
           SPRING_DATASOURCE_USERNAME: postgres
@@ -68,12 +64,20 @@ jobs:
           SPRING_DATA_REDIS_HOST: localhost
           SPRING_DATA_REDIS_PORT: 6379
 
+      - name: Run batch tests
+        run: ./gradlew :batch:test
+
       - name: Upload test report
         uses: actions/upload-artifact@v4
         if: failure()
         with:
           name: test-report
-          path: backend/build/reports/tests/test/
+          path: |
+            backend/build/reports/tests/test/
+            batch/build/reports/tests/test/
 
-      - name: Build Docker image
-        run: docker build -t ec-api-backend:ci .
+      - name: Build backend Docker image
+        run: docker build -f backend/Dockerfile -t ec-api-backend:ci .
+
+      - name: Build batch Docker image
+        run: docker build -f batch/Dockerfile -t ec-api-batch:ci .

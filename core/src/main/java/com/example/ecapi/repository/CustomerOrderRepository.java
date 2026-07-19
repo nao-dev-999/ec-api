@@ -25,6 +25,9 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
 
     List<CustomerOrder> findByStatus(OrderStatus status);
 
+    @Query("SELECT COALESCE(MAX(o.id), 0) FROM CustomerOrder o")
+    Long findMaxId();
+
     @Query(
             """
         SELECT DISTINCT o FROM CustomerOrder o

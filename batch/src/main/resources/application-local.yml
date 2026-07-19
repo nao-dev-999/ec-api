@@ -1,0 +1,10 @@
+spring:
+  datasource:
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:postgres}
+
+batch:
+  input:
+    flag-file: ./tmp/batch/input/daily-sales.done
+  output:
+    dir: ./tmp/batch/output

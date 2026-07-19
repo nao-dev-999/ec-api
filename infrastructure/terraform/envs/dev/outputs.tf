@@ -28,3 +28,12 @@ output "redis_host" {
   description = "ElastiCache Redisエンドポイント"
   value       = module.ecs.redis_host
 }
+
+output "ecr_batch_repository_url" {
+  description = "バッチのECRリポジトリURL"
+  value       = module.ecr.batch_repository_url
+}
+
+output "batch_pipeline_name" {
+  value = module.codepipeline.batch_pipeline_name
+}

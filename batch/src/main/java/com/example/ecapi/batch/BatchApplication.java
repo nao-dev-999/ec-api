@@ -1,0 +1,12 @@
+package com.example.ecapi.batch;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class BatchApplication {
+
+    static void main(String[] args) {
+        System.exit(SpringApplication.exit(SpringApplication.run(BatchApplication.class, args)));
+    }
+}

@@ -1,0 +1,11 @@
+frontend
+infrastructure
+.git
+.github
+.idea
+.claude
+**/build
+**/.gradle
+**/node_modules
+*.md
+global-bundle.pem
