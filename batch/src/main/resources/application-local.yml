@@ -5,6 +5,6 @@ spring:
 
 batch:
   input:
-    flag-file: ./tmp/batch/input/daily-sales.done
+    flag-file-template: ./tmp/batch/input/payment_confirmed_%s.done
   output:
     dir: ./tmp/batch/output

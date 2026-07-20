@@ -88,18 +88,23 @@
 
 ```java
 @Bean
-public Tasklet checkArrivalFlagTasklet(@Value("${batch.input.flag-file}") String flagFile) {
+public Tasklet checkArrivalFlagTasklet(
+        @Value("${batch.input.flag-file-template}") String flagFileTemplate) {
     return (contribution, chunkContext) -> {
-        Path flag = Paths.get(flagFile);
+        // flagFileTemplateは%sプレースホルダを持つ（例: payment_confirmed_%s.done）。
+        // 対象日はjobParameters['targetDateFrom']から求め、yyyyMMdd形式で埋め込む
+        Path flag = Paths.get(String.format(flagFileTemplate, targetDate));
         if (!Files.exists(flag)) {
             // リトライハンドラ相当の仕組みで一定間隔リトライし、
             // 一定時間超過でアラート発報して人手介入を促す
-            throw new FlagFileNotFoundException("受信I/Fの到着フラグが未検出: " + flagFile);
+            throw new FlagFileNotFoundException("受信I/Fの到着フラグが未検出: " + flag);
         }
         return RepeatStatus.FINISHED;
     };
 }
 ```
+
+フラグファイル名には対象日（`yyyyMMdd`）を含める（例: `payment_confirmed_20240115.done`）。日付が入っていない固定名だと、前日分の処理が終わる前に当日分のフラグが上書きされる、あるいは別日の再実行時に誤って古いフラグを検出するといった事故につながるため。
 
 ### 実装例：送信完了フラグの生成（JobC）
 
@@ -305,41 +310,50 @@ spring:
 
 **原則:** UPSERTが必要な書き込みはJPA経由にせず、`JdbcBatchItemWriter` + 素のJDBCで書く。
 
-**注意:** 14.5節のLocal Partitioningと組み合わせる場合、複数パーティションが同一商品の行を並行して書き込みうる。`total_amount = EXCLUDED.total_amount` のような**置換**ではなく、`total_amount = daily_sales_summary_by_product.total_amount + EXCLUDED.total_amount` の**積算**にしないと、後から書き込んだパーティションが他パーティションの部分集計を上書きしてデータを失う。
+**注意（積算方式は採用しない）:** 14.5節のLocal Partitioningと組み合わせる場合、複数パーティションが同一商品の行を並行して書き込みうる。かつてはこれに対応するため `total_amount = daily_sales_summary_by_product.total_amount + EXCLUDED.total_amount` という**積算**方式のUPSERTを採用していたが、これは「同じ targetDate でジョブ全体を最初から再実行する」（データ修正等）と売上が二重に積み上がるという欠陥があった。「初回実行かリスタートかを判定してから積算するかどうか決める」対応も検討したが、判定ロジックが複雑で壊れやすいため採用しない。
+
+**採用方式: ステージング + 置き換え。** Workerは最終テーブルに直接書かず、ステージングテーブル `daily_sales_summary_staging` に明細のまま単純INSERTする（PKは `(job_instance_id, order_detail_id)`。同一Job Instanceの同一明細を二重ステージングしない）。JobBの最後にjobBConsolidateStepを置き、ステージングを `job_instance_id` で絞り込んでGROUP BY・SUMし、最終テーブルへ **置換**（`EXCLUDED.total_amount` そのまま、積算しない）でUPSERTする。
+
+**jobBConsolidateStepはchunk構成にする（1トランザクションのTaskletにしない）。** `daily_sales_summary_by_product`が将来数万件規模に増える可能性を見込むと、1トランザクションで数万件をUPSERTするとロック保持時間が伸び、オンラインAPI側の読み取りクエリと競合するリスクが高まる。そこで以下の3コンポーネントに分割する。
+
+| コンポーネント | 役割 |
+|---|---|
+| `StagingAggregateItemReader` | ステージングを`job_instance_id`で絞り込みGROUP BY/SUMした結果をカーソルで1行ずつ返す（`JdbcCursorItemReader`に委譲）。全件を一度にメモリへ載せない |
+| `dailySalesSummaryUpsertWriter`（`JdbcBatchItemWriter`） | 1行ずつ最終テーブルへ置換UPSERT |
+| `StagingCleanupListener`（`StepExecutionListener#afterStep`） | 全chunk完了後、Step成功時のみステージング行をまとめてDELETE |
 
 ```java
-@Bean
-public JdbcBatchItemWriter<SalesSummaryRow> salesSummaryWriter(DataSource dataSource) {
-    return new JdbcBatchItemWriterBuilder<SalesSummaryRow>()
-        .dataSource(dataSource)
-        .sql("""
-            INSERT INTO daily_sales_summary_by_product
-                (product_id, sales_date, total_amount, total_quantity,
-                 version, created_by, updated_by, created_at, updated_at)
-            VALUES (:productId, :salesDate, :amount, :quantity,
-                    0, :systemUserId, :systemUserId, now(), now())
-            ON CONFLICT (product_id, sales_date)
-            DO UPDATE SET
-                total_amount = daily_sales_summary_by_product.total_amount + EXCLUDED.total_amount,
-                total_quantity = daily_sales_summary_by_product.total_quantity + EXCLUDED.total_quantity,
-                version = daily_sales_summary_by_product.version + 1,
-                updated_by = :systemUserId,
-                updated_at = now()
-            """)
-        .itemSqlParameterSourceProvider(row -> {
-            var params = new MapSqlParameterSource();
-            params.addValue("productId", row.productId());
-            params.addValue("salesDate", row.salesDate());
-            params.addValue("amount", row.amount());
-            params.addValue("quantity", row.quantity());
-            params.addValue("systemUserId", BATCH_SYSTEM_USER_ID);
-            return params;
-        })
-        .build();
-}
+// Reader: ステージングをGROUP BY/SUMしてカーソルで読む
+SELECT product_id, sales_date, SUM(amount) AS total_amount, SUM(quantity) AS total_quantity
+FROM daily_sales_summary_staging
+WHERE job_instance_id = ?
+GROUP BY product_id, sales_date
+
+// Writer: 1行ずつ置換UPSERT
+INSERT INTO daily_sales_summary_by_product
+    (product_id, sales_date, total_amount, total_quantity,
+     version, created_by, updated_by, created_at, updated_at)
+VALUES (:productId, :salesDate, :totalAmount, :totalQuantity,
+        0, :systemUserId, :systemUserId, now(), now())
+ON CONFLICT (product_id, sales_date)
+DO UPDATE SET
+    total_amount = EXCLUDED.total_amount,
+    total_quantity = EXCLUDED.total_quantity,
+    version = daily_sales_summary_by_product.version + 1,
+    updated_by = :systemUserId,
+    updated_at = now();
+
+// StagingCleanupListener#afterStep: 全chunk完了後にまとめて1回だけDELETE
+DELETE FROM daily_sales_summary_staging WHERE job_instance_id = :jobInstanceId;
 ```
 
-これは[4.6 楽観ロック / バルク演算の制限](../../backend/docs/04-entity-design.md)の「バルク演算はversion手動インクリメント必須」というルールをそのまま踏襲したものである。バッチのWriterはエンティティ経由ではないため `AuditorAware` は働かず、`created_by` / `updated_by` にはバッチ用システムユーザーIDを明示的に渡す。
+**DELETEを最後にまとめて1回だけ行う理由:** chunk処理中に都度DELETEすると、Reader側のGROUP BY結果（まだ読んでいない行の集計）が途中で変わってしまう。そのため全chunk完了後、`StepExecutionListener#afterStep`でStep成功時のみ一括DELETEする。Step失敗時はDELETEしない。
+
+**このStepはリスタート時の位置復元をしない。** `StagingAggregateItemReader`は`OrderDetailKeysetItemReader`と異なり、`open()`でExecutionContextから位置を復元しない（`JdbcCursorItemReader`の`saveState(false)`）。対象はstagingの集約結果であり、失敗しても同じ`job_instance_id`の全データを毎回読み直すコストが小さいため、常に最初からカーソルを開き直す設計でよい（DELETEを最後まで遅延させているため、Step失敗後もステージング行は残っており安全に読み直せる）。
+
+**なぜ`job_execution_id`ではなく`job_instance_id`か:** `JobExecution`のIDはジョブ全体のrestartのたびに新しくなる。ジョブ全体の途中でクラッシュしrestartした場合、クラッシュ前にコミット済みだったパーティション分（Readerのキーセットにより再読込されずステージングもされない）が新しい`job_execution_id`とは紐付かず、Consolidateの集計から漏れてしまう。同一`JobParameters`（対象日）に対して再実行を跨いで不変な`job_instance_id`（`JobExecution.getJobInstanceId()`）をキーにすることで、この問題を避けつつ「再実行のたびに完全に読み直して置き換える」という意図を正しく実現できる。
+
+これは[4.6 楽観ロック / バルク演算の制限](../../backend/docs/04-entity-design.md)の「バルク演算はversion手動インクリメント必須」というルールをそのまま踏襲したものである。バッチのWriter/Consolidateはエンティティ経由ではないため `AuditorAware` は働かず、`created_by` / `updated_by` にはバッチ用システムユーザーIDを明示的に渡す。
 
 ### ⑤ Readerでのリレーション（N+1）に注意
 
@@ -382,6 +396,7 @@ List<OrderDetailProjection> page = session
 | 大量データの読み取りはOFFSETページングではなくキーセット方式にする | PostgreSQLでのスキャンコスト増大を回避 |
 | `hibernate.jdbc.batch_size` + `order_inserts` / `order_updates` を設定する | JDBCラウンドトリップ削減 |
 | UPSERTが必要な書き込みはJPA経由にせず素のJDBCで書く | JPAは `ON CONFLICT` を表現できないため |
+| 最終テーブルへの反映はステージング+置き換え方式にし、`job_instance_id`で完全に読み直して置換する | 積算方式は「ジョブ全体の再実行」で二重加算を招くため。判定ロジックより「毎回読み直して置き換える」設計の方が壊れにくい |
 | 集計目的のReadはエンティティではなくDTO射影を使う | N+1回避・オブジェクト生成コスト削減 |
 
 ---
@@ -406,7 +421,7 @@ public Job dailyOrderAggregationJob(JobRepository jobRepository, Step masterStep
 
 ### 冪等性の担保
 
-同じ `JobParameters` で再実行したら同じ結果になることを保証する。Writerは `INSERT` ではなく **UPSERT**（`ON CONFLICT DO UPDATE`）にして、再実行時の重複を防ぐ（[14.7 ④](#④-upsert-はjpaで表現しにくい) 参照）。
+同じ `JobParameters` で再実行したら同じ結果になることを保証する。Workerは最終テーブルへ直接UPSERTするのではなく、ステージングテーブルへの単純INSERT + Consolidate Stepでの`job_instance_id`単位の**置き換え**（読み直してON CONFLICT DO UPDATEで置換、その後ステージング行を物理DELETE）にすることで、初回実行・Step単位のリスタート・後日の完全再実行のいずれでも同じ結果になる（[14.7 ④](#④-upsert-はjpaで表現しにくい) 参照）。「初回実行かリスタートかを判定してから書き込み方法を変える」対応は判定ロジックが複雑で壊れやすいため採用しない。
 
 ### 楽観ロックとの関係
 
@@ -432,6 +447,7 @@ public Job dailyOrderAggregationJob(JobRepository jobRepository, Step masterStep
 - [ ] UPSERTが必要な書き込みをJPAの `save()` で無理に表現していない
 - [ ] 集計用の読み取りでエンティティのリレーションを辿っていない（DTO射影を使用）
 - [ ] `JobParameters` に処理対象日を含め、再実行時の挙動を制御している
+- [ ] 最終テーブルへの反映はステージング+置き換え方式にし、`job_instance_id`（`job_execution_id`ではない）で完全に読み直して置換している
 - [ ] `created_by` / `updated_by` にバッチ専用システムユーザーIDを明示的に設定している
 
 ### 運用設計時

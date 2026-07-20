@@ -17,7 +17,22 @@ public class SalesSummaryItemProcessor
 
     @Override
     public SalesSummaryRow process(OrderDetailProjection item) {
+        validate(item);
         BigDecimal amount = item.unitPrice().multiply(BigDecimal.valueOf(item.quantity()));
-        return new SalesSummaryRow(item.productId(), salesDate, amount, item.quantity());
+        return new SalesSummaryRow(item.id(), item.productId(), salesDate, amount, item.quantity());
+    }
+
+    private void validate(OrderDetailProjection item) {
+        if (item.unitPrice() == null || item.unitPrice().signum() < 0) {
+            throw new InvalidOrderDetailException(
+                    "unitPriceが不正です: orderDetailId="
+                            + item.id()
+                            + ", unitPrice="
+                            + item.unitPrice());
+        }
+        if (item.quantity() <= 0) {
+            throw new InvalidOrderDetailException(
+                    "quantityが不正です: orderDetailId=" + item.id() + ", quantity=" + item.quantity());
+        }
     }
 }
