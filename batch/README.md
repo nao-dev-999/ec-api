@@ -81,7 +81,7 @@ docker compose -f backend/docker-compose.yml up -d
 mkdir -p batch/tmp/batch/input
 touch batch/tmp/batch/input/payment_confirmed_20240115.done  # JobAの受信フラグ（対象日入り。事前に手動で用意）
 
-SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=changeme \
+SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=password \
   ./gradlew :batch:bootRun --args='--targetDate=2024-01-15'
 ```
 

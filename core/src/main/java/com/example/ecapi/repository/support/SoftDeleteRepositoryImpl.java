@@ -1,10 +1,6 @@
 package com.example.ecapi.repository.support;
 
 import jakarta.persistence.EntityManager;
-import jakarta.persistence.criteria.CriteriaBuilder;
-import jakarta.persistence.criteria.CriteriaQuery;
-import jakarta.persistence.criteria.Predicate;
-import jakarta.persistence.criteria.Root;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Page;
@@ -13,29 +9,26 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.support.JpaEntityInformation;
 import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 論理削除（deleted = false フィルタ）を全 Repository に機械的に強制する基底実装。
  *
  * <p>{@code @EnableJpaRepositories(repositoryBaseClass = SoftDeleteRepositoryImpl.class)} で
- * 有効化すると、アプリ内の全 {@code JpaRepository} 継承インターフェースの実体がこのクラスになる。
- * 以後、開発者が {@code findByIdAndDeletedFalse} のような命名を忘れても、
- * 標準の {@code findById} / {@code findAll} が自動的に削除済みレコードを除外する。
+ * 有効化すると、アプリ内の全 {@code JpaRepository} 継承インターフェースの実体がこのクラスになる。 以後、開発者が {@code
+ * findByIdAndDeletedFalse} のような命名を忘れても、 標準の {@code findById} / {@code findAll} が自動的に削除済みレコードを除外する。
  *
  * <p><b>挙動の変更点（重要・チーム周知必須）:</b>
  *
  * <ul>
- *   <li>{@code findById} / {@code findAll} / {@code count} / {@code existsById}:
- *       {@code deleted = false} のレコードのみを対象にする
+ *   <li>{@code findById} / {@code findAll} / {@code count} / {@code existsById}: {@code deleted =
+ *       false} のレコードのみを対象にする
  *   <li>{@code deleteById} / {@code delete}: 物理 DELETE ではなく {@code deleted = true} への
  *       UPDATE（論理削除）に置き換わる
  *   <li>物理削除が本当に必要な場合は {@link #hardDeleteById(Object)} を明示的に呼ぶ
  * </ul>
  *
- * <p><b>deleted フィールドを持たないエンティティ:</b> JPA メタモデルを起動時に確認し、
- * {@code deleted} 属性が存在しないエンティティに対しては一切の挙動変更をしない
- * （標準の {@link SimpleJpaRepository} と同じ動作にフォールバックする）。
+ * <p><b>deleted フィールドを持たないエンティティ:</b> JPA メタモデルを起動時に確認し、 {@code deleted}
+ * 属性が存在しないエンティティに対しては一切の挙動変更をしない （標準の {@link SimpleJpaRepository} と同じ動作にフォールバックする）。
  * これにより集計テーブルや中間テーブルなど論理削除対象外のエンティティが混在しても安全。
  *
  * <p><b>このクラスで防げないもの（規約側で引き続き担保が必要）:</b>
@@ -66,8 +59,7 @@ public class SoftDeleteRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID> 
         this.softDeletable = hasDeletedAttribute(entityInformation, entityManager);
     }
 
-    private static boolean hasDeletedAttribute(
-            JpaEntityInformation<?, ?> info, EntityManager em) {
+    private static boolean hasDeletedAttribute(JpaEntityInformation<?, ?> info, EntityManager em) {
         return em.getMetamodel().entity(info.getJavaType()).getAttributes().stream()
                 .anyMatch(attr -> DELETED_ATTRIBUTE.equals(attr.getName()));
     }
