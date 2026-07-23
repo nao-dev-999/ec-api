@@ -89,7 +89,7 @@ docker-compose up -d
 SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=changeme ./gradlew :backend:bootRun
 ```
 
-起動時にFlywayが `src/main/resources/db/migration` のマイグレーションを自動適用してスキーマを構築する（`spring.jpa.hibernate.ddl-auto=validate` のためJPAはテーブルを作成しない）。`local`プロファイルでは併せて `src/main/resources/db/seed/V9__init_data.sql` が適用され、商品100件・顧客50件・従業員50件（いずれもパスワードは `password123`）が投入される。
+起動時にFlywayが `src/main/resources/db/migration` のマイグレーションを自動適用してスキーマを構築する（`spring.jpa.hibernate.ddl-auto=validate` のためJPAはテーブルを作成しない）。`local`プロファイルでは併せて `src/main/resources/db/seed/R__init_data.sql` が適用され、商品100件・顧客50件・従業員50件（いずれもパスワードは `password123`）が投入される。
 
 ---
 
