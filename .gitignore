@@ -74,6 +74,7 @@ override.tf.json
 
 ### Other ###
 .linux_command.md
+/batch/tmp/
 
 # CLAUDE
 CLAUDE.md
