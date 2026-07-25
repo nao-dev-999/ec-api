@@ -1,9 +1,10 @@
-package com.example.ecapi.batch.job;
+package com.example.ecapi.batch.job.dailysales;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 
 import com.example.ecapi.batch.dto.OrderDetailProjection;
+import com.example.ecapi.batch.exception.InvalidOrderDetailException;
 import java.math.BigDecimal;
 import java.util.Map;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +24,7 @@ class SalesSummarySkipListenerTest {
     @DisplayName("onSkipInProcessでbatch_skipped_recordsへ期待通りの内容をINSERTすること")
     void shouldRecordSkippedItemOnSkipInProcess() {
         SalesSummarySkipListener listener =
-                new SalesSummarySkipListener(jdbcTemplate, 99L, "jobBWorkerStep");
+                new SalesSummarySkipListener(jdbcTemplate, 99L, "salesAggregateWorkerStep");
         OrderDetailProjection item =
                 new OrderDetailProjection(7L, 100L, 200L, new BigDecimal("-1"), 3);
 
@@ -36,7 +37,7 @@ class SalesSummarySkipListenerTest {
 
         assertThat(paramsCaptor.getValue())
                 .containsEntry("jobExecutionId", 99L)
-                .containsEntry("stepName", "jobBWorkerStep")
+                .containsEntry("stepName", "salesAggregateWorkerStep")
                 .containsEntry("orderDetailId", 7L)
                 .containsEntry("errorMessage", "unitPriceが不正です");
     }

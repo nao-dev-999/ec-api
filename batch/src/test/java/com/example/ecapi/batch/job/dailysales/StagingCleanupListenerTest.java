@@ -1,4 +1,4 @@
-package com.example.ecapi.batch.job;
+package com.example.ecapi.batch.job.dailysales;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyMap;

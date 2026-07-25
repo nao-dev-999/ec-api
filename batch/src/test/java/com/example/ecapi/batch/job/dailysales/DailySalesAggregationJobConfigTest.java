@@ -1,10 +1,12 @@
-package com.example.ecapi.batch.job;
+package com.example.ecapi.batch.job.dailysales;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.ecapi.batch.dto.AggregatedSalesRow;
 import com.example.ecapi.batch.dto.OrderDetailProjection;
+import com.example.ecapi.batch.dto.PaymentConfirmationRow;
 import com.example.ecapi.batch.dto.SalesSummaryRow;
+import com.example.ecapi.batch.reader.StagingAggregateItemReader;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -14,17 +16,20 @@ import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.infrastructure.item.ItemStreamReader;
 import org.springframework.batch.infrastructure.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /**
- * jobBWorkerStep/jobBConsolidateStepのBeanファクトリメソッドを直接呼び出し、Stepが例外なく ビルドできることを確認するスモークテスト（{@link
- * BatchFaultTolerancePolicy}適用込み）。
+ * paymentConfirmationIntakeStep/salesAggregateWorkerStep/salesSummaryConsolidateStepのBeanファクトリメソッドを直接呼び出し、Stepが例外なく
+ * ビルドできることを確認するスモークテスト（{@link BatchFaultTolerancePolicy}適用込み）。
  */
 @ExtendWith(MockitoExtension.class)
 class DailySalesAggregationJobConfigTest {
 
     @Mock private JobRepository jobRepository;
     @Mock private PlatformTransactionManager transactionManager;
+    @Mock private FlatFileItemReader<PaymentConfirmationRow> paymentConfirmationFileReader;
+    @Mock private JdbcBatchItemWriter<PaymentConfirmationRow> paymentConfirmationStagingWriter;
     @Mock private ItemStreamReader<OrderDetailProjection> orderDetailReader;
     @Mock private SalesSummaryItemProcessor salesSummaryProcessor;
     @Mock private JdbcBatchItemWriter<SalesSummaryRow> salesSummaryStagingWriter;
@@ -36,10 +41,24 @@ class DailySalesAggregationJobConfigTest {
     private final DailySalesAggregationJobConfig config = new DailySalesAggregationJobConfig();
 
     @Test
-    @DisplayName("jobBWorkerStepがBatchFaultTolerancePolicy適用込みで正しくビルドされること")
-    void shouldBuildJobBWorkerStepWithFaultTolerancePolicyApplied() {
+    @DisplayName("paymentConfirmationIntakeStepがCSV読み取り→ステージング書き込みのchunk構成で正しくビルドされること")
+    void shouldBuildPaymentConfirmationIntakeStepAsChunkOrientedStep() {
         Step step =
-                config.jobBWorkerStep(
+                config.paymentConfirmationIntakeStep(
+                        jobRepository,
+                        transactionManager,
+                        paymentConfirmationFileReader,
+                        paymentConfirmationStagingWriter);
+
+        assertThat(step).isNotNull();
+        assertThat(step.getName()).isEqualTo("paymentConfirmationIntakeStep");
+    }
+
+    @Test
+    @DisplayName("salesAggregateWorkerStepがBatchFaultTolerancePolicy適用込みで正しくビルドされること")
+    void shouldBuildSalesAggregateWorkerStepWithFaultTolerancePolicyApplied() {
+        Step step =
+                config.salesAggregateWorkerStep(
                         jobRepository,
                         transactionManager,
                         orderDetailReader,
@@ -48,14 +67,14 @@ class DailySalesAggregationJobConfigTest {
                         salesSummarySkipListener);
 
         assertThat(step).isNotNull();
-        assertThat(step.getName()).isEqualTo("jobBWorkerStep");
+        assertThat(step.getName()).isEqualTo("salesAggregateWorkerStep");
     }
 
     @Test
-    @DisplayName("jobBConsolidateStepがchunk構成で正しくビルドされること")
-    void shouldBuildJobBConsolidateStepAsChunkOrientedStep() {
+    @DisplayName("salesSummaryConsolidateStepがchunk構成で正しくビルドされること")
+    void shouldBuildSalesSummaryConsolidateStepAsChunkOrientedStep() {
         Step step =
-                config.jobBConsolidateStep(
+                config.salesSummaryConsolidateStep(
                         jobRepository,
                         transactionManager,
                         stagingAggregateItemReader,
@@ -63,6 +82,6 @@ class DailySalesAggregationJobConfigTest {
                         stagingCleanupListener);
 
         assertThat(step).isNotNull();
-        assertThat(step.getName()).isEqualTo("jobBConsolidateStep");
+        assertThat(step.getName()).isEqualTo("salesSummaryConsolidateStep");
     }
 }

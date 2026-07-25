@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -131,6 +132,27 @@ class BatchRunnerTest {
         assertThatThrownBy(() -> runner.run("--job=unknownJob"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("unknownJob");
+    }
+
+    @Test
+    @DisplayName("同名Jobが既に実行中の場合は起動を中止し例外を投げること")
+    void shouldThrowWhenJobAlreadyRunning() throws Exception {
+        when(dailySalesAggregationJob.getName()).thenReturn("dailySalesAggregationJob");
+        when(jobRepository.findRunningJobExecutions("dailySalesAggregationJob"))
+                .thenReturn(Set.of(jobExecution));
+
+        BatchRunner runner =
+                new BatchRunner(
+                        jobOperator,
+                        jobRepository,
+                        Map.of("dailySalesAggregationJob", dailySalesAggregationJob),
+                        List.of(dailySalesJobParametersProvider));
+
+        assertThatThrownBy(runner::run)
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("dailySalesAggregationJob");
+
+        verify(jobOperator, never()).start(any(Job.class), any(JobParameters.class));
     }
 
     @Test

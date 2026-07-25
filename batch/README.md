@@ -29,7 +29,7 @@ ec-api/
 |---|---|
 | `com.example.ecapi.batch` | `BatchApplication`（エントリポイント）、`BatchRunner`（起動経路）、`JobParametersProvider`（Job毎のJobParameters組み立ての拡張点） |
 | `com.example.ecapi.batch.config` | `BatchAuditConfig`（バッチ専用`AuditorAware`） |
-| `com.example.ecapi.batch.job` | Job/Step定義、Partitioner、Reader、Processor、Job固有の例外、`JobParametersProvider`実装（例: `DailySalesJobParametersProvider`） |
+| `com.example.ecapi.batch.job.{jobName}` | Job単位のサブパッケージ。Job/Step定義、Partitioner、Reader、Processor、Job固有の例外、`JobParametersProvider`実装をまとめる（例: `job.dailysales`に`DailySalesAggregationJobConfig`・`DailySalesJobParametersProvider`等）。新規Job追加時は同様に`job.{jobName}`を切る |
 | `com.example.ecapi.batch.writer` | ステージングテーブル・最終テーブルへの`JdbcBatchItemWriter`設定 |
 | `com.example.ecapi.batch.dto` | Reader/Writer間のDTO射影 |
 
@@ -49,9 +49,9 @@ BatchRunner.run()  ← CommandLineRunnerとして自動実行
   ├─ jobRepository.findRunningJobExecutions(...) で二重起動を検知し、実行中なら中止
   ├─ 選択したJobに対応する JobParametersProvider.resolve(args) でJobParametersを組み立てて jobOperator.start(...)
   │     dailySalesAggregationJobの場合: --targetDate未指定時は「前日」（JST基準）を対象日とし、targetDateFrom/targetDateToを積む
-  │     JobA(受信フラグ確認) → JobB(集計: Local Partitioning→Consolidate) → JobC(完了フラグ生成)
-  │       JobB-Worker: ステージングテーブルへ明細のまま単純INSERT（fault tolerance: データ不正はskip、一時的なDBエラーはretry）
-  │       JobB-Consolidate: chunk(1000)構成。job_instance_id単位でステージングをGROUP BY/SUMしながら
+  │     取込フェーズ(受信フラグ確認→受信CSV検証・ステージング取込) → 集計フェーズ(集計: Local Partitioning→Consolidate) → 送信フェーズ(完了フラグ生成)
+  │       集計フェーズ-Worker: ステージングテーブルへ明細のまま単純INSERT（fault tolerance: データ不正はskip、一時的なDBエラーはretry）
+  │       集計フェーズ-Consolidate: chunk(1000)構成。job_instance_id単位でステージングをGROUP BY/SUMしながら
   │                         カーソルで読み、最終テーブルへ1行ずつ置換UPSERT。全chunk完了後（成功時のみ）
   │                         StagingCleanupListenerがステージング行をまとめてDELETE
   └─ JobExecutionの結果をexit codeに反映（ExitCodeGenerator）
@@ -79,13 +79,20 @@ JobParametersの形はJob毎に異なってよい（`DailySalesJobParametersProv
 docker compose -f backend/docker-compose.yml up -d
 
 mkdir -p batch/tmp/batch/input
-touch batch/tmp/batch/input/payment_confirmed_20240115.done  # JobAの受信フラグ（対象日入り。事前に手動で用意）
+
+# 取込フェーズが取り込む決済確定明細CSV（対象日入り。事前に手動で用意）
+cat <<'CSV' > batch/tmp/batch/input/payment_confirmed_20240115.csv
+order_id,amount,settled_at
+1,12800.00,2024-01-15T03:12:45Z
+CSV
+
+touch batch/tmp/batch/input/payment_confirmed_20240115.done  # 取込フェーズの受信フラグ（CSVの書き込み完了を示すキックファイル）
 
 SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=password \
   ./gradlew :batch:bootRun --args='--targetDate=2024-01-15'
 ```
 
-`local`プロファイルでは受信フラグ・送信出力とも`batch/tmp/batch/`配下（`application-local.yml`）を見る。受信フラグのファイル名は`batch.input.flag-file-template`（`%s`が対象日の`yyyyMMdd`）で組み立てる。
+`local`プロファイルでは受信フラグ・受信CSV・送信出力とも`batch/tmp/batch/`配下（`application-local.yml`）を見る。ファイル名は`batch.input.flag-file-template`/`batch.input.data-file-template`（`%s`が対象日の`yyyyMMdd`）で組み立てる。受信CSVはヘッダー`order_id,amount,settled_at`固定で、フォーマット不正（ヘッダー不一致・数値/日時としてパースできない値）は取込フェーズを異常終了させる（集計フェーズのデータ不正のようなskipはしない）。取り込んだ内容は`payment_confirmation_staging`テーブルに保存される（現時点では集計フェーズ以降からの参照はなく、監査・将来の突合処理向け）。
 
 fault toleranceでskipされたレコードは`batch_skipped_records`テーブルに記録される。
 

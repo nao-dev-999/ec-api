@@ -1,4 +1,4 @@
-package com.example.ecapi.batch.job;
+package com.example.ecapi.batch.reader;
 
 import com.example.ecapi.batch.dto.OrderDetailProjection;
 import jakarta.persistence.EntityManagerFactory;

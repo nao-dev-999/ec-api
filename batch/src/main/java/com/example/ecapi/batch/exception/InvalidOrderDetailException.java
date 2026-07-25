@@ -1,4 +1,4 @@
-package com.example.ecapi.batch.job;
+package com.example.ecapi.batch.exception;
 
 public class InvalidOrderDetailException extends RuntimeException {
 
