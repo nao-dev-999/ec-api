@@ -81,9 +81,10 @@ docker compose -f backend/docker-compose.yml up -d
 mkdir -p batch/tmp/batch/input
 
 # 取込フェーズが取り込む決済確定明細CSV（対象日入り。事前に手動で用意）
+# order_numberはcustomer_order.order_number（外部連携用の参照番号、内部idではない）と対応させる
 cat <<'CSV' > batch/tmp/batch/input/payment_confirmed_20240115.csv
-order_id,amount,settled_at
-1,12800.00,2024-01-15T03:12:45Z
+order_number,transaction_id,customer_id,payment_method,status,amount,settled_at
+3fa85f64-5717-4562-b3fc-2c963f66afa6,txn_8f3c1a2b9d4e,1,CREDIT_CARD,SETTLED,12800.00,2024-01-15T03:12:45Z
 CSV
 
 touch batch/tmp/batch/input/payment_confirmed_20240115.done  # 取込フェーズの受信フラグ（CSVの書き込み完了を示すキックファイル）
@@ -92,7 +93,7 @@ SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=password \
   ./gradlew :batch:bootRun --args='--targetDate=2024-01-15'
 ```
 
-`local`プロファイルでは受信フラグ・受信CSV・送信出力とも`batch/tmp/batch/`配下（`application-local.yml`）を見る。ファイル名は`batch.input.flag-file-template`/`batch.input.data-file-template`（`%s`が対象日の`yyyyMMdd`）で組み立てる。受信CSVはヘッダー`order_id,amount,settled_at`固定で、フォーマット不正（ヘッダー不一致・数値/日時としてパースできない値）は取込フェーズを異常終了させる（集計フェーズのデータ不正のようなskipはしない）。取り込んだ内容は`payment_confirmation_staging`テーブルに保存される（現時点では集計フェーズ以降からの参照はなく、監査・将来の突合処理向け）。
+`local`プロファイルでは受信フラグ・受信CSV・送信出力とも`batch/tmp/batch/`配下（`application-local.yml`）を見る。ファイル名は`batch.input.flag-file-template`/`batch.input.data-file-template`（`%s`が対象日の`yyyyMMdd`）で組み立てる。受信CSVはヘッダー`order_number,transaction_id,customer_id,payment_method,status,amount,settled_at`固定で、フォーマット不正（ヘッダー不一致・数値/日時としてパースできない値）は取込フェーズを異常終了させる（集計フェーズのデータ不正のようなskipはしない）。`order_number`は内部サロゲートキー（`customer_order.id`）ではなく、決済代行が実際に知り得る外部連携用の参照番号（`customer_order.order_number`）を使う。`customer_id`は突合・監査用の識別子のみで、氏名・住所等のPIIは含めない。取り込んだ内容は`payment_confirmation_staging`テーブルに保存される（現時点では集計フェーズ以降からの参照はなく、監査・将来の突合処理向け）。詳細は`docs/batch.md`の14.3節を参照。
 
 fault toleranceでskipされたレコードは`batch_skipped_records`テーブルに記録される。
 

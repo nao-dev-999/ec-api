@@ -47,7 +47,8 @@ import org.springframework.transaction.PlatformTransactionManager;
 @Configuration
 public class DailySalesAggregationJobConfig {
 
-    private static final String EXPECTED_CSV_HEADER = "order_id,amount,settled_at";
+    private static final String EXPECTED_CSV_HEADER =
+            "order_number,transaction_id,customer_id,payment_method,status,amount,settled_at";
 
     @Bean
     public Job dailySalesAggregationJob(
@@ -127,7 +128,14 @@ public class DailySalesAggregationJobConfig {
                             }
                         })
                 .delimited()
-                .names("order_id", "amount", "settled_at")
+                .names(
+                        "order_number",
+                        "transaction_id",
+                        "customer_id",
+                        "payment_method",
+                        "status",
+                        "amount",
+                        "settled_at")
                 .fieldSetMapper(new PaymentConfirmationFieldSetMapper())
                 .build();
     }
