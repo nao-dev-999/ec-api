@@ -26,5 +26,6 @@ spring:
 batch:
   input:
     flag-file-template: /data/batch/input/payment_confirmed_%s.done
+    data-file-template: /data/batch/input/payment_confirmed_%s.csv
   output:
     dir: /data/batch/output

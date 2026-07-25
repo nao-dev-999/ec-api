@@ -1,10 +1,11 @@
-package com.example.ecapi.batch.job;
+package com.example.ecapi.batch.job.dailysales;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.ecapi.batch.dto.OrderDetailProjection;
 import com.example.ecapi.batch.dto.SalesSummaryRow;
+import com.example.ecapi.batch.exception.InvalidOrderDetailException;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import org.junit.jupiter.api.DisplayName;

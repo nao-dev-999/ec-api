@@ -1,5 +1,6 @@
-package com.example.ecapi.batch.job;
+package com.example.ecapi.batch.job.dailysales;
 
+import com.example.ecapi.batch.reader.StagingAggregateItemReader;
 import java.util.Map;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
@@ -8,7 +9,7 @@ import org.springframework.batch.core.step.StepExecution;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * jobBConsolidateStep完了後にステージング行をまとめてDELETEする。
+ * salesSummaryConsolidateStep完了後にステージング行をまとめてDELETEする。
  *
  * <p>chunk処理中に都度DELETEすると{@link StagingAggregateItemReader}のGROUP BY結果が
  * 途中で変わってしまうため、全chunk完了後の一括DELETEにする。Step失敗時はDELETEしない

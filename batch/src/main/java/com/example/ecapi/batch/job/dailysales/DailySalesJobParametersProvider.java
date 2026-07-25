@@ -1,4 +1,4 @@
-package com.example.ecapi.batch.job;
+package com.example.ecapi.batch.job.dailysales;
 
 import com.example.ecapi.batch.JobParametersProvider;
 import java.time.Instant;

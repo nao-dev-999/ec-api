@@ -6,5 +6,6 @@ spring:
 batch:
   input:
     flag-file-template: ./tmp/batch/input/payment_confirmed_%s.done
+    data-file-template: ./tmp/batch/input/payment_confirmed_%s.csv
   output:
     dir: ./tmp/batch/output

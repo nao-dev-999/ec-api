@@ -56,19 +56,19 @@
 ┌───────────────────────────────────────────────────────┐
 │                     日次売上集計ジョブネット                │
 │                                                           │
-│  JobA: 受信I/F取込                                        │
+│  取込フェーズ: 受信I/F取込                                  │
 │    ① キックファイル(到着フラグ)の存在確認・待機              │
 │    ② ファイルフォーマット検証                               │
 │    ③ ステージングテーブルへ取込                             │
 │         │                                                 │
 │         ▼                                                 │
-│  JobB: 集計処理（Local Partitioningで並列化）               │
+│  集計フェーズ: 集計処理（Local Partitioningで並列化）        │
 │    ① CustomerOrderDetail + ステージングデータを突合          │
 │    ② 商品別・顧客別・カテゴリ別に集計                        │
 │    ③ daily_sales_summary_* テーブルへUPSERT                │
 │         │                                                 │
 │         ▼                                                 │
-│  JobC: 送信I/F生成・送信                                   │
+│  送信フェーズ: 送信I/F生成・送信                             │
 │    ① daily_sales_summary_* を読み出しファイル生成           │
 │    ② SFTP/S3へ配置                                        │
 │    ③ 送信完了を示すキックファイルを最後に生成（原子的に）      │
@@ -84,7 +84,7 @@
 | Exit Code連携 | シェルスクリプトやオーケストレータで前JobのExit Codeを見て次Jobを起動 | 同一実行基盤内で完結する場合のみ検討 |
 | ジョブスケジューラの依存関係定義 | JP1・AWS Step Functions等でJob間の先行後続関係を定義 | 既存インフラの制約に応じて選択 |
 
-### 実装例：受信フラグの確認（JobA）
+### 実装例：受信フラグの確認（取込フェーズ）
 
 ```java
 @Bean
@@ -106,7 +106,38 @@ public Tasklet checkArrivalFlagTasklet(
 
 フラグファイル名には対象日（`yyyyMMdd`）を含める（例: `payment_confirmed_20240115.done`）。日付が入っていない固定名だと、前日分の処理が終わる前に当日分のフラグが上書きされる、あるいは別日の再実行時に誤って古いフラグを検出するといった事故につながるため。
 
-### 実装例：送信完了フラグの生成（JobC）
+### 実装例：フォーマット検証・ステージング取込（取込フェーズ）
+
+キックファイルの存在確認（①）はStepを分け（`arrivalFlagCheckStep`）、②③はchunk指向Stepとして別Step（`paymentConfirmationIntakeStep`）にする（14.4節「外部I/OとDB内部処理を同じStepに混在させない」の原則を取込フェーズ内部でも踏襲する）。フォーマット不正（ヘッダー不一致・型として解釈できない値）は集計フェーズのデータ不正のようにskipせず、受信I/Fそのものの異常としてJob全体を停止させる。
+
+```java
+@Bean
+@StepScope
+public FlatFileItemReader<PaymentConfirmationRow> paymentConfirmationFileReader(
+        @Value("${batch.input.data-file-template}") String dataFileTemplate,
+        @Value("#{jobParameters['targetDateFrom']}") String from) {
+    Path csv = Paths.get(String.format(dataFileTemplate, targetDate));
+    return new FlatFileItemReaderBuilder<PaymentConfirmationRow>()
+            .name("paymentConfirmationFileReader")
+            .resource(new FileSystemResource(csv))
+            .strict(true)
+            .linesToSkip(1)
+            .skippedLinesCallback(header -> {
+                // ヘッダーが期待する列構成と一致するか検証する（②フォーマット検証）
+                if (!EXPECTED_CSV_HEADER.equals(header.strip())) {
+                    throw new InvalidPaymentConfirmationFormatException(...);
+                }
+            })
+            .delimited()
+            .names("order_id", "amount", "settled_at")
+            .fieldSetMapper(new PaymentConfirmationFieldSetMapper()) // 数値/日時としてパースできなければ例外を伝播させる
+            .build();
+}
+```
+
+`payment_confirmation_staging`は`job_instance_id` + `order_id`をPKとし（daily_sales_summary_stagingと同様、再実行時の二重ステージング防止）、監査・将来の突合処理向けに保持する。**現時点では集計フェーズはこのステージングデータを参照せず、従来どおり`CustomerOrderDetail`から直接集計する。** 上記ジョブネット図の集計フェーズ①「CustomerOrderDetail + ステージングデータを突合」は将来の拡張であり未実装。
+
+### 実装例：送信完了フラグの生成（送信フェーズ）
 
 書き込み中のファイルを後続処理が誤って読まないよう、**フラグファイルの生成は原子的に行う**。
 
@@ -127,20 +158,20 @@ private void writeCompletionFlag(Path targetDir, String jobDate) throws IOExcept
 
 | 分割理由 | 説明 |
 |---|---|
-| **リスタート粒度の最適化** | JobC（ファイル送信）だけが失敗した場合、JobB（重い集計処理）をやり直す必要がない。Job単位で `JobRepository` の実行履歴が独立するため、失敗したJobだけ再実行できる |
-| **責務の単一化** | JobAは「ネットワーク待ちに強いリトライ」、JobBは「DB負荷を考慮したリトライ」というように、Jobごとにリトライ戦略を個別最適化できる |
+| **リスタート粒度の最適化** | 送信フェーズ（ファイル送信）だけが失敗した場合、集計フェーズ（重い集計処理）をやり直す必要がない。Job単位で `JobRepository` の実行履歴が独立するため、失敗したJobだけ再実行できる |
+| **責務の単一化** | 取込フェーズは「ネットワーク待ちに強いリトライ」、集計フェーズは「DB負荷を考慮したリトライ」というように、フェーズごとにリトライ戦略を個別最適化できる |
 | **監視・アラートの粒度** | 「受信I/Fが来ていない」と「集計処理が失敗した」は通知すべき相手（連携先システム担当 vs 自チーム）が異なることが多い。Job単位でアラートを分ける |
-| **冪等性の担保しやすさ** | JobCの送信I/F生成だけ再実行したい場合、JobBの集計結果（テーブル）は変更せず読むだけなので安全に再実行できる |
+| **冪等性の担保しやすさ** | 送信フェーズの送信I/F生成だけ再実行したい場合、集計フェーズの集計結果（テーブル）は変更せず読むだけなので安全に再実行できる |
 
 **禁止事項:** 集計処理中に外部システムへのファイル送信も同時に行う設計にしない。DBトランザクションが外部I/Oの完了を待つ形になり、トランザクションが長時間ロックを保持してしまう。
 
 ```java
 @Bean
-public Job dailySalesJobNet(JobRepository repo, Step jobA_intake, Step jobB_aggregate, Step jobC_export) {
+public Job dailySalesJobNet(JobRepository repo, Step intakeStep, Step aggregateStep, Step exportStep) {
     return new JobBuilder("dailySalesJobNet", repo)
-        .start(jobA_intake)   // I/O: 外部ファイル取込のみ。DB更新はステージングテーブルへの単純insertのみ
-        .next(jobB_aggregate) // DB内部処理のみ。外部I/Oなし。Local Partitioningの対象
-        .next(jobC_export)    // 読み取り専用DBアクセス + 外部I/O。DB更新なし
+        .start(intakeStep)    // I/O: 外部ファイル取込のみ。DB更新はステージングテーブルへの単純insertのみ
+        .next(aggregateStep)  // DB内部処理のみ。外部I/Oなし。Local Partitioningの対象
+        .next(exportStep)     // 読み取り専用DBアクセス + 外部I/O。DB更新なし
         .build();
 }
 ```
@@ -162,11 +193,16 @@ public Job dailySalesJobNet(JobRepository repo, Step jobA_intake, Step jobB_aggr
 
 顧客IDではなく **`CustomerOrder.id` のレンジ** をパーティションキーとする。顧客IDだと注文の時間的発生ムラの影響を受けやすいため、ID範囲の方が均等な負荷分散になりやすい。
 
+最大IDの取得はJob開始時に1度だけ行う軽量な集約クエリであり、200万件規模のRead/Writeとは異なりHibernateの永続化コンテキストを介する必要がないため、素のJDBCで発行する（[14.7 ①](#①-永続化コンテキストの肥大化)参照）。
+
 ```java
 @Bean
-public Partitioner orderAggregationPartitioner(CustomerOrderRepository repo) {
+public Partitioner orderAggregationPartitioner(NamedParameterJdbcTemplate jdbcTemplate) {
     return gridSize -> {
-        long maxId = repo.findMaxId();
+        long maxId =
+                jdbcTemplate
+                        .getJdbcTemplate()
+                        .queryForObject("SELECT COALESCE(MAX(id), 0) FROM customer_order", Long.class);
         long rangeSize = Math.max(maxId / gridSize, 1);
         Map<String, ExecutionContext> partitions = new HashMap<>();
         for (int i = 0; i < gridSize; i++) {
@@ -312,9 +348,9 @@ spring:
 
 **注意（積算方式は採用しない）:** 14.5節のLocal Partitioningと組み合わせる場合、複数パーティションが同一商品の行を並行して書き込みうる。かつてはこれに対応するため `total_amount = daily_sales_summary_by_product.total_amount + EXCLUDED.total_amount` という**積算**方式のUPSERTを採用していたが、これは「同じ targetDate でジョブ全体を最初から再実行する」（データ修正等）と売上が二重に積み上がるという欠陥があった。「初回実行かリスタートかを判定してから積算するかどうか決める」対応も検討したが、判定ロジックが複雑で壊れやすいため採用しない。
 
-**採用方式: ステージング + 置き換え。** Workerは最終テーブルに直接書かず、ステージングテーブル `daily_sales_summary_staging` に明細のまま単純INSERTする（PKは `(job_instance_id, order_detail_id)`。同一Job Instanceの同一明細を二重ステージングしない）。JobBの最後にjobBConsolidateStepを置き、ステージングを `job_instance_id` で絞り込んでGROUP BY・SUMし、最終テーブルへ **置換**（`EXCLUDED.total_amount` そのまま、積算しない）でUPSERTする。
+**採用方式: ステージング + 置き換え。** Workerは最終テーブルに直接書かず、ステージングテーブル `daily_sales_summary_staging` に明細のまま単純INSERTする（PKは `(job_instance_id, order_detail_id)`。同一Job Instanceの同一明細を二重ステージングしない）。集計フェーズの最後にsalesSummaryConsolidateStepを置き、ステージングを `job_instance_id` で絞り込んでGROUP BY・SUMし、最終テーブルへ **置換**（`EXCLUDED.total_amount` そのまま、積算しない）でUPSERTする。
 
-**jobBConsolidateStepはchunk構成にする（1トランザクションのTaskletにしない）。** `daily_sales_summary_by_product`が将来数万件規模に増える可能性を見込むと、1トランザクションで数万件をUPSERTするとロック保持時間が伸び、オンラインAPI側の読み取りクエリと競合するリスクが高まる。そこで以下の3コンポーネントに分割する。
+**salesSummaryConsolidateStepはchunk構成にする（1トランザクションのTaskletにしない）。** `daily_sales_summary_by_product`が将来数万件規模に増える可能性を見込むと、1トランザクションで数万件をUPSERTするとロック保持時間が伸び、オンラインAPI側の読み取りクエリと競合するリスクが高まる。そこで以下の3コンポーネントに分割する。
 
 | コンポーネント | 役割 |
 |---|---|

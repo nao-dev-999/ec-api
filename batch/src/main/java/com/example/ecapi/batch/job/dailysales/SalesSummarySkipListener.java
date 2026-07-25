@@ -1,4 +1,4 @@
-package com.example.ecapi.batch.job;
+package com.example.ecapi.batch.job.dailysales;
 
 import com.example.ecapi.batch.dto.OrderDetailProjection;
 import com.example.ecapi.batch.dto.SalesSummaryRow;
@@ -7,10 +7,12 @@ import org.springframework.batch.core.listener.SkipListener;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 /**
- * スキップされたレコードを{@code batch_skipped_records}に記録する（監査目的）。 Local
- * Partitioningでパーティション毎にThreadが分かれるため、{@code jobExecutionId}/{@code stepName}
- * は他のReader/Processor/Writer同様に{@code @StepScope}経由で注入する（インスタンスフィールドで
- * StepExecutionを保持すると、パーティション間で共有される場合に競合しうるため）。
+ * fault toleranceでスキップされたレコードを{@code batch_skipped_records}に記録する（監査目的）。
+ *
+ * <p>{@code salesAggregatePartitionStep}はLocal Partitioningによりパーティションごとに別Threadで並列実行されるため、
+ * 本リスナーもパーティション（Thread）ごとに専用インスタンスとして動作する必要がある。そのため{@code jobExecutionId}/{@code
+ * stepName}は他のReader/Processorと同様に{@code @StepScope}経由でコンストラクタに注入し、 イミュータブルなフィールドとして保持する。仮に{@code
+ * StepExecution}そのものをフィールドで保持し実行時に都度参照する 実装にすると、複数パーティションのThreadが同一の共有状態を参照してしまい競合が起こり得る。
  */
 public class SalesSummarySkipListener
         implements SkipListener<OrderDetailProjection, SalesSummaryRow> {

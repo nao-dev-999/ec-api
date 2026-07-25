@@ -1,9 +1,13 @@
-package com.example.ecapi.batch.job;
+package com.example.ecapi.batch.job.dailysales;
 
 import com.example.ecapi.batch.dto.AggregatedSalesRow;
 import com.example.ecapi.batch.dto.OrderDetailProjection;
+import com.example.ecapi.batch.dto.PaymentConfirmationRow;
 import com.example.ecapi.batch.dto.SalesSummaryRow;
-import com.example.ecapi.repository.CustomerOrderRepository;
+import com.example.ecapi.batch.exception.FlagFileNotFoundException;
+import com.example.ecapi.batch.exception.InvalidPaymentConfirmationFormatException;
+import com.example.ecapi.batch.reader.OrderDetailKeysetItemReader;
+import com.example.ecapi.batch.reader.StagingAggregateItemReader;
 import jakarta.persistence.EntityManagerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,84 +28,135 @@ import org.springframework.batch.core.step.builder.StepBuilder;
 import org.springframework.batch.core.step.tasklet.Tasklet;
 import org.springframework.batch.infrastructure.item.ItemStreamReader;
 import org.springframework.batch.infrastructure.item.database.JdbcBatchItemWriter;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
+import org.springframework.batch.infrastructure.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.batch.infrastructure.repeat.RepeatStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /**
- * 日次売上集計ジョブネット（14.3〜14.4節参照）。 JobA(受信I/F取込) → JobB(集計・Local Partitioning・Consolidate) →
- * JobC(送信I/F生成) の4Step構成で、 外部I/OとDB内部処理を同一Stepに混在させない。
+ * 日次売上集計ジョブネット（14.3〜14.4節参照）。 取込フェーズ(受信I/F取込: フラグ確認→フォーマット検証・ステージング取込) → 集計フェーズ(集計・Local
+ * Partitioning・Consolidate) → 送信フェーズ(送信I/F生成) の5Step構成で、 外部I/OとDB内部処理を同一Stepに混在させない。
  */
 @Configuration
 public class DailySalesAggregationJobConfig {
 
+    private static final String EXPECTED_CSV_HEADER = "order_id,amount,settled_at";
+
     @Bean
     public Job dailySalesAggregationJob(
             JobRepository jobRepository,
-            Step jobAIntakeStep,
-            Step jobBAggregateStep,
-            Step jobBConsolidateStep,
-            Step jobCExportStep) {
+            Step arrivalFlagCheckStep,
+            Step paymentConfirmationIntakeStep,
+            Step salesAggregatePartitionStep,
+            Step salesSummaryConsolidateStep,
+            Step completionFlagExportStep) {
         return new JobBuilder("dailySalesAggregationJob", jobRepository)
-                .start(jobAIntakeStep)
-                .next(jobBAggregateStep)
-                .next(jobBConsolidateStep)
-                .next(jobCExportStep)
+                .start(arrivalFlagCheckStep)
+                .next(paymentConfirmationIntakeStep)
+                .next(salesAggregatePartitionStep)
+                .next(salesSummaryConsolidateStep)
+                .next(completionFlagExportStep)
                 .build();
     }
 
     @Bean
-    public Step jobAIntakeStep(
+    public Step arrivalFlagCheckStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
             @Value("${batch.input.flag-file-template}") String flagFileTemplate) {
         Tasklet checkArrivalFlagTasklet =
                 (contribution, chunkContext) -> {
-                    String from =
-                            String.valueOf(
+                    String targetDate =
+                            targetDateYyyyMMdd(
                                     chunkContext
                                             .getStepContext()
                                             .getJobParameters()
                                             .get("targetDateFrom"));
-                    String targetDate =
-                            Instant.parse(from)
-                                    .atZone(ZoneId.of("Asia/Tokyo"))
-                                    .toLocalDate()
-                                    .format(DateTimeFormatter.BASIC_ISO_DATE);
                     Path flag = Paths.get(String.format(flagFileTemplate, targetDate));
                     if (!Files.exists(flag)) {
                         throw new FlagFileNotFoundException("受信I/Fの到着フラグが未検出: " + flag);
                     }
                     return RepeatStatus.FINISHED;
                 };
-        return new StepBuilder("jobAIntakeStep", jobRepository)
+        return new StepBuilder("arrivalFlagCheckStep", jobRepository)
                 .tasklet(checkArrivalFlagTasklet, transactionManager)
                 .build();
     }
 
     @Bean
-    public Step jobBAggregateStep(
+    public Step paymentConfirmationIntakeStep(
             JobRepository jobRepository,
-            Step jobBWorkerStep,
-            CustomerOrderRepository customerOrderRepository,
+            PlatformTransactionManager transactionManager,
+            FlatFileItemReader<PaymentConfirmationRow> paymentConfirmationFileReader,
+            JdbcBatchItemWriter<PaymentConfirmationRow> paymentConfirmationStagingWriter) {
+        return new StepBuilder("paymentConfirmationIntakeStep", jobRepository)
+                .<PaymentConfirmationRow, PaymentConfirmationRow>chunk(500)
+                .transactionManager(transactionManager)
+                .reader(paymentConfirmationFileReader)
+                .writer(paymentConfirmationStagingWriter)
+                .build();
+    }
+
+    @Bean
+    @StepScope
+    public FlatFileItemReader<PaymentConfirmationRow> paymentConfirmationFileReader(
+            @Value("${batch.input.data-file-template}") String dataFileTemplate,
+            @Value("#{jobParameters['targetDateFrom']}") String from) {
+        String targetDate = targetDateYyyyMMdd(from);
+        Path csv = Paths.get(String.format(dataFileTemplate, targetDate));
+        return new FlatFileItemReaderBuilder<PaymentConfirmationRow>()
+                .name("paymentConfirmationFileReader")
+                .resource(new FileSystemResource(csv))
+                .strict(true)
+                .linesToSkip(1)
+                .skippedLinesCallback(
+                        header -> {
+                            if (!EXPECTED_CSV_HEADER.equals(header.strip())) {
+                                throw new InvalidPaymentConfirmationFormatException(
+                                        "受信I/Fのヘッダー形式が不正です。期待値: "
+                                                + EXPECTED_CSV_HEADER
+                                                + " 実際: "
+                                                + header);
+                            }
+                        })
+                .delimited()
+                .names("order_id", "amount", "settled_at")
+                .fieldSetMapper(new PaymentConfirmationFieldSetMapper())
+                .build();
+    }
+
+    private static String targetDateYyyyMMdd(Object jobParametersTargetDateFrom) {
+        return Instant.parse(String.valueOf(jobParametersTargetDateFrom))
+                .atZone(ZoneId.of("Asia/Tokyo"))
+                .toLocalDate()
+                .format(DateTimeFormatter.BASIC_ISO_DATE);
+    }
+
+    @Bean
+    public Step salesAggregatePartitionStep(
+            JobRepository jobRepository,
+            Step salesAggregateWorkerStep,
+            DataSource dataSource,
             TaskExecutor batchTaskExecutor) {
-        return new StepBuilder("jobBAggregateStep", jobRepository)
+        return new StepBuilder("salesAggregatePartitionStep", jobRepository)
                 .partitioner(
-                        jobBWorkerStep.getName(),
-                        new OrderAggregationPartitioner(customerOrderRepository))
-                .step(jobBWorkerStep)
+                        salesAggregateWorkerStep.getName(),
+                        new OrderAggregationPartitioner(new NamedParameterJdbcTemplate(dataSource)))
+                .step(salesAggregateWorkerStep)
                 .taskExecutor(batchTaskExecutor)
                 .gridSize(4)
                 .build();
     }
 
     @Bean
-    public Step jobBWorkerStep(
+    public Step salesAggregateWorkerStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
             ItemStreamReader<OrderDetailProjection> orderDetailReader,
@@ -109,7 +164,7 @@ public class DailySalesAggregationJobConfig {
             JdbcBatchItemWriter<SalesSummaryRow> salesSummaryStagingWriter,
             SalesSummarySkipListener salesSummarySkipListener) {
         ChunkOrientedStepBuilder<OrderDetailProjection, SalesSummaryRow> stepBuilder =
-                new StepBuilder("jobBWorkerStep", jobRepository)
+                new StepBuilder("salesAggregateWorkerStep", jobRepository)
                         .<OrderDetailProjection, SalesSummaryRow>chunk(500)
                         .transactionManager(transactionManager)
                         .reader(orderDetailReader)
@@ -149,13 +204,13 @@ public class DailySalesAggregationJobConfig {
     }
 
     @Bean
-    public Step jobBConsolidateStep(
+    public Step salesSummaryConsolidateStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
             StagingAggregateItemReader stagingAggregateItemReader,
             JdbcBatchItemWriter<AggregatedSalesRow> dailySalesSummaryUpsertWriter,
             StagingCleanupListener stagingCleanupListener) {
-        return new StepBuilder("jobBConsolidateStep", jobRepository)
+        return new StepBuilder("salesSummaryConsolidateStep", jobRepository)
                 .<AggregatedSalesRow, AggregatedSalesRow>chunk(1000)
                 .transactionManager(transactionManager)
                 .reader(stagingAggregateItemReader)
@@ -178,7 +233,7 @@ public class DailySalesAggregationJobConfig {
     }
 
     @Bean
-    public Step jobCExportStep(
+    public Step completionFlagExportStep(
             JobRepository jobRepository,
             PlatformTransactionManager transactionManager,
             @Value("${batch.output.dir}") String outputDir) {
@@ -193,7 +248,7 @@ public class DailySalesAggregationJobConfig {
                     writeCompletionFlag(Paths.get(outputDir), jobDate);
                     return RepeatStatus.FINISHED;
                 };
-        return new StepBuilder("jobCExportStep", jobRepository)
+        return new StepBuilder("completionFlagExportStep", jobRepository)
                 .tasklet(writeCompletionFlagTasklet, transactionManager)
                 .build();
     }

@@ -1,12 +1,13 @@
-package com.example.ecapi.batch.job;
+package com.example.ecapi.batch.job.dailysales;
 
 import com.example.ecapi.batch.dto.OrderDetailProjection;
 import com.example.ecapi.batch.dto.SalesSummaryRow;
+import com.example.ecapi.batch.exception.InvalidOrderDetailException;
 import org.springframework.batch.core.step.builder.ChunkOrientedStepBuilder;
 import org.springframework.dao.TransientDataAccessException;
 
 /**
- * jobBWorkerStepの異常系（fault tolerance）ポリシーを正常系のStep定義から切り出したもの。
+ * salesAggregateWorkerStepの異常系（fault tolerance）ポリシーを正常系のStep定義から切り出したもの。
  *
  * <p>データ不正（{@link InvalidOrderDetailException}）はスキップして処理を継続し、DB接続断等の 一時的なシステムエラー（{@link
  * TransientDataAccessException}）はスキップ対象にせずリトライで区別する。
