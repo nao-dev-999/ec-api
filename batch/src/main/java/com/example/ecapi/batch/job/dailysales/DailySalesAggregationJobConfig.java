@@ -29,6 +29,7 @@ import javax.sql.DataSource;
 import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.job.Job;
 import org.springframework.batch.core.job.builder.JobBuilder;
+import org.springframework.batch.core.partition.Partitioner;
 import org.springframework.batch.core.repository.JobRepository;
 import org.springframework.batch.core.step.Step;
 import org.springframework.batch.core.step.builder.ChunkOrientedStepBuilder;
@@ -46,14 +47,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.task.SimpleAsyncTaskExecutor;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.dao.TransientDataAccessException;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /**
- * 日次売上集計ジョブネット（14.3〜14.4節参照）。 取込フェーズ(受信I/F取込: フラグ確認→フォーマット検証・ステージング取込) → 集計フェーズ(集計・Local
+ * 日次売上集計ジョブネット。 取込フェーズ(受信I/F取込: フラグ確認→フォーマット検証・ステージング取込) → 集計フェーズ(集計・Local
  * Partitioning・Consolidate) → 送信フェーズ(送信I/F生成) の5Step構成で、 外部I/OとDB内部処理を同一Stepに混在させない。
  */
 @Configuration
@@ -230,16 +231,24 @@ public class DailySalesAggregationJobConfig {
     public Step salesAggregatePartitionStep(
             JobRepository jobRepository,
             Step salesAggregateWorkerStep,
-            DataSource dataSource,
+            Partitioner orderAggregationPartitioner,
             TaskExecutor batchTaskExecutor) {
         return new StepBuilder("salesAggregatePartitionStep", jobRepository)
-                .partitioner(
-                        salesAggregateWorkerStep.getName(),
-                        new OrderAggregationPartitioner(new NamedParameterJdbcTemplate(dataSource)))
+                .partitioner(salesAggregateWorkerStep.getName(), orderAggregationPartitioner)
                 .step(salesAggregateWorkerStep)
                 .taskExecutor(batchTaskExecutor)
                 .gridSize(4)
                 .build();
+    }
+
+    @Bean
+    @StepScope
+    public Partitioner orderAggregationPartitioner(
+            DataSource dataSource,
+            @Value("#{jobParameters['targetDateFrom']}") String from,
+            @Value("#{jobParameters['targetDateTo']}") String to) {
+        return new OrderAggregationPartitioner(
+                new NamedParameterJdbcTemplate(dataSource), Instant.parse(from), Instant.parse(to));
     }
 
     @Bean
@@ -323,7 +332,7 @@ public class DailySalesAggregationJobConfig {
      * 決済システム（自社の別システム、入金消込用）向けの決済明細ファイルを生成するStep。
      * daily_sales_summary_by_product（商品単位の集計値。payment_id・fee・net_amountを持たない）は経由せず、
      * PAYMENTテーブル（status = CAPTURED）から直接抽出する。1オーダー1決済のためPAYMENTの対象日分の件数規模は
-     * CustomerOrderと同程度（ピーク日想定で最大20万件、14.2節参照）となりうるため、salesAggregateWorkerStepと
+     * CustomerOrderと同程度（ピーク日想定で最大20万件）となりうるため、salesAggregateWorkerStepと
      * 同様にchunk指向StepとStatelessSession + キーセットページングのReaderを使う（Taskletで1トランザクションに まとめない）。
      */
     @Bean
@@ -397,7 +406,7 @@ public class DailySalesAggregationJobConfig {
 
     /**
      * settlementDetailExportStepとは別Stepにすることで、CSV生成（重いI/O）だけをやり直さず
-     * フラグ生成のみリスタートできるようにする（14.4節「外部I/OとDB内部処理を同じStepに混在させない」と 同じ分割原則を送信フェーズ内部でも踏襲）。
+     * フラグ生成のみリスタートできるようにする（「外部I/OとDB内部処理を同じStepに混在させない」と 同じ分割原則を送信フェーズ内部でも踏襲）。
      */
     @Bean
     public Step settlementDetailFlagExportStep(
@@ -451,11 +460,8 @@ public class DailySalesAggregationJobConfig {
 
     @Bean
     public TaskExecutor batchTaskExecutor() {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(4);
-        executor.setMaxPoolSize(4);
-        executor.setThreadNamePrefix("batch-partition-");
-        executor.initialize();
+        SimpleAsyncTaskExecutor executor = new SimpleAsyncTaskExecutor("batch-partition-");
+        executor.setVirtualThreads(true);
         return executor;
     }
 }

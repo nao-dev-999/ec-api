@@ -13,9 +13,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 
 /**
- * Workerは最終テーブルへ直接書かず、ステージングテーブルへ明細のまま単純INSERTする（14.7節④・14.8節参照）。
- * 集約・最終テーブルへの反映はsalesSummaryConsolidateStep（{@code StagingAggregateItemReader} + {@code
- * dailySalesSummaryUpsertWriter}）が担う。
+ * Workerは最終テーブルへ直接書かず、ステージングテーブルへ明細のまま単純INSERTする。 集約・最終テーブルへの反映はsalesSummaryConsolidateStep（{@code
+ * StagingAggregateItemReader} + {@code dailySalesSummaryUpsertWriter}）が担う。
  */
 @Configuration
 public class SalesSummaryWriterConfig {

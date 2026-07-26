@@ -3,6 +3,7 @@ package com.example.ecapi.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.ecapi.config.JpaAuditConfig;
+import com.example.ecapi.constant.OrderPaymentStatus;
 import com.example.ecapi.constant.OrderStatus;
 import com.example.ecapi.entity.Customer;
 import com.example.ecapi.entity.CustomerOrder;
@@ -52,6 +53,7 @@ class CustomerOrderRepositoryTest {
         CustomerOrder order = new CustomerOrder();
         order.setCustomer(customer);
         order.setStatus(status);
+        order.setPaymentStatus(OrderPaymentStatus.AUTHORIZED);
         order.setOrderedAt(Instant.now());
         order.setTotalAmount(BigDecimal.valueOf(1000));
         return entityManager.persistFlushFind(order);

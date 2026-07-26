@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 
 /**
  * バッチにはHTTPセッション/SecurityContextが存在しないため、backendのJpaAuditConfigとは別に
- * 固定のバッチ用システムユーザーIDを返すAuditorAwareを定義する（14.6節参照）。
+ * 固定のバッチ用システムユーザーIDを返すAuditorAwareを定義する。
  */
 @Configuration
 @EnableJpaAuditing(auditorAwareRef = "auditorAware")

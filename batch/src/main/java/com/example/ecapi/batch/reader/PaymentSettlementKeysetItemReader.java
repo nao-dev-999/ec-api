@@ -15,7 +15,7 @@ import org.springframework.batch.infrastructure.item.ItemStreamReader;
 
 /**
  * StatelessSession + キーセット方式でPAYMENT（status = CAPTURED）を読み取るReader（{@link
- * OrderDetailKeysetItemReader}と同じ設計方針、14.7節①②参照）。
+ * OrderDetailKeysetItemReader}と同じ設計方針）。
  *
  * <p>決済システム（自社の別システム、入金消込用）への出力元はPAYMENTテーブルそのものであり、
  * daily_sales_summary_by_product（商品単位に丸めた集計値でpayment_id・fee・net_amountを持たない）は経由しない。

@@ -17,7 +17,7 @@ import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 /**
  * paymentReconciliationStepの反映先。1件のPaymentUpsertRowにつき ①paymentへのUPSERT
  * ②customer_order.payment_statusの更新、の2つのSQLを実行する必要があるため、 それぞれ単責務のJdbcBatchItemWriterに分け{@link
- * CompositeItemWriter}で束ねる（14.7節④の ステージング+置き換え方式をpaymentテーブルにも踏襲。積算ではなくEXCLUDED値でのそのまま置換）。
+ * CompositeItemWriter}で束ねる（ステージング+置き換え方式をpaymentテーブルにも踏襲。積算ではなくEXCLUDED値でのそのまま置換）。
  *
  * <p>authorized_atはON CONFLICTのDO UPDATE SETに含めない。初回INSERT時の値 （customer_order.ordered_atの近似値、{@code
  * PaymentReconciliationItemProcessor}参照）を 突合再実行後も保持するため。
