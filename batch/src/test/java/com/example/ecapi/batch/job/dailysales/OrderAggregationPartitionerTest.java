@@ -33,8 +33,29 @@ class OrderAggregationPartitionerTest {
         assertThat(partitions).hasSize(4);
         assertThat(partitions.get("partition0").getLong("minId")).isEqualTo(0L);
         assertThat(partitions.get("partition0").getLong("maxId")).isEqualTo(250L);
-        assertThat(partitions.get("partition3").getLong("minId")).isEqualTo(750L);
+        assertThat(partitions.get("partition1").getLong("minId")).isEqualTo(251L);
+        assertThat(partitions.get("partition3").getLong("minId")).isEqualTo(751L);
         assertThat(partitions.get("partition3").getLong("maxId")).isEqualTo(1000L);
+    }
+
+    @Test
+    @DisplayName("BETWEENで読むリーダーとの整合上、隣接パーティションの範囲が重複しないこと")
+    void shouldNotOverlapAdjacentPartitionRanges() {
+        when(jdbcTemplate.getJdbcTemplate()).thenReturn(plainJdbcTemplate);
+        when(plainJdbcTemplate.queryForObject(
+                        "SELECT COALESCE(MAX(id), 0) FROM customer_order", Long.class))
+                .thenReturn(1000L);
+        OrderAggregationPartitioner partitioner = new OrderAggregationPartitioner(jdbcTemplate);
+
+        Map<String, ExecutionContext> partitions = partitioner.partition(4);
+
+        for (int i = 0; i < 3; i++) {
+            long currentMaxId = partitions.get("partition" + i).getLong("maxId");
+            long nextMinId = partitions.get("partition" + (i + 1)).getLong("minId");
+            assertThat(nextMinId)
+                    .as("partition%d のmaxIdとpartition%d のminIdはBETWEEN境界で重複してはならない", i, i + 1)
+                    .isEqualTo(currentMaxId + 1);
+        }
     }
 
     @Test

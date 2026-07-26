@@ -18,8 +18,13 @@ public class PaymentConfirmationFieldSetMapper implements FieldSetMapper<Payment
     @Override
     public PaymentConfirmationRow mapFieldSet(FieldSet fieldSet) {
         return new PaymentConfirmationRow(
-                fieldSet.readLong("order_id"),
+                fieldSet.readString("order_number"),
+                fieldSet.readString("transaction_id"),
+                fieldSet.readLong("customer_id"),
+                fieldSet.readString("payment_method"),
+                fieldSet.readString("status"),
                 fieldSet.readBigDecimal("amount"),
+                fieldSet.readBigDecimal("fee"),
                 Instant.parse(fieldSet.readString("settled_at")));
     }
 }

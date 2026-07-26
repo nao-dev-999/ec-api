@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.ecapi.batch.dto.AggregatedSalesRow;
 import com.example.ecapi.batch.dto.OrderDetailProjection;
 import com.example.ecapi.batch.dto.PaymentConfirmationRow;
+import com.example.ecapi.batch.dto.PaymentSettlementProjection;
+import com.example.ecapi.batch.dto.PaymentSettlementRow;
 import com.example.ecapi.batch.dto.SalesSummaryRow;
 import com.example.ecapi.batch.reader.StagingAggregateItemReader;
 import org.junit.jupiter.api.DisplayName;
@@ -17,6 +19,7 @@ import org.springframework.batch.core.step.Step;
 import org.springframework.batch.infrastructure.item.ItemStreamReader;
 import org.springframework.batch.infrastructure.item.database.JdbcBatchItemWriter;
 import org.springframework.batch.infrastructure.item.file.FlatFileItemReader;
+import org.springframework.batch.infrastructure.item.file.FlatFileItemWriter;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /**
@@ -37,6 +40,9 @@ class DailySalesAggregationJobConfigTest {
     @Mock private StagingAggregateItemReader stagingAggregateItemReader;
     @Mock private JdbcBatchItemWriter<AggregatedSalesRow> dailySalesSummaryUpsertWriter;
     @Mock private StagingCleanupListener stagingCleanupListener;
+    @Mock private ItemStreamReader<PaymentSettlementProjection> paymentSettlementReader;
+    @Mock private PaymentSettlementItemProcessor paymentSettlementItemProcessor;
+    @Mock private FlatFileItemWriter<PaymentSettlementRow> settlementDetailFileWriter;
 
     private final DailySalesAggregationJobConfig config = new DailySalesAggregationJobConfig();
 
@@ -83,5 +89,31 @@ class DailySalesAggregationJobConfigTest {
 
         assertThat(step).isNotNull();
         assertThat(step.getName()).isEqualTo("salesSummaryConsolidateStep");
+    }
+
+    @Test
+    @DisplayName("settlementDetailExportStepがPAYMENT読み取り→CSV書き込みのchunk構成で正しくビルドされること")
+    void shouldBuildSettlementDetailExportStepAsChunkOrientedStep() {
+        Step step =
+                config.settlementDetailExportStep(
+                        jobRepository,
+                        transactionManager,
+                        paymentSettlementReader,
+                        paymentSettlementItemProcessor,
+                        settlementDetailFileWriter);
+
+        assertThat(step).isNotNull();
+        assertThat(step.getName()).isEqualTo("settlementDetailExportStep");
+    }
+
+    @Test
+    @DisplayName("settlementDetailFlagExportStepがTaskletとして正しくビルドされること")
+    void shouldBuildSettlementDetailFlagExportStepAsTasklet() {
+        Step step =
+                config.settlementDetailFlagExportStep(
+                        jobRepository, transactionManager, "/tmp/out");
+
+        assertThat(step).isNotNull();
+        assertThat(step.getName()).isEqualTo("settlementDetailFlagExportStep");
     }
 }

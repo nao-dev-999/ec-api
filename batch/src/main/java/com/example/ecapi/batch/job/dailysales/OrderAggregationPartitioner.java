@@ -31,7 +31,9 @@ public class OrderAggregationPartitioner implements Partitioner {
         Map<String, ExecutionContext> partitions = new HashMap<>();
         for (int i = 0; i < gridSize; i++) {
             ExecutionContext ctx = new ExecutionContext();
-            ctx.putLong("minId", i * rangeSize);
+            // BETWEEN minId AND maxIdは両端を含むため、minIdを前パーティションのmaxIdと同じ値にすると
+            // 境界のIDが2つのパーティションに二重に含まれ、二重集計・staging PK重複を引き起こす。
+            ctx.putLong("minId", i == 0 ? 0 : i * rangeSize + 1);
             ctx.putLong("maxId", i == gridSize - 1 ? maxId : (i + 1) * rangeSize);
             partitions.put("partition" + i, ctx);
         }

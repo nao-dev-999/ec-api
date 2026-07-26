@@ -1,5 +1,6 @@
 package com.example.ecapi.service.order;
 
+import com.example.ecapi.constant.OrderPaymentStatus;
 import com.example.ecapi.constant.OrderStatus;
 import com.example.ecapi.entity.Customer;
 import com.example.ecapi.entity.CustomerOrder;
@@ -98,6 +99,7 @@ public class OrderService {
         CustomerOrder order = new CustomerOrder();
         order.setCustomer(customer);
         order.setStatus(OrderStatus.PENDING);
+        order.setPaymentStatus(OrderPaymentStatus.AUTHORIZED);
         order.setOrderedAt(Instant.now());
 
         for (CreateOrderItem item : createOrder.items()) {
