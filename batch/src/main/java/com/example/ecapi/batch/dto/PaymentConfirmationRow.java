@@ -10,4 +10,5 @@ public record PaymentConfirmationRow(
         String paymentMethod,
         String status,
         BigDecimal amount,
+        BigDecimal fee,
         Instant settledAt) {}

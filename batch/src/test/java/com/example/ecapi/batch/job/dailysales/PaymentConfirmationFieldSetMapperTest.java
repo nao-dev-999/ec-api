@@ -27,6 +27,7 @@ class PaymentConfirmationFieldSetMapperTest {
                 "payment_method",
                 "status",
                 "amount",
+                "fee",
                 "settled_at");
     }
 
@@ -36,7 +37,7 @@ class PaymentConfirmationFieldSetMapperTest {
         FieldSet fieldSet =
                 tokenizer.tokenize(
                         ORDER_NUMBER
-                                + ",txn_8f3c1a2b9d4e,42,CREDIT_CARD,SETTLED,12800.00,2024-01-15T03:12:45Z");
+                                + ",txn_8f3c1a2b9d4e,42,CREDIT_CARD,SETTLED,12800.00,372.00,2024-01-15T03:12:45Z");
 
         PaymentConfirmationRow row = mapper.mapFieldSet(fieldSet);
 
@@ -46,6 +47,7 @@ class PaymentConfirmationFieldSetMapperTest {
         assertThat(row.paymentMethod()).isEqualTo("CREDIT_CARD");
         assertThat(row.status()).isEqualTo("SETTLED");
         assertThat(row.amount()).isEqualByComparingTo("12800.00");
+        assertThat(row.fee()).isEqualByComparingTo("372.00");
         assertThat(row.settledAt()).isEqualTo(Instant.parse("2024-01-15T03:12:45Z"));
     }
 
@@ -55,7 +57,7 @@ class PaymentConfirmationFieldSetMapperTest {
         FieldSet fieldSet =
                 tokenizer.tokenize(
                         ORDER_NUMBER
-                                + ",txn_8f3c1a2b9d4e,42,CREDIT_CARD,SETTLED,invalid,2024-01-15T03:12:45Z");
+                                + ",txn_8f3c1a2b9d4e,42,CREDIT_CARD,SETTLED,invalid,372.00,2024-01-15T03:12:45Z");
 
         assertThatThrownBy(() -> mapper.mapFieldSet(fieldSet))
                 .isInstanceOf(NumberFormatException.class);
@@ -67,7 +69,7 @@ class PaymentConfirmationFieldSetMapperTest {
         FieldSet fieldSet =
                 tokenizer.tokenize(
                         ORDER_NUMBER
-                                + ",txn_8f3c1a2b9d4e,42,CREDIT_CARD,SETTLED,12800.00,2024/01/15 03:12:45");
+                                + ",txn_8f3c1a2b9d4e,42,CREDIT_CARD,SETTLED,12800.00,372.00,2024/01/15 03:12:45");
 
         assertThatThrownBy(() -> mapper.mapFieldSet(fieldSet))
                 .isInstanceOf(DateTimeParseException.class);

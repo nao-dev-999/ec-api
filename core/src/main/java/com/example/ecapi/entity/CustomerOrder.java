@@ -1,5 +1,6 @@
 package com.example.ecapi.entity;
 
+import com.example.ecapi.constant.OrderPaymentStatus;
 import com.example.ecapi.constant.OrderStatus;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
@@ -32,6 +33,12 @@ public class CustomerOrder extends BaseEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OrderStatus status;
+
+    // 発送等の履行ステータス（status）とは別軸。オーソリ成功時にAUTHORIZEDで作成され、
+    // 夜間バッチの決済確定突合でCAPTURED/CANCELLED/REFUNDEDへ遷移する。
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false, length = 20)
+    private OrderPaymentStatus paymentStatus;
 
     @Column(name = "ordered_at", updatable = false, nullable = false)
     private Instant orderedAt;

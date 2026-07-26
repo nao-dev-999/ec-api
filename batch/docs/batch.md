@@ -151,7 +151,13 @@ public FlatFileItemReader<PaymentConfirmationRow> paymentConfirmationFileReader(
 
 商品明細（`CustomerOrderDetail`）は含めない。決済代行は商品カタログを知らず、明細は自社の`CustomerOrderDetail`に既にあるため、将来の突合処理でも明細側は自社DBを参照すればよい。
 
-`payment_confirmation_staging`は`job_instance_id` + `order_number`をPKとし（daily_sales_summary_stagingと同様、再実行時の二重ステージング防止）、監査・将来の突合処理向けに保持する。**現時点では集計フェーズはこのステージングデータを参照せず、従来どおり`CustomerOrderDetail`から直接集計する。** 上記ジョブネット図の集計フェーズ①「CustomerOrderDetail + ステージングデータを突合」は将来の拡張であり未実装。
+`payment_confirmation_staging`は`job_instance_id` + `order_number`をPKとし（daily_sales_summary_stagingと同様、再実行時の二重ステージング防止）、監査・突合処理向けに保持する（Step成功後もDELETEしない）。
+
+`paymentConfirmationIntakeStep`の直後に`paymentReconciliationStep`を置き、`payment_confirmation_staging`を`order_number`で`customer_order`へLEFT JOINして突合する（`PaymentReconciliationItemReader`）。決済ファイルの`status`（決済代行からの通知値。例: `SETTLED`/`CANCELLED`/`REFUNDED`）を内部の`PaymentStatus`（`payment.status`）・`OrderPaymentStatus`（`customer_order.payment_status`）へマッピングし、`payment`テーブルへUPSERTする（`customer_order_id`にUNIQUE制約、14.7節④のステージング+置き換え方式と同じ思想でEXCLUDED値にそのまま置換、積算しない）。
+
+`customer_order`が存在しない行（孤立レコード）、および未知の`status`値の行は自動処理せず`PaymentReconciliationException`をskipし、`PaymentReconciliationSkipListener`経由で`payment_reconciliation_alerts`に記録のうえ人手調査へ回す（実際の通知先連携は未決定）。
+
+**現時点では集計フェーズ（`salesAggregatePartitionStep`）はこの突合結果を参照せず、従来どおり`CustomerOrderDetail`から直接集計する。** 決済確定（`payment.status = CAPTURED`）のみを売上集計の対象にする拡張は将来対応であり未実装。
 
 ### 実装例：送信完了フラグの生成（送信フェーズ）
 

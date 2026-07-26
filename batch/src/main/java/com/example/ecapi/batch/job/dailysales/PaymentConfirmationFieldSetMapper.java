@@ -24,6 +24,7 @@ public class PaymentConfirmationFieldSetMapper implements FieldSetMapper<Payment
                 fieldSet.readString("payment_method"),
                 fieldSet.readString("status"),
                 fieldSet.readBigDecimal("amount"),
+                fieldSet.readBigDecimal("fee"),
                 Instant.parse(fieldSet.readString("settled_at")));
     }
 }

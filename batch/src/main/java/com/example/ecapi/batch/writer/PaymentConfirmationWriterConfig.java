@@ -23,8 +23,8 @@ public class PaymentConfirmationWriterConfig {
     private static final String STAGING_INSERT_SQL =
             """
             INSERT INTO payment_confirmation_staging
-                (job_instance_id, order_number, transaction_id, customer_id, payment_method, status, amount, settled_at)
-            VALUES (:jobInstanceId, :orderNumber, :transactionId, :customerId, :paymentMethod, :status, :amount, :settledAt)
+                (job_instance_id, order_number, transaction_id, customer_id, payment_method, status, amount, fee, settled_at)
+            VALUES (:jobInstanceId, :orderNumber, :transactionId, :customerId, :paymentMethod, :status, :amount, :fee, :settledAt)
             """;
 
     @Bean
@@ -45,6 +45,7 @@ public class PaymentConfirmationWriterConfig {
                             params.addValue("paymentMethod", row.paymentMethod());
                             params.addValue("status", row.status());
                             params.addValue("amount", row.amount());
+                            params.addValue("fee", row.fee());
                             params.addValue("settledAt", Timestamp.from(row.settledAt()));
                             return params;
                         })
