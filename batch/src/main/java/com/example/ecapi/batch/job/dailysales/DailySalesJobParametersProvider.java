@@ -37,6 +37,6 @@ public class DailySalesJobParametersProvider implements JobParametersProvider {
                 return LocalDate.parse(arg.substring(TARGET_DATE_ARG_PREFIX.length()));
             }
         }
-        return LocalDate.now(JST).minusDays(1); // 未指定時は「前日分」（14.2節）
+        return LocalDate.now(JST).minusDays(1); // 未指定時は「前日分」
     }
 }

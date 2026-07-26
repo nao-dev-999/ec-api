@@ -14,9 +14,8 @@ import org.springframework.boot.ExitCodeGenerator;
 import org.springframework.stereotype.Component;
 
 /**
- * spring.batch.job.enabled=false により標準のJobLauncherApplicationRunnerを無効化した上で、
- * このRunnerが唯一の起動経路になる（14.6節: 二重起動防止、14.8節: JobParametersによる冪等性）。 どのJobを起動するかは{@code
- * --job=}引数（Bean名）で選択する。未指定時は既存運用（EventBridge Scheduler経由のECS
+ * spring.batch.job.enabled=false により標準のJobLauncherApplicationRunnerを無効化した上で、 このRunnerが唯一の起動経路になる。
+ * どのJobを起動するかは{@code --job=}引数（Bean名）で選択する。未指定時は既存運用（EventBridge Scheduler経由のECS
  * RunTaskが引数なしで起動する現行の日次売上集計）との互換のためデフォルトJobを使う。 JobParametersの形はJob毎に異なりうるため、組み立ては{@link
  * JobParametersProvider}にJob単位で委譲する。
  */

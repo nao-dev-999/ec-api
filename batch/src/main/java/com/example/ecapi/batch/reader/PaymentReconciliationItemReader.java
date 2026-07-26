@@ -11,8 +11,7 @@ import org.springframework.batch.infrastructure.item.database.builder.JdbcCursor
 
 /**
  * payment_confirmation_stagingをcustomer_orderへLEFT JOINし、{@code job_instance_id}で絞り込んだ結果を
- * カーソルで1行ずつ返す。孤立レコード（customer_order_idがNULL）の判定もこのJOINで行い、Processor側で
- * 1行ずつ突合クエリを発行するN+1を避ける（14.7節⑤参照）。
+ * カーソルで1行ずつ返す。孤立レコード（customer_order_idがNULL）の判定もこのJOINで行い、Processor側で 1行ずつ突合クエリを発行するN+1を避ける。
  *
  * <p>{@link StagingAggregateItemReader}と同様、対象はステージングの内容そのものであり
  * ステージング行はStep失敗後も削除されない（V13/V15の方針どおり監査目的で保持し続ける）ため、 リスタート時の位置復元は行わない（{@code saveState(false)}）。

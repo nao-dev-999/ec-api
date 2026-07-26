@@ -13,8 +13,8 @@ import org.springframework.batch.infrastructure.item.ItemStreamException;
 import org.springframework.batch.infrastructure.item.ItemStreamReader;
 
 /**
- * StatelessSession + キーセット方式でCustomerOrderDetailを読み取るReader（14.7節①②参照）。
- * OFFSETページングは使わず、直前に読んだidより大きい行だけを都度取得することで PostgreSQLでのスキャンコスト増大（14.7節②）を回避する。
+ * StatelessSession + キーセット方式でCustomerOrderDetailを読み取るReader。
+ * OFFSETページングは使わず、直前に読んだidより大きい行だけを都度取得することで PostgreSQLでのスキャンコスト増大を回避する。
  */
 public class OrderDetailKeysetItemReader implements ItemStreamReader<OrderDetailProjection> {
 
