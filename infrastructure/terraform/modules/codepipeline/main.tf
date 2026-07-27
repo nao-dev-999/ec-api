@@ -1,4 +1,12 @@
 # ---------------------------------------------------------------------------
+# タグトリガーの命名規則: api-${env}-vX.Y.Z / batch-${env}-vX.Y.Z
+# ---------------------------------------------------------------------------
+locals {
+  api_tag_pattern   = "api-${var.env}-v*"
+  batch_tag_pattern = "batch-${var.env}-v*"
+}
+
+# ---------------------------------------------------------------------------
 # S3 Bucket (パイプラインアーティファクト保存用)
 # ---------------------------------------------------------------------------
 resource "aws_s3_bucket" "artifacts" {
@@ -232,12 +240,28 @@ resource "aws_codebuild_project" "build" {
 # CodePipeline
 # ---------------------------------------------------------------------------
 resource "aws_codepipeline" "this" {
-  name     = "${var.project}-${var.env}-pipeline"
-  role_arn = aws_iam_role.pipeline.arn
+  name          = "${var.project}-${var.env}-pipeline"
+  role_arn      = aws_iam_role.pipeline.arn
+  pipeline_type = "V2"
 
   artifact_store {
     location = aws_s3_bucket.artifacts.bucket
     type     = "S3"
+  }
+
+  # タグ "api-${env}-vX.Y.Z" のpushでのみ起動する（ブランチへの通常pushでは起動しない）
+  trigger {
+    provider_type = "CodeStarSourceConnection"
+
+    git_configuration {
+      source_action_name = "GitHub_Source"
+
+      push {
+        tags {
+          includes = [local.api_tag_pattern]
+        }
+      }
+    }
   }
 
   # ── Stage 1: Source ────────────────────────────────────────────────────
@@ -257,7 +281,7 @@ resource "aws_codepipeline" "this" {
         FullRepositoryId     = var.github_repository   # "owner/repo"
         BranchName           = var.github_branch
         OutputArtifactFormat = "CODE_ZIP"
-        DetectChanges        = "true"
+        DetectChanges        = "false"
       }
     }
   }
@@ -366,12 +390,28 @@ resource "aws_codebuild_project" "batch_build" {
 # Deployステージは持たず、CodeBuild内のregister-task-definitionで完結する2ステージ構成。
 # ---------------------------------------------------------------------------
 resource "aws_codepipeline" "batch" {
-  name     = "${var.project}-${var.env}-batch-pipeline"
-  role_arn = aws_iam_role.pipeline.arn
+  name          = "${var.project}-${var.env}-batch-pipeline"
+  role_arn      = aws_iam_role.pipeline.arn
+  pipeline_type = "V2"
 
   artifact_store {
     location = aws_s3_bucket.artifacts.bucket
     type     = "S3"
+  }
+
+  # タグ "batch-${env}-vX.Y.Z" のpushでのみ起動する（ブランチへの通常pushでは起動しない）
+  trigger {
+    provider_type = "CodeStarSourceConnection"
+
+    git_configuration {
+      source_action_name = "GitHub_Source"
+
+      push {
+        tags {
+          includes = [local.batch_tag_pattern]
+        }
+      }
+    }
   }
 
   stage {
@@ -390,7 +430,7 @@ resource "aws_codepipeline" "batch" {
         FullRepositoryId     = var.github_repository
         BranchName           = var.github_branch
         OutputArtifactFormat = "CODE_ZIP"
-        DetectChanges        = "true"
+        DetectChanges        = "false"
       }
     }
   }

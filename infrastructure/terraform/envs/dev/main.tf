@@ -105,3 +105,14 @@ module "codepipeline" {
   batch_repository_url         = module.ecr.batch_repository_url
   batch_task_definition_family = module.ecs.batch_task_definition_family
 }
+
+# AWS Config（設定ミス・非準拠状態の検知と通知）
+# 他モジュールのデプロイフローに影響を与えないよう独立して追加
+module "config" {
+  source = "../../modules/config"
+
+  project = var.project
+  env     = var.env
+
+  notification_emails = var.config_notification_emails
+}

@@ -37,3 +37,8 @@ output "ecr_batch_repository_url" {
 output "batch_pipeline_name" {
   value = module.codepipeline.batch_pipeline_name
 }
+
+output "config_sns_topic_arn" {
+  description = "AWS Config通知用SNSトピックARN"
+  value       = module.config.sns_topic_arn
+}
