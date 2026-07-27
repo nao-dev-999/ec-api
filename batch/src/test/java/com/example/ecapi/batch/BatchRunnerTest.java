@@ -29,40 +29,29 @@ class BatchRunnerTest {
 
     @Mock private JobOperator jobOperator;
     @Mock private JobRepository jobRepository;
-    @Mock private Job dailySalesAggregationJob;
+    @Mock private Job paymentIntakeJob;
     @Mock private Job monthlyReportJob;
     @Mock private JobExecution jobExecution;
-    @Mock private JobParametersProvider dailySalesJobParametersProvider;
+    @Mock private JobParametersProvider paymentIntakeJobParametersProvider;
     @Mock private JobParametersProvider monthlyReportJobParametersProvider;
 
     @Test
-    @DisplayName("--job未指定時はdailySalesAggregationJobがデフォルトで起動されること")
-    void shouldRunDefaultJobWhenJobArgOmitted() throws Exception {
-        when(dailySalesAggregationJob.getName()).thenReturn("dailySalesAggregationJob");
-        when(jobRepository.findRunningJobExecutions("dailySalesAggregationJob"))
-                .thenReturn(Set.of());
-        when(dailySalesJobParametersProvider.jobName()).thenReturn("dailySalesAggregationJob");
-        when(dailySalesJobParametersProvider.resolve(any()))
-                .thenReturn(new JobParametersBuilder().toJobParameters());
-        when(jobOperator.start(eq(dailySalesAggregationJob), any(JobParameters.class)))
-                .thenReturn(jobExecution);
-        when(jobExecution.getStatus()).thenReturn(BatchStatus.COMPLETED);
-
+    @DisplayName("--job未指定時は例外を投げること")
+    void shouldThrowWhenJobArgOmitted() throws Exception {
         BatchRunner runner =
                 new BatchRunner(
                         jobOperator,
                         jobRepository,
                         Map.of(
-                                "dailySalesAggregationJob", dailySalesAggregationJob,
+                                "paymentIntakeJob", paymentIntakeJob,
                                 "monthlyReportJob", monthlyReportJob),
-                        List.of(
-                                dailySalesJobParametersProvider,
-                                monthlyReportJobParametersProvider));
+                        List.of());
 
-        runner.run();
+        assertThatThrownBy(runner::run)
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("--job=");
 
-        verify(jobOperator).start(eq(dailySalesAggregationJob), any(JobParameters.class));
-        assertThat(runner.getExitCode()).isEqualTo(0);
+        verify(jobOperator, never()).start(any(Job.class), any(JobParameters.class));
     }
 
     @Test
@@ -82,10 +71,10 @@ class BatchRunnerTest {
                         jobOperator,
                         jobRepository,
                         Map.of(
-                                "dailySalesAggregationJob", dailySalesAggregationJob,
+                                "paymentIntakeJob", paymentIntakeJob,
                                 "monthlyReportJob", monthlyReportJob),
                         List.of(
-                                dailySalesJobParametersProvider,
+                                paymentIntakeJobParametersProvider,
                                 monthlyReportJobParametersProvider));
 
         runner.run("--job=monthlyReportJob");
@@ -97,13 +86,12 @@ class BatchRunnerTest {
     @Test
     @DisplayName("JobExecutionが失敗した場合はexitCodeが1になること")
     void shouldSetExitCodeOneWhenJobExecutionFailed() throws Exception {
-        when(dailySalesAggregationJob.getName()).thenReturn("dailySalesAggregationJob");
-        when(jobRepository.findRunningJobExecutions("dailySalesAggregationJob"))
-                .thenReturn(Set.of());
-        when(dailySalesJobParametersProvider.jobName()).thenReturn("dailySalesAggregationJob");
-        when(dailySalesJobParametersProvider.resolve(any()))
+        when(paymentIntakeJob.getName()).thenReturn("paymentIntakeJob");
+        when(jobRepository.findRunningJobExecutions("paymentIntakeJob")).thenReturn(Set.of());
+        when(paymentIntakeJobParametersProvider.jobName()).thenReturn("paymentIntakeJob");
+        when(paymentIntakeJobParametersProvider.resolve(any()))
                 .thenReturn(new JobParametersBuilder().toJobParameters());
-        when(jobOperator.start(eq(dailySalesAggregationJob), any(JobParameters.class)))
+        when(jobOperator.start(eq(paymentIntakeJob), any(JobParameters.class)))
                 .thenReturn(jobExecution);
         when(jobExecution.getStatus()).thenReturn(BatchStatus.FAILED);
 
@@ -111,10 +99,10 @@ class BatchRunnerTest {
                 new BatchRunner(
                         jobOperator,
                         jobRepository,
-                        Map.of("dailySalesAggregationJob", dailySalesAggregationJob),
-                        List.of(dailySalesJobParametersProvider));
+                        Map.of("paymentIntakeJob", paymentIntakeJob),
+                        List.of(paymentIntakeJobParametersProvider));
 
-        runner.run();
+        runner.run("--job=paymentIntakeJob");
 
         assertThat(runner.getExitCode()).isEqualTo(1);
     }
@@ -126,7 +114,7 @@ class BatchRunnerTest {
                 new BatchRunner(
                         jobOperator,
                         jobRepository,
-                        Map.of("dailySalesAggregationJob", dailySalesAggregationJob),
+                        Map.of("paymentIntakeJob", paymentIntakeJob),
                         List.of());
 
         assertThatThrownBy(() -> runner.run("--job=unknownJob"))
@@ -137,20 +125,20 @@ class BatchRunnerTest {
     @Test
     @DisplayName("同名Jobが既に実行中の場合は起動を中止し例外を投げること")
     void shouldThrowWhenJobAlreadyRunning() throws Exception {
-        when(dailySalesAggregationJob.getName()).thenReturn("dailySalesAggregationJob");
-        when(jobRepository.findRunningJobExecutions("dailySalesAggregationJob"))
+        when(paymentIntakeJob.getName()).thenReturn("paymentIntakeJob");
+        when(jobRepository.findRunningJobExecutions("paymentIntakeJob"))
                 .thenReturn(Set.of(jobExecution));
 
         BatchRunner runner =
                 new BatchRunner(
                         jobOperator,
                         jobRepository,
-                        Map.of("dailySalesAggregationJob", dailySalesAggregationJob),
-                        List.of(dailySalesJobParametersProvider));
+                        Map.of("paymentIntakeJob", paymentIntakeJob),
+                        List.of(paymentIntakeJobParametersProvider));
 
-        assertThatThrownBy(runner::run)
+        assertThatThrownBy(() -> runner.run("--job=paymentIntakeJob"))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("dailySalesAggregationJob");
+                .hasMessageContaining("paymentIntakeJob");
 
         verify(jobOperator, never()).start(any(Job.class), any(JobParameters.class));
     }
@@ -158,19 +146,18 @@ class BatchRunnerTest {
     @Test
     @DisplayName("JobParametersProviderが未登録のJobを起動しようとすると例外を投げること")
     void shouldThrowWhenParametersProviderMissing() {
-        when(dailySalesAggregationJob.getName()).thenReturn("dailySalesAggregationJob");
-        when(jobRepository.findRunningJobExecutions("dailySalesAggregationJob"))
-                .thenReturn(Set.of());
+        when(paymentIntakeJob.getName()).thenReturn("paymentIntakeJob");
+        when(jobRepository.findRunningJobExecutions("paymentIntakeJob")).thenReturn(Set.of());
 
         BatchRunner runner =
                 new BatchRunner(
                         jobOperator,
                         jobRepository,
-                        Map.of("dailySalesAggregationJob", dailySalesAggregationJob),
+                        Map.of("paymentIntakeJob", paymentIntakeJob),
                         List.of());
 
-        assertThatThrownBy(runner::run)
+        assertThatThrownBy(() -> runner.run("--job=paymentIntakeJob"))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("dailySalesAggregationJob");
+                .hasMessageContaining("paymentIntakeJob");
     }
 }

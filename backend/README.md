@@ -8,14 +8,25 @@
 | 分類 | 内容                                         |
 |------|--------------------------------------------|
 | フレームワーク | Spring Boot 4.0.1 (Spring WebMVC)          |
-| ORM | Hibernate 7.1（Spring Data JPA 経由）          |
+| ORM | Hibernate 7.2（Spring Data JPA 経由）          |
 | DB | PostgreSQL                                 |
 | マイグレーション | Flyway                                     |
 | 言語 | Java 25                                    |
-| ビルド | Gradle 8.14 (Kotlin DSL)                   |
-| コードフォーマット | Spotless 8.4.0 + Google Java Format 1.18.1 |
+| ビルド | Gradle 9.5.1 (Kotlin DSL)                  |
+| コードフォーマット | Spotless 8.4.0 + Google Java Format 1.28.0 |
 | カバレッジ計測 | JaCoCo                                     |
 | 認証・セッション管理 | Spring Security + Spring Session Redis     |
+
+## モジュール構成
+
+`ec-api`直下のGradleマルチモジュール構成の1つ（`settings.gradle.kts`はリポジトリルート）。`entity`/`repository`は`core`モジュールに切り出して[`batch`](../batch/)と共有しており、`backend`と`batch`は互いに依存しない。
+
+```
+ec-api/
+├── core/     … entity・repository（backendとbatchが共有）
+├── backend/  … このモジュール（API）
+└── batch/    … 日次売上集計・決済突合バッチ（Spring Batch）
+```
 
 ## プロジェクト構成
 
@@ -41,10 +52,13 @@
 ## CI/CD
 
 ```
-GitHub push
+GitHub push（backend/, core/, batch/ 配下の変更が対象）
   │
   ├─► GitHub Actions CI (.github/workflows/ci.yml、リポジトリルート)
-  │     └─ spotlessCheck → test（PostgreSQL/Redisサービスコンテナ使用）
+  │     ├─ spotlessCheck（全モジュール共通）
+  │     ├─ :backend:test（PostgreSQL/Redisサービスコンテナ使用）
+  │     ├─ :batch:test
+  │     └─ backend/batch それぞれの Dockerfile で image build（CI検証のみ、push はしない）
   │
   └─► main へのマージ後: AWS CodePipeline（Terraform管理: infrastructure/terraform）
         ├─ Source: GitHub (CodeStar Connections)
@@ -126,7 +140,7 @@ SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=changeme ./gradlew :back
 | 商品 | `/api/customer/products` | 商品一覧・検索・詳細（認証不要） |
 | カート | `/api/customer/cart` | カート参照・追加・数量更新・削除 |
 | マイページ | `/api/customer/me` | 自分の情報参照、メール/パスワード変更 |
-| 注文 | `/api/orders` | 注文一覧・詳細・作成・ステータス更新 |
+| 注文 | `/api/orders` | 注文一覧・詳細・作成・キャンセル |
 
 ---
 ## swagger
@@ -137,7 +151,7 @@ http://localhost:8080/swagger-ui/index.html （`local`プロファイルでは `
 ```bash
 ### 管理者ログイン (セッションクッキーを取得)
 curl -v -c admin_cookies.txt -H "Content-Type: application/json" \
-  -d '{"email":"satou@example.com","password":"password"}' \
+  -d '{"email":"satou@example.com","password":"password123"}' \
   http://localhost:8080/api/auth/login
 
 ### 商品登録 (管理者、セッションクッキーを使用)
@@ -185,6 +199,8 @@ curl -s -b customer_cookies.txt -X POST http://localhost:8080/api/orders \
     ]
   }' | jq
 
-# 注文ステータス更新 (楽観ロックはサービス層で適用)
-curl -s -b customer_cookies.txt -X PATCH "http://localhost:8080/api/orders/1/status?status=CONFIRMED" | jq
+# 注文キャンセル (状態遷移はアクションエンドポイント、楽観ロックのため version が必須)
+ORDER_ID=1
+ORDER_VERSION=$(curl -s -b customer_cookies.txt http://localhost:8080/api/orders/${ORDER_ID} | jq -r .version)
+curl -s -b customer_cookies.txt -X POST "http://localhost:8080/api/orders/${ORDER_ID}/cancel?version=${ORDER_VERSION}" | jq
 ```
