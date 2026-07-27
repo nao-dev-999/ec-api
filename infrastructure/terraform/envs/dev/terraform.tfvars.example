@@ -19,3 +19,6 @@ rds_master_username = "awstest"
 # CodePipeline / GitHub
 github_repository       = "your-org/ec-api"
 github_branch           = "main"
+
+# AWS Config
+config_notification_emails = ["you@example.com"]

@@ -22,3 +22,10 @@ variable "github_repository" {
 variable "github_branch" {
   default = "main"
 }
+
+# AWS Config
+variable "config_notification_emails" {
+  description = "AWS Configのコンプライアンス違反通知を受け取るメールアドレス一覧"
+  type        = list(string)
+  default     = []
+}
