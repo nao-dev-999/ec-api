@@ -15,15 +15,15 @@ import org.springframework.stereotype.Component;
 
 /**
  * spring.batch.job.enabled=false により標準のJobLauncherApplicationRunnerを無効化した上で、 このRunnerが唯一の起動経路になる。
- * どのJobを起動するかは{@code --job=}引数（Bean名）で選択する。未指定時は既存運用（EventBridge Scheduler経由のECS
- * RunTaskが引数なしで起動する現行の日次売上集計）との互換のためデフォルトJobを使う。 JobParametersの形はJob毎に異なりうるため、組み立ては{@link
+ * どのJobを起動するかは{@code --job=}引数（Bean名）で選択する。必須引数であり、未指定時は起動を中止する
+ * （日次売上集計ジョブネットがpaymentIntakeJob/salesAggregationJob/settlementExportJobの3Jobに分割されて以降、
+ * 「引数なし起動で何が起動するか」を暗黙のデフォルトに委ねると事故りやすいため）。 JobParametersの形はJob毎に異なりうるため、組み立ては{@link
  * JobParametersProvider}にJob単位で委譲する。
  */
 @Component
 public class BatchRunner implements CommandLineRunner, ExitCodeGenerator {
 
     private static final String JOB_ARG_PREFIX = "--job=";
-    private static final String DEFAULT_JOB_NAME = "dailySalesAggregationJob";
 
     private final JobOperator jobOperator;
     private final JobRepository jobRepository;
@@ -60,12 +60,16 @@ public class BatchRunner implements CommandLineRunner, ExitCodeGenerator {
     }
 
     private Job resolveJob(String[] args) {
-        String jobName = DEFAULT_JOB_NAME;
+        String jobName = null;
         for (String arg : args) {
             if (arg.startsWith(JOB_ARG_PREFIX)) {
                 jobName = arg.substring(JOB_ARG_PREFIX.length());
                 break;
             }
+        }
+        if (jobName == null) {
+            throw new IllegalArgumentException(
+                    "--job=<jobName> の指定は必須です（利用可能: " + jobsByName.keySet() + "）");
         }
         Job job = jobsByName.get(jobName);
         if (job == null) {

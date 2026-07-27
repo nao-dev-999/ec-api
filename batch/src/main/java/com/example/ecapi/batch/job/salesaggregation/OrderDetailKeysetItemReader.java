@@ -1,0 +1,108 @@
+package com.example.ecapi.batch.job.salesaggregation;
+
+import com.example.ecapi.batch.dto.OrderDetailProjection;
+import com.example.ecapi.constant.PaymentStatus;
+import jakarta.persistence.EntityManagerFactory;
+import java.time.Instant;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.List;
+import org.hibernate.SessionFactory;
+import org.hibernate.StatelessSession;
+import org.springframework.batch.infrastructure.item.ExecutionContext;
+import org.springframework.batch.infrastructure.item.ItemStreamException;
+import org.springframework.batch.infrastructure.item.ItemStreamReader;
+
+/**
+ * StatelessSession + キーセット方式でCustomerOrderDetailを読み取るReader。
+ * OFFSETページングは使わず、直前に読んだidより大きい行だけを都度取得することで PostgreSQLでのスキャンコスト増大を回避する。
+ *
+ * <p>売上集計の対象は「決済確定（{@code PAYMENT.status = CAPTURED}）した注文明細」であり、
+ * オーソリのみ（AUTHORIZED）・決済失敗（FAILED）・返金（REFUNDED）の注文は対象外とする。 売上計上日も{@code
+ * CustomerOrder}の作成日時ではなく、決済確定日時（{@code PAYMENT.captured_at}）を基準にする
+ * （決済の2段階モデル。payment_reconciliation_design参照）。
+ */
+public class OrderDetailKeysetItemReader implements ItemStreamReader<OrderDetailProjection> {
+
+    private static final String LAST_ID_KEY = "orderDetailReader.lastId";
+    private static final int PAGE_SIZE = 500;
+
+    private static final String QUERY =
+            """
+            SELECT new com.example.ecapi.batch.dto.OrderDetailProjection(
+                d.id, d.product.id, d.order.customer.id, d.unitPrice, d.quantity)
+            FROM CustomerOrderDetail d
+            JOIN Payment p ON p.customerOrder.id = d.order.id
+            WHERE d.order.id BETWEEN :minId AND :maxId
+              AND p.status = :status
+              AND p.capturedAt BETWEEN :from AND :to
+              AND d.id > :lastId
+            ORDER BY d.id
+            """;
+
+    private final EntityManagerFactory entityManagerFactory;
+    private final long minId;
+    private final long maxId;
+    private final Instant from;
+    private final Instant to;
+
+    private StatelessSession session;
+    private Deque<OrderDetailProjection> buffer = new ArrayDeque<>();
+    private long lastId;
+
+    public OrderDetailKeysetItemReader(
+            EntityManagerFactory entityManagerFactory,
+            long minId,
+            long maxId,
+            Instant from,
+            Instant to) {
+        this.entityManagerFactory = entityManagerFactory;
+        this.minId = minId;
+        this.maxId = maxId;
+        this.from = from;
+        this.to = to;
+    }
+
+    @Override
+    public void open(ExecutionContext executionContext) throws ItemStreamException {
+        this.lastId = executionContext.getLong(LAST_ID_KEY, 0L);
+        this.session = entityManagerFactory.unwrap(SessionFactory.class).openStatelessSession();
+    }
+
+    @Override
+    public OrderDetailProjection read() {
+        if (buffer.isEmpty()) {
+            fetchNextPage();
+        }
+        return buffer.poll();
+    }
+
+    private void fetchNextPage() {
+        List<OrderDetailProjection> page =
+                session.createQuery(QUERY, OrderDetailProjection.class)
+                        .setParameter("minId", minId)
+                        .setParameter("maxId", maxId)
+                        .setParameter("status", PaymentStatus.CAPTURED)
+                        .setParameter("from", from)
+                        .setParameter("to", to)
+                        .setParameter("lastId", lastId)
+                        .setMaxResults(PAGE_SIZE)
+                        .list();
+        buffer.addAll(page);
+        if (!page.isEmpty()) {
+            lastId = page.get(page.size() - 1).id();
+        }
+    }
+
+    @Override
+    public void update(ExecutionContext executionContext) throws ItemStreamException {
+        executionContext.putLong(LAST_ID_KEY, lastId);
+    }
+
+    @Override
+    public void close() throws ItemStreamException {
+        if (session != null) {
+            session.close();
+        }
+    }
+}
