@@ -45,3 +45,7 @@ output "batch_task_definition_arn" {
 output "batch_task_definition_family" {
   value = aws_ecs_task_definition.batch.family
 }
+
+output "batch_state_machine_arn" {
+  value = aws_sfn_state_machine.batch_orchestrator.arn
+}
