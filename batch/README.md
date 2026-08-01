@@ -85,14 +85,14 @@ BatchApplication.main() に戻り System.exit(SpringApplication.exit(context))
 
 `--job`にはJob Beanの名前（`paymentIntakeJob`/`salesAggregationJob`/`settlementExportJob`のいずれか）を指定する。**必須引数であり、未指定の場合も存在しない名前を指定した場合と同様に起動時に`IllegalArgumentException`で落ちる**（「引数なし起動で何が起動するか」を暗黙のデフォルトに委ねると事故りやすいため、後方互換のデフォルトJobは持たない）。
 
-> **運用への影響:** 分割前はEventBridge Schedulerが`ecs:RunTask`を引数なしで呼び出す1本の設定で足りていたが、分割後は3回（`--job=paymentIntakeJob`→`--job=salesAggregationJob`→`--job=settlementExportJob`の順に、前段の終了コードが0であることを確認しながら）呼び出す構成へ変更する必要がある。このオーケストレーション層（`infrastructure/terraform`のEventBridge Scheduler設定等）の更新は本変更のスコープ外であり、別途対応が必要。
+> **運用への影響:** 分割前はEventBridge Schedulerが`ecs:RunTask`を引数なしで呼び出す1本の設定で足りていたが、分割後は3回（`--job=paymentIntakeJob`→`--job=salesAggregationJob`→`--job=settlementExportJob`の順に、前段の終了コードが0であることを確認しながら）呼び出す構成へ変更する必要がある。このオーケストレーション層は`infrastructure/terraform/modules/ecs`内のStep Functionsステートマシン（`aws_sfn_state_machine.batch_orchestrator`）が担う。EventBridge Schedulerは1日1回このステートマシンを起動するだけになり、ステートマシン側が3つの`ecs:RunTask`を`RunTask.sync`統合で順に実行して、ECSタスクが非0終了した場合は後続のJobを実行しない（AWSネイティブな終了コード判定に委ね、後方互換のデフォルトJobを持たせるような回避策は取らない）。失敗時のCloudWatch Alarm/SNS通知は現時点では未対応で、実行状況はStep Functionsの実行履歴（コンソール/`list-executions`）で確認する。
 
 新しいJobを追加する場合、`BatchRunner`自体は変更不要で、以下の2つを追加するだけでよい。
 
 - 新しい`@Bean Job`（Beanは自動的に`Map<String, Job>`として`BatchRunner`に注入される）
 - そのJob専用の`JobParametersProvider`実装（`jobName()`が対応するJob Bean名を返すこと。`--job`で選択されたJobの起動時に、そのJobParametersProviderの`resolve(args)`でJobParametersを組み立てる。実装が存在しないJobを起動しようとすると`IllegalStateException`で落ちる）
 
-JobParametersの形はJob毎に異なってよい（日次売上集計ジョブネットの3Jobはいずれも`TargetDateRangeJobParameters`経由でtargetDateFrom/targetDateToを組み立てるが、他のJobが全く別のパラメータ形状を必要としても`BatchRunner`側の変更は不要）。
+JobParametersの形はJob毎に異なってよい（`DailySalesJobParametersProvider`はtargetDateFrom/targetDateToを組み立てるが、他のJobが全く別のパラメータ形状を必要としても`BatchRunner`側の変更は不要）。
 
 ## ローカルでの実行
 
@@ -113,12 +113,12 @@ CSV
 touch batch/tmp/batch/input/payment_confirmed_20240115.done  # 取込フェーズの受信フラグ（CSVの書き込み完了を示すキックファイル）
 
 # 3Jobを順番に実行する（前段が失敗した場合は後段を実行しない）
-SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=password \
-  ./gradlew :batch:bootRun --args='--job=paymentIntakeJob --targetDate=2024-01-15'
-SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=password \
-  ./gradlew :batch:bootRun --args='--job=salesAggregationJob --targetDate=2024-01-15'
-SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=password \
-  ./gradlew :batch:bootRun --args='--job=settlementExportJob --targetDate=2024-01-15'
+SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=postgres \
+  ./gradlew :batch:bootRun --args='--job=paymentIntakeJob --targetDate=2026-07-24'
+SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=postgres \
+  ./gradlew :batch:bootRun --args='--job=salesAggregationJob --targetDate=2026-07-24'
+SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=postgres \
+  ./gradlew :batch:bootRun --args='--job=settlementExportJob --targetDate=2026-07-24'
 ```
 
 `local`プロファイルでは受信フラグ・受信CSV・送信出力とも`batch/tmp/batch/`配下（`application-local.yml`）を見る。ファイル名は`batch.input.flag-file-template`/`batch.input.data-file-template`（`%s`が対象日の`yyyyMMdd`）で組み立てる。受信CSVはヘッダー`order_number,transaction_id,customer_id,payment_method,status,amount,fee,settled_at`固定で、フォーマット不正（ヘッダー不一致・数値/日時としてパースできない値）は取込フェーズを異常終了させる（集計フェーズのデータ不正のようなskipはしない）。`order_number`は内部サロゲートキー（`customer_order.id`）ではなく、決済代行が実際に知り得る外部連携用の参照番号（`customer_order.order_number`）を使う。`customer_id`は突合・監査用の識別子のみで、氏名・住所等のPIIは含めない。取り込んだ内容は`payment_confirmation_staging`テーブルに保存され、後続の決済突合フェーズ（`paymentReconciliationStep`）がこのテーブルを`customer_order`にLEFT JOINして読み出す。詳細は`docs/batch.md`の14.3節を参照。

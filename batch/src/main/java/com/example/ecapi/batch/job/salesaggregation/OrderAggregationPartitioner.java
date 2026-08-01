@@ -2,6 +2,8 @@ package com.example.ecapi.batch.job.salesaggregation;
 
 import com.example.ecapi.constant.PaymentStatus;
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.Map;
 import org.springframework.batch.core.partition.Partitioner;
@@ -46,8 +48,8 @@ public class OrderAggregationPartitioner implements Partitioner {
         MapSqlParameterSource params =
                 new MapSqlParameterSource()
                         .addValue("status", PaymentStatus.CAPTURED.name())
-                        .addValue("from", from)
-                        .addValue("to", to);
+                        .addValue("from", OffsetDateTime.ofInstant(from, ZoneOffset.UTC))
+                        .addValue("to", OffsetDateTime.ofInstant(to, ZoneOffset.UTC));
         long[] idRange =
                 jdbcTemplate.queryForObject(
                         ID_RANGE_SQL, params, (rs, i) -> new long[] {rs.getLong(1), rs.getLong(2)});

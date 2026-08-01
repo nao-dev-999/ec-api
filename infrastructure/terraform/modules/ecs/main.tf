@@ -1,3 +1,5 @@
+data "aws_caller_identity" "current" {}
+
 # ---------------------------------------------------------------------------
 # ECS Cluster
 # ---------------------------------------------------------------------------
@@ -416,7 +418,180 @@ resource "aws_ecs_task_definition" "batch" {
   }
 }
 
-# EventBridge Scheduler が ecs:RunTask を呼び出すためのロール
+resource "aws_iam_role" "sfn_batch_orchestrator" {
+  name = "${var.project}-${var.env}-sfn-batch-orchestrator-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "states.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+resource "aws_iam_role_policy" "sfn_batch_orchestrator" {
+  name = "batch-orchestrator-run-task"
+  role = aws_iam_role.sfn_batch_orchestrator.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect   = "Allow"
+        Action   = ["ecs:RunTask"]
+        Resource = replace(aws_ecs_task_definition.batch.arn, "/:\\d+$/", ":*")
+      },
+      {
+        # RunTask.sync統合の実行状態監視・実行キャンセルに必要
+        Effect   = "Allow"
+        Action   = ["ecs:StopTask", "ecs:DescribeTasks"]
+        Resource = "*"
+      },
+      {
+        # RunTask.sync統合がECS Task State ChangeイベントをEventBridge経由で受け取るために必要な、
+        # AWS管理ルール（StepFunctionsGetEventForECSTaskRule）固定のパーミッション
+        Effect   = "Allow"
+        Action   = ["events:PutTargets", "events:PutRule", "events:DescribeRule"]
+        Resource = "arn:aws:events:${var.aws_region}:${data.aws_caller_identity.current.account_id}:rule/StepFunctionsGetEventForECSTaskRule"
+      },
+      {
+        Effect = "Allow"
+        Action = ["iam:PassRole"]
+        Resource = [
+          aws_iam_role.task_execution.arn,
+          aws_iam_role.task.arn
+        ]
+      },
+      {
+        # 実行履歴をCloudWatch Logsへ配信するために必要（ログ配信APIはリソースレベル権限非対応のためResource="*"がAWSの標準要件）
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogDelivery",
+          "logs:GetLogDelivery",
+          "logs:UpdateLogDelivery",
+          "logs:DeleteLogDelivery",
+          "logs:ListLogDeliveries",
+          "logs:PutResourcePolicy",
+          "logs:DescribeResourcePolicies",
+          "logs:DescribeLogGroups"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_cloudwatch_log_group" "sfn_batch_orchestrator" {
+  name              = "/aws/vendedlogs/states/${var.project}-${var.env}-batch-orchestrator"
+  retention_in_days = 30
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+locals {
+  # 3つのTask stateで共通のRunTask.syncパラメータ（差分はOverrides.Command/Nextのみ）
+  batch_run_task_parameters = {
+    Cluster        = aws_ecs_cluster.this.arn
+    TaskDefinition = aws_ecs_task_definition.batch.family
+    LaunchType     = "FARGATE"
+    NetworkConfiguration = {
+      AwsvpcConfiguration = {
+        Subnets        = var.batch_private_subnet_ids
+        SecurityGroups = [aws_security_group.ecs.id]
+        AssignPublicIp = "DISABLED"
+      }
+    }
+  }
+
+  # RunTask API呼び出し自体の一時的なエラー（スロットリング等）のみリトライ対象とする。
+  # コンテナの非0終了（States.TaskFailed）はJob側の失敗であり、
+  # 「前段が失敗したら後段を実行しない」という設計意図通りリトライせず即座に実行を止める。
+  batch_run_task_retry = [
+    {
+      ErrorEquals     = ["ECS.AmazonECSException", "States.Timeout"]
+      IntervalSeconds = 30
+      MaxAttempts     = 2
+      BackoffRate     = 2.0
+    }
+  ]
+}
+
+resource "aws_sfn_state_machine" "batch_orchestrator" {
+  name     = "${var.project}-${var.env}-batch-orchestrator"
+  role_arn = aws_iam_role.sfn_batch_orchestrator.arn
+  type     = "STANDARD"
+
+  definition = jsonencode({
+    Comment = "日次売上集計バッチ: paymentIntakeJob → salesAggregationJob → settlementExportJob を順に実行し、前段が失敗したら後段を実行しない"
+    StartAt = "PaymentIntakeJob"
+    # バッチウィンドウ（14.6節: 02:00-05:00 JST = 3時間）全体を実行全体の安全網として設定
+    TimeoutSeconds = 10800
+    States = {
+      PaymentIntakeJob = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::ecs:runTask.sync"
+        Parameters = merge(local.batch_run_task_parameters, {
+          Overrides = {
+            ContainerOverrides = [
+              { Name = "batch", Command = ["--job=paymentIntakeJob"] }
+            ]
+          }
+        })
+        Retry = local.batch_run_task_retry
+        Next  = "SalesAggregationJob"
+      }
+      SalesAggregationJob = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::ecs:runTask.sync"
+        Parameters = merge(local.batch_run_task_parameters, {
+          Overrides = {
+            ContainerOverrides = [
+              { Name = "batch", Command = ["--job=salesAggregationJob"] }
+            ]
+          }
+        })
+        Retry = local.batch_run_task_retry
+        Next  = "SettlementExportJob"
+      }
+      SettlementExportJob = {
+        Type     = "Task"
+        Resource = "arn:aws:states:::ecs:runTask.sync"
+        Parameters = merge(local.batch_run_task_parameters, {
+          Overrides = {
+            ContainerOverrides = [
+              { Name = "batch", Command = ["--job=settlementExportJob"] }
+            ]
+          }
+        })
+        Retry = local.batch_run_task_retry
+        End   = true
+      }
+    }
+  })
+
+  logging_configuration {
+    log_destination        = "${aws_cloudwatch_log_group.sfn_batch_orchestrator.arn}:*"
+    include_execution_data = true
+    level                  = "ERROR"
+  }
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+# EventBridge Scheduler が Step Functions ステートマシンを起動するためのロール
 resource "aws_iam_role" "batch_scheduler" {
   name = "${var.project}-${var.env}-batch-scheduler-role"
 
@@ -436,7 +611,7 @@ resource "aws_iam_role" "batch_scheduler" {
 }
 
 resource "aws_iam_role_policy" "batch_scheduler" {
-  name = "batch-run-task"
+  name = "batch-start-orchestrator-execution"
   role = aws_iam_role.batch_scheduler.id
 
   policy = jsonencode({
@@ -444,22 +619,14 @@ resource "aws_iam_role_policy" "batch_scheduler" {
     Statement = [
       {
         Effect   = "Allow"
-        Action   = ["ecs:RunTask"]
-        Resource = replace(aws_ecs_task_definition.batch.arn, "/:\\d+$/", ":*")
-      },
-      {
-        Effect = "Allow"
-        Action = ["iam:PassRole"]
-        Resource = [
-          aws_iam_role.task_execution.arn,
-          aws_iam_role.task.arn
-        ]
+        Action   = ["states:StartExecution"]
+        Resource = aws_sfn_state_machine.batch_orchestrator.arn
       }
     ]
   })
 }
 
-# 日次売上集計バッチの起動スケジュール（14.6節: バッチウィンドウ 02:00〜05:00 JST）
+# 日次売上集計バッチの起動スケジュール
 resource "aws_scheduler_schedule" "batch_daily" {
   name       = "${var.project}-${var.env}-batch-daily"
   group_name = "default"
@@ -472,21 +639,8 @@ resource "aws_scheduler_schedule" "batch_daily" {
   schedule_expression_timezone = "UTC"
 
   target {
-    arn      = aws_ecs_cluster.this.arn
+    arn      = aws_sfn_state_machine.batch_orchestrator.arn
     role_arn = aws_iam_role.batch_scheduler.arn
-
-    ecs_parameters {
-      # revisionを固定せず family名を渡すことで、CodeBuildが register-task-definition で
-      # 新リビジョンを登録するたびTerraform再applyなしで自動的に最新版を実行する
-      task_definition_arn = aws_ecs_task_definition.batch.family
-      launch_type         = "FARGATE"
-
-      network_configuration {
-        subnets          = var.batch_private_subnet_ids
-        security_groups  = [aws_security_group.ecs.id]
-        assign_public_ip = false
-      }
-    }
   }
 }
 
