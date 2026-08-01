@@ -92,7 +92,7 @@ BatchApplication.main() に戻り System.exit(SpringApplication.exit(context))
 - 新しい`@Bean Job`（Beanは自動的に`Map<String, Job>`として`BatchRunner`に注入される）
 - そのJob専用の`JobParametersProvider`実装（`jobName()`が対応するJob Bean名を返すこと。`--job`で選択されたJobの起動時に、そのJobParametersProviderの`resolve(args)`でJobParametersを組み立てる。実装が存在しないJobを起動しようとすると`IllegalStateException`で落ちる）
 
-JobParametersの形はJob毎に異なってよい（日次売上集計ジョブネットの3Jobはいずれも`TargetDateRangeJobParameters`経由でtargetDateFrom/targetDateToを組み立てるが、他のJobが全く別のパラメータ形状を必要としても`BatchRunner`側の変更は不要）。
+JobParametersの形はJob毎に異なってよい（`DailySalesJobParametersProvider`はtargetDateFrom/targetDateToを組み立てるが、他のJobが全く別のパラメータ形状を必要としても`BatchRunner`側の変更は不要）。
 
 ## ローカルでの実行
 
