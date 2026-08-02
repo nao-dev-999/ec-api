@@ -17,7 +17,7 @@ public class CustomerUserDetailsService implements UserDetailsService {
     @Override
     public LoginUserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return customerRepository
-                .findByEmail(email)
+                .findByEmailAndDeletedFalse(email)
                 .map(
                         customer ->
                                 new LoginUserDetails(

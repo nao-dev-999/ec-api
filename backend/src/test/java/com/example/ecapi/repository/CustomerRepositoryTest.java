@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.ecapi.config.JpaAuditConfig;
 import com.example.ecapi.entity.Customer;
+import com.example.ecapi.repository.support.SoftDeleteJpaConfig;
 import com.example.ecapi.support.TestcontainersConfiguration;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -18,7 +19,7 @@ import org.springframework.context.annotation.Import;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaAuditConfig.class})
+@Import({TestcontainersConfiguration.class, JpaAuditConfig.class, SoftDeleteJpaConfig.class})
 class CustomerRepositoryTest {
 
     @Autowired private TestEntityManager entityManager;
@@ -73,6 +74,23 @@ class CustomerRepositoryTest {
 
             assertThatThrownBy(() -> entityManager.persistFlushFind(duplicate))
                     .isInstanceOf(RuntimeException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("findByEmailAndDeletedFalse（ログイン用）")
+    class FindByEmailAndDeletedFalseTest {
+
+        @Test
+        @DisplayName("論理削除済みの顧客は取得できないこと（ログイン不可）")
+        void shouldNotReturnSoftDeletedCustomer() {
+            Customer customer = persistCustomer("deleted@example.com");
+            customerRepository.deleteById(customer.getId());
+            entityManager.flush();
+            entityManager.clear();
+
+            assertThat(customerRepository.findByEmailAndDeletedFalse("deleted@example.com"))
+                    .isEmpty();
         }
     }
 }

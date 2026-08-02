@@ -17,7 +17,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     @Override
     public LoginUserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return employeeRepository
-                .findByEmail(email)
+                .findByEmailAndDeletedFalse(email)
                 .map(
                         employee ->
                                 new LoginUserDetails(

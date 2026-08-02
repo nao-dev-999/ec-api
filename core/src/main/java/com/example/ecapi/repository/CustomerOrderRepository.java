@@ -19,11 +19,12 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
      */
     @Override
     @Query(
-            value = "SELECT o FROM CustomerOrder o LEFT JOIN FETCH o.customer",
-            countQuery = "SELECT COUNT(o) FROM CustomerOrder o")
+            value =
+                    "SELECT o FROM CustomerOrder o LEFT JOIN FETCH o.customer WHERE o.deleted = false",
+            countQuery = "SELECT COUNT(o) FROM CustomerOrder o WHERE o.deleted = false")
     Page<CustomerOrder> findAll(Pageable pageable);
 
-    List<CustomerOrder> findByStatus(OrderStatus status);
+    List<CustomerOrder> findByStatusAndDeletedFalse(OrderStatus status);
 
     @Query(
             """
@@ -31,14 +32,15 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
         LEFT JOIN FETCH o.customer
         LEFT JOIN FETCH o.items i
         LEFT JOIN FETCH i.product
-        WHERE o.id = :id
+        WHERE o.id = :id AND o.deleted = false
         """)
     Optional<CustomerOrder> findByIdWithItems(@Param("id") Long id);
 
     @Query(
             value =
-                    "SELECT o FROM CustomerOrder o LEFT JOIN FETCH o.customer WHERE o.customer.id = :customerId",
-            countQuery = "SELECT COUNT(o) FROM CustomerOrder o WHERE o.customer.id = :customerId")
+                    "SELECT o FROM CustomerOrder o LEFT JOIN FETCH o.customer WHERE o.customer.id = :customerId AND o.deleted = false",
+            countQuery =
+                    "SELECT COUNT(o) FROM CustomerOrder o WHERE o.customer.id = :customerId AND o.deleted = false")
     Page<CustomerOrder> findAllByCustomerId(
             @Param("customerId") Long customerId, Pageable pageable);
 
@@ -48,7 +50,7 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
         LEFT JOIN FETCH o.customer
         LEFT JOIN FETCH o.items i
         LEFT JOIN FETCH i.product
-        WHERE o.id = :id AND o.customer.id = :customerId
+        WHERE o.id = :id AND o.customer.id = :customerId AND o.deleted = false
         """)
     Optional<CustomerOrder> findByIdAndCustomerIdWithItems(
             @Param("id") Long id, @Param("customerId") Long customerId);

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.ecapi.config.JpaAuditConfig;
 import com.example.ecapi.entity.Category;
+import com.example.ecapi.repository.support.SoftDeleteJpaConfig;
 import com.example.ecapi.support.TestcontainersConfiguration;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,7 +17,7 @@ import org.springframework.context.annotation.Import;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaAuditConfig.class})
+@Import({TestcontainersConfiguration.class, JpaAuditConfig.class, SoftDeleteJpaConfig.class})
 class CategoryRepositoryTest {
 
     @Autowired private TestEntityManager entityManager;

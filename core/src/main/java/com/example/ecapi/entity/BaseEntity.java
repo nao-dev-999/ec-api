@@ -26,9 +26,6 @@ public abstract class BaseEntity {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
 
-    @Column(name = "deleted_at")
-    private Instant deletedAt;
-
     @CreatedBy
     @Column(name = "created_by", updatable = false)
     private Long createdBy;
@@ -36,9 +33,6 @@ public abstract class BaseEntity {
     @LastModifiedBy
     @Column(name = "updated_by")
     private Long updatedBy;
-
-    @Column(name = "deleted_by", length = 255)
-    private String deletedBy;
 
     @Setter
     @Version

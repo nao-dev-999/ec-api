@@ -29,4 +29,9 @@ public class ProductSpecification {
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
+
+    /** Specification経由の検索はSoftDeleteRepositoryImplの自動フィルタが効かないため、呼び出し側で明示的に合成する。 */
+    public static Specification<Product> notDeleted() {
+        return (root, query, cb) -> cb.isFalse(root.get("deleted"));
+    }
 }
