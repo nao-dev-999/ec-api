@@ -9,6 +9,7 @@ import com.example.ecapi.entity.Customer;
 import com.example.ecapi.entity.CustomerOrder;
 import com.example.ecapi.entity.CustomerOrderDetail;
 import com.example.ecapi.entity.Product;
+import com.example.ecapi.repository.support.SoftDeleteJpaConfig;
 import com.example.ecapi.support.TestcontainersConfiguration;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -27,7 +28,7 @@ import org.springframework.data.domain.PageRequest;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaAuditConfig.class})
+@Import({TestcontainersConfiguration.class, JpaAuditConfig.class, SoftDeleteJpaConfig.class})
 class CustomerOrderRepositoryTest {
 
     @Autowired private TestEntityManager entityManager;
@@ -61,11 +62,11 @@ class CustomerOrderRepositoryTest {
 
     private CustomerOrderDetail persistOrderDetail(CustomerOrder order, Product product) {
         CustomerOrderDetail detail = new CustomerOrderDetail();
-        detail.setOrder(order);
         detail.setProduct(product);
         detail.setQuantity(1);
         detail.setUnitPrice(product.getPrice());
         detail.setSubtotal(product.getPrice());
+        order.addItem(detail);
         return entityManager.persistFlushFind(detail);
     }
 
@@ -80,7 +81,8 @@ class CustomerOrderRepositoryTest {
             CustomerOrder pending = persistOrder(customer, OrderStatus.PENDING);
             persistOrder(customer, OrderStatus.SHIPPED);
 
-            List<CustomerOrder> result = customerOrderRepository.findByStatus(OrderStatus.PENDING);
+            List<CustomerOrder> result =
+                    customerOrderRepository.findByStatusAndDeletedFalse(OrderStatus.PENDING);
 
             assertThat(result).extracting(CustomerOrder::getId).containsExactly(pending.getId());
         }

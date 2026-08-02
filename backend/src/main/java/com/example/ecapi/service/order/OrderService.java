@@ -115,12 +115,11 @@ public class OrderService {
             product.setStock(product.getStock() - item.quantity());
 
             CustomerOrderDetail detail = new CustomerOrderDetail();
-            detail.setOrder(order);
             detail.setProduct(product);
             detail.setQuantity(item.quantity());
             detail.setUnitPrice(product.getPrice());
             detail.setSubtotal(product.getPrice().multiply(BigDecimal.valueOf(item.quantity())));
-            order.getItems().add(detail);
+            order.addItem(detail);
         }
 
         order.setTotalAmount(

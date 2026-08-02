@@ -76,11 +76,11 @@ class OrderDetailKeysetItemReaderTest {
 
     private CustomerOrderDetail persistOrderDetail(CustomerOrder order, Product product) {
         CustomerOrderDetail detail = new CustomerOrderDetail();
-        detail.setOrder(order);
         detail.setProduct(product);
         detail.setQuantity(2);
         detail.setUnitPrice(product.getPrice());
         detail.setSubtotal(product.getPrice().multiply(BigDecimal.valueOf(2)));
+        order.addItem(detail);
         return entityManager.persistFlushFind(detail);
     }
 

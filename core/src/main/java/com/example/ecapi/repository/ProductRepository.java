@@ -17,13 +17,13 @@ public interface ProductRepository
         extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
     // 商品名のあいまい検索（大文字小文字無視）
-    List<Product> findByNameContainingIgnoreCase(String keyword);
+    List<Product> findByNameContainingIgnoreCaseAndDeletedFalse(String keyword);
 
     // 価格範囲検索（JPQL）
     @Query(
             """
         SELECT p FROM Product p
-        WHERE p.price BETWEEN :min AND :max
+        WHERE p.price BETWEEN :min AND :max AND p.deleted = false
         ORDER BY p.price
         """)
     List<Product> findByPriceRange(@Param("min") BigDecimal min, @Param("max") BigDecimal max);

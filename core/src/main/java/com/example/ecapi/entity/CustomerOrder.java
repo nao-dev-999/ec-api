@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import lombok.*;
@@ -46,14 +47,39 @@ public class CustomerOrder extends BaseEntity {
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
-    // 注文明細（1 対多）
+    // 注文明細（1 対多）。外部からの直接操作を防ぐため、getter/setterはaddItem/removeItem経由に限定する。
+    @Setter(AccessLevel.NONE)
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<CustomerOrderDetail> items = new ArrayList<>();
+
+    @Column(name = "is_deleted", nullable = false)
+    private boolean deleted = false;
 
     @PrePersist
     private void assignOrderNumberIfAbsent() {
         if (orderNumber == null) {
             orderNumber = UUID.randomUUID().toString();
+        }
+    }
+
+    public List<CustomerOrderDetail> getItems() {
+        return Collections.unmodifiableList(items);
+    }
+
+    public void addItem(CustomerOrderDetail detail) {
+        if (detail == null) {
+            throw new IllegalArgumentException("detail must not be null");
+        }
+        items.add(detail);
+        detail.setOrder(this);
+    }
+
+    public void removeItem(CustomerOrderDetail detail) {
+        if (detail == null) {
+            throw new IllegalArgumentException("detail must not be null");
+        }
+        if (items.remove(detail)) {
+            detail.setOrder(null);
         }
     }
 }

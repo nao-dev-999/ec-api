@@ -16,6 +16,8 @@ public class CustomerOrderDetail extends BaseEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // setOrderはpackage-privateに制限し、CustomerOrder.addItem/removeItem経由でのみ同期させる
+    @Setter(AccessLevel.NONE)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_order_id", nullable = false) // 修正: order_id -> customer_order_id
     private CustomerOrder order;
@@ -32,4 +34,8 @@ public class CustomerOrderDetail extends BaseEntity {
 
     @Column(name = "subtotal", nullable = false, precision = 10, scale = 2) // subtotal もカラムとして追加
     private BigDecimal subtotal;
+
+    void setOrder(CustomerOrder order) {
+        this.order = order;
+    }
 }

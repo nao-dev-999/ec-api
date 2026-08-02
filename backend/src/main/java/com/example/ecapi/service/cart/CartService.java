@@ -11,6 +11,9 @@ import com.example.ecapi.service.cart.dto.CartItemResult;
 import com.example.ecapi.service.cart.dto.UpdateCartItemQuantity;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,16 +29,20 @@ public class CartService {
     private final ProductRepository productRepository;
 
     public List<CartItemResult> getCart(Long customerId) {
-        return cartItemRepository.findAllByCustomerId(customerId).stream()
+        List<CartItem> items = cartItemRepository.findAllByCustomerId(customerId);
+        Map<Long, Product> productsById =
+                productRepository
+                        .findAllById(items.stream().map(CartItem::getProductId).toList())
+                        .stream()
+                        .collect(Collectors.toMap(Product::getId, Function.identity()));
+
+        return items.stream()
                 .map(
                         item -> {
-                            Product product =
-                                    productRepository
-                                            .findById(item.getProductId())
-                                            .orElseThrow(
-                                                    () ->
-                                                            new ProductNotFoundException(
-                                                                    item.getProductId()));
+                            Product product = productsById.get(item.getProductId());
+                            if (product == null) {
+                                throw new ProductNotFoundException(item.getProductId());
+                            }
                             return toResult(item, product);
                         })
                 .toList();

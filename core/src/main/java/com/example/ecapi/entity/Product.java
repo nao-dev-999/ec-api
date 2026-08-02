@@ -40,4 +40,7 @@ public class Product extends BaseEntity {
             joinColumns = @JoinColumn(name = "product_id"),
             inverseJoinColumns = @JoinColumn(name = "category_id"))
     private Set<Category> categories = new HashSet<>();
+
+    @Column(name = "is_deleted", nullable = false)
+    private boolean deleted = false;
 }

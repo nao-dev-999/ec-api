@@ -54,4 +54,7 @@ public class Employee extends BaseEntity {
 
     @Column(name = "address_line2")
     private String addressLine2;
+
+    @Column(name = "is_deleted", nullable = false)
+    private boolean deleted = false;
 }

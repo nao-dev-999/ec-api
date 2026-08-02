@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.ecapi.config.JpaAuditConfig;
 import com.example.ecapi.constant.EmployeeRole;
 import com.example.ecapi.entity.Employee;
+import com.example.ecapi.repository.support.SoftDeleteJpaConfig;
 import com.example.ecapi.support.TestcontainersConfiguration;
 import java.util.Optional;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +20,7 @@ import org.springframework.context.annotation.Import;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
-@Import({TestcontainersConfiguration.class, JpaAuditConfig.class})
+@Import({TestcontainersConfiguration.class, JpaAuditConfig.class, SoftDeleteJpaConfig.class})
 class EmployeeRepositoryTest {
 
     @Autowired private TestEntityManager entityManager;
@@ -75,6 +76,25 @@ class EmployeeRepositoryTest {
 
             assertThatThrownBy(() -> entityManager.persistFlushFind(duplicate))
                     .isInstanceOf(RuntimeException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("findByEmailAndDeletedFalse（ログイン用）")
+    class FindByEmailAndDeletedFalseTest {
+
+        @Test
+        @DisplayName("論理削除済みの従業員は取得できないこと（ログイン不可）")
+        void shouldNotReturnSoftDeletedEmployee() {
+            Employee employee = persistEmployee("deleted@example.com");
+            employeeRepository.deleteById(employee.getId());
+            entityManager.flush();
+            entityManager.clear();
+
+            assertThat(employeeRepository.findByEmailAndDeletedFalse("deleted@example.com"))
+                    .isEmpty();
+            // 重複チェック用のfindByEmailは、物理UNIQUE制約が及ぶため論理削除済みでも見つかる
+            assertThat(employeeRepository.findByEmail("deleted@example.com")).isPresent();
         }
     }
 }

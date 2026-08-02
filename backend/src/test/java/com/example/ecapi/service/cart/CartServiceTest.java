@@ -70,7 +70,7 @@ class CartServiceTest {
         @DisplayName("カート内の商品一覧を取得できること")
         void shouldReturnCartItems() {
             when(cartItemRepository.findAllByCustomerId(CUSTOMER_ID)).thenReturn(List.of(cartItem));
-            when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+            when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
 
             List<CartItemResult> result = cartService.getCart(CUSTOMER_ID);
 

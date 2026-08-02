@@ -41,7 +41,9 @@ public class ProductService {
     }
 
     public List<ProductResult> searchProducts(String name, String description, BigDecimal price) {
-        Specification<Product> spec = ProductSpecification.byCriteria(name, description, price);
+        Specification<Product> spec =
+                ProductSpecification.byCriteria(name, description, price)
+                        .and(ProductSpecification.notDeleted());
         return productRepository.findAll(spec, Sort.by("name").ascending()).stream()
                 .map(this::toProductResult)
                 .toList();
