@@ -8,6 +8,7 @@ on:
   pull_request:
     branches: [ main ]
     paths: [ 'backend/**', 'core/**', 'batch/**' ]
+  workflow_dispatch:
 
 jobs:
   test:
