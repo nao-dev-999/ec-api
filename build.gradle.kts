@@ -2,6 +2,7 @@ plugins {
     id("org.springframework.boot") version "4.0.1" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
     id("com.diffplug.spotless") version "8.4.0"
+    id("org.sonarqube") version "7.3.1.8318"
 }
 
 allprojects {
@@ -87,5 +88,12 @@ spotless {
         ktlint("1.5.0")
         trimTrailingWhitespace()
         endWithNewline()
+    }
+}
+
+sonar {
+    properties {
+        property("sonar.projectKey", "nao-dev-999_ec-api")
+        property("sonar.organization", "nao-dev-999")
     }
 }
