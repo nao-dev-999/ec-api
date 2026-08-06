@@ -20,14 +20,8 @@ public class ServiceLoggingAspect {
         Logger log = LoggerFactory.getLogger(joinPoint.getTarget().getClass());
         String method = joinPoint.getSignature().toShortString();
         long start = System.currentTimeMillis();
-        try {
-            Object result = joinPoint.proceed();
-            log.debug("method={} responseTimeMs={}", method, System.currentTimeMillis() - start);
-            return result;
-        } catch (Throwable t) {
-            // 例外は GlobalExceptionHandler でログを出すため、ここでは二重にしない
-            log.debug("method={} threw={}", method, t.getClass().getSimpleName());
-            throw t;
-        }
+        Object result = joinPoint.proceed();
+        log.debug("method={} responseTimeMs={}", method, System.currentTimeMillis() - start);
+        return result;
     }
 }
