@@ -125,3 +125,46 @@ module "config" {
 
   notification_emails = var.config_notification_emails
 }
+
+# CloudWatch Alarms（アプリのERRORログ / ECS起動数0 / CPU使用率90%以上 → SNS通知）
+module "alarms" {
+  source = "../../modules/alarms"
+
+  project = var.project
+  env     = var.env
+
+  aws_region = var.aws_region
+
+  ecs_cluster_name   = module.ecs.cluster_name
+  ecs_service_name   = module.ecs.service_name
+  app_log_group_name = module.ecs.app_log_group_name
+
+  alb_arn_suffix              = module.alb.alb_arn_suffix
+  alb_target_group_arn_suffix = module.alb.target_group_arn_suffix
+  rds_instance_id             = module.rds.db_instance_id
+  redis_cluster_id            = module.ecs.redis_cluster_id
+
+  notification_emails = var.alarm_notification_emails
+}
+
+# セキュリティ監査基盤（CloudTrail: APIアクティビティ証跡 / GuardDuty: 脅威検知）
+# 高深刻度のGuardDuty検出はAWS Configと同じ通知チャンネル（module.config）に集約する
+module "security_audit" {
+  source = "../../modules/security-audit"
+
+  project = var.project
+  env     = var.env
+
+  sns_topic_arn = module.config.sns_topic_arn
+}
+
+# コスト監視（想定外課金の検知）
+module "budget" {
+  source = "../../modules/budget"
+
+  project = var.project
+  env     = var.env
+
+  monthly_limit_usd   = var.monthly_budget_usd
+  notification_emails = var.budget_notification_emails
+}

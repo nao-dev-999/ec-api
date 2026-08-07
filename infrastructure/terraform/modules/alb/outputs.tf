@@ -13,3 +13,13 @@ output "target_group_arn" {
 output "alb_sg_id" {
   value = aws_security_group.alb.id
 }
+
+output "alb_arn_suffix" {
+  description = "CloudWatchメトリクスのLoadBalancerディメンションに使うarn_suffix"
+  value       = aws_lb.this.arn_suffix
+}
+
+output "target_group_arn_suffix" {
+  description = "CloudWatchメトリクスのTargetGroupディメンションに使うarn_suffix"
+  value       = aws_lb_target_group.this.arn_suffix
+}

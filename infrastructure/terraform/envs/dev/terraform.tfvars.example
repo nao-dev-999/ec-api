@@ -22,3 +22,10 @@ github_branch           = "main"
 
 # AWS Config
 config_notification_emails = ["you@example.com"]
+
+# CloudWatch Alarms
+alarm_notification_emails = ["you@example.com"]
+
+# AWS Budgets
+monthly_budget_usd         = "50"
+budget_notification_emails = ["you@example.com"]

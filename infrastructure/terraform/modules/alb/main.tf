@@ -1,3 +1,74 @@
+data "aws_caller_identity" "current" {}
+
+# ---------------------------------------------------------------------------
+# ALBアクセスログ保存用S3バケット
+# 障害調査やWAF誤検知の裏付けにアクセスログが必要なため出力する
+# ---------------------------------------------------------------------------
+resource "aws_s3_bucket" "access_logs" {
+  bucket        = "${var.project}-${var.env}-alb-logs"
+  force_destroy = true
+
+  tags = {
+    Name    = "${var.project}-${var.env}-alb-logs"
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "access_logs" {
+  bucket = aws_s3_bucket.access_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "access_logs" {
+  bucket = aws_s3_bucket.access_logs.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+# 全リージョン共通で使えるELBログ配信サービスプリンシパル方式（リージョンごとのELBアカウントID一覧が不要）
+resource "aws_s3_bucket_policy" "access_logs" {
+  bucket = aws_s3_bucket.access_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "AWSLogDeliveryWrite"
+        Effect    = "Allow"
+        Principal = { Service = "delivery.logs.amazonaws.com" }
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.access_logs.arn}/${var.project}-${var.env}-alb/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+        Condition = {
+          StringEquals = {
+            "s3:x-amz-acl"      = "bucket-owner-full-control"
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      },
+      {
+        Sid       = "AWSLogDeliveryAclCheck"
+        Effect    = "Allow"
+        Principal = { Service = "delivery.logs.amazonaws.com" }
+        Action    = "s3:GetBucketAcl"
+        Resource  = aws_s3_bucket.access_logs.arn
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      }
+    ]
+  })
+}
+
 resource "aws_lb" "this" {
   name               = "${var.project}-${var.env}-alb"
   internal           = false
@@ -5,9 +76,18 @@ resource "aws_lb" "this" {
   subnets            = var.public_subnet_ids
   security_groups    = [aws_security_group.alb.id]
   enable_deletion_protection = false
+
+  access_logs {
+    bucket  = aws_s3_bucket.access_logs.id
+    prefix  = "${var.project}-${var.env}-alb"
+    enabled = true
+  }
+
   tags = {
     Name = "${var.project}-${var.env}-alb"
   }
+
+  depends_on = [aws_s3_bucket_policy.access_logs]
 }
 
 resource "aws_security_group" "alb" {

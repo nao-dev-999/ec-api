@@ -14,6 +14,7 @@ resource "aws_db_instance" "this" {
   engine_version          = var.engine_version
   instance_class          = var.instance_class
   allocated_storage       = 20
+  max_allocated_storage   = var.max_allocated_storage
   storage_type            = "gp3"
   db_name                 = var.database_name
   username                = var.master_username
@@ -26,6 +27,7 @@ resource "aws_db_instance" "this" {
   publicly_accessible     = false
   multi_az                = false
   port                    = 5432
+  backup_retention_period = var.backup_retention_period
 
   tags = {
     Name = var.identifier

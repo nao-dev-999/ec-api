@@ -47,3 +47,21 @@ output "waf_web_acl_arn" {
   description = "ALBにアソシエートしたWAF WebACLのARN"
   value       = module.waf.web_acl_arn
 }
+
+output "alarms_sns_topic_arn" {
+  description = "CloudWatchアラーム通知用SNSトピックARN"
+  value       = module.alarms.sns_topic_arn
+}
+
+output "ops_dashboard_name" {
+  description = "CloudWatchダッシュボード名"
+  value       = module.alarms.dashboard_name
+}
+
+output "cloudtrail_arn" {
+  value = module.security_audit.cloudtrail_arn
+}
+
+output "guardduty_detector_id" {
+  value = module.security_audit.guardduty_detector_id
+}

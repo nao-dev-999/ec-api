@@ -29,3 +29,23 @@ variable "config_notification_emails" {
   type        = list(string)
   default     = []
 }
+
+# CloudWatch Alarms
+variable "alarm_notification_emails" {
+  description = "CloudWatchアラーム（ERRORログ / ECS起動数0 / CPU使用率90%以上）の通知を受け取るメールアドレス一覧"
+  type        = list(string)
+  default     = []
+}
+
+# AWS Budgets
+variable "monthly_budget_usd" {
+  description = "月次コスト予算の上限（USD）"
+  type        = string
+  default     = "50"
+}
+
+variable "budget_notification_emails" {
+  description = "予算超過通知を受け取るメールアドレス一覧"
+  type        = list(string)
+  default     = []
+}
