@@ -50,3 +50,15 @@ variable "vpc_id" {
 variable "ecs_sg_id" {
   type = string
 }
+
+variable "backup_retention_period" {
+  description = "自動バックアップの保持日数（0で無効。デフォルトのTerraform/AWS挙動は0=バックアップ無効のため明示的に設定する）"
+  type        = number
+  default     = 7
+}
+
+variable "max_allocated_storage" {
+  description = "ストレージ自動拡張の上限（GB）。allocated_storageに近づくと自動的にスケールアップする"
+  type        = number
+  default     = 100
+}

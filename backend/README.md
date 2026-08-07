@@ -76,6 +76,25 @@ terraform apply -target=module.rds
 ### ステップ3: 残り（ALB, ECS, CodePipeline）をすべて作成
 terraform apply
 
+### CloudWatchアラーム（module.alarms）
+
+`terraform.tfvars` の `alarm_notification_emails` にメールアドレスを設定しておくと、apply後にSNSトピック（`{project}-{env}-alarms`）へ以下のアラームが通知される（購読には各アドレスでの確認メール承認が必要）。
+
+| アラーム | 内容 | 条件 |
+|---|---|---|
+| app-error-log | アプリログにERRORが出力 | 1件以上/1分 |
+| ecs-running-count-zero | ECSサービスの起動中タスク数が0 | 2分連続 |
+| ecs-cpu-high | ECSサービスのCPU使用率 | 90%以上（15分） |
+| ecs-memory-high | ECSサービスのメモリ使用率 | 90%以上（15分） |
+| alb-unhealthy-host | ALBのヘルスチェック失敗ターゲット | 1台以上/2分 |
+| alb-target-5xx | ALB配下のアプリが返す5xx | 5件以上/5分 |
+| rds-cpu-high | RDSのCPU使用率 | 90%以上（15分） |
+| rds-connections-high | RDSのDatabaseConnections | 80以上（10分、`rds_database_connections_threshold`で調整可） |
+| redis-cpu-high | ElastiCache RedisのEngineCPUUtilization | 90%以上（15分） |
+| redis-evictions | ElastiCache Redisのメモリ逼迫によるEvictions | 1件以上/5分 |
+| redis-freeable-memory-low | ElastiCache Redisの空きメモリ | 約50MB未満（15分、cache.t3.micro想定） |
+
+定義は `infrastructure/terraform/modules/alarms/main.tf` を参照。
 
 ## 起動手順
 

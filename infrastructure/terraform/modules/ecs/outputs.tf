@@ -34,6 +34,11 @@ output "redis_host" {
   value = aws_elasticache_cluster.this.cache_nodes[0].address
 }
 
+output "redis_cluster_id" {
+  description = "CloudWatchメトリクスのCacheClusterIdディメンションに使うクラスタID"
+  value       = aws_elasticache_cluster.this.cluster_id
+}
+
 output "db_debug_task_definition_family" {
   value = aws_ecs_task_definition.db_debug.family
 }
@@ -48,4 +53,8 @@ output "batch_task_definition_family" {
 
 output "batch_state_machine_arn" {
   value = aws_sfn_state_machine.batch_orchestrator.arn
+}
+
+output "app_log_group_name" {
+  value = aws_cloudwatch_log_group.app.name
 }
