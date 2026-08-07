@@ -48,7 +48,7 @@ desktop.ini
 
 ### Local Configuration (Sensitive Data) ###
 .env
-src/main/resources/application-local.properties
+**/src/main/resources/application-local.yml
 
 ### Terraform ###
 # Terraform の作業ディレクトリ
