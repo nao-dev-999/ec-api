@@ -95,5 +95,16 @@ sonar {
     properties {
         property("sonar.projectKey", "nao-dev-999_ec-api")
         property("sonar.organization", "nao-dev-999")
+        // backend/build.gradle.kts の jacocoTestReport 除外設定と揃える
+        // (config/constant/例外の単純DTOはビジネスロジックを持たずテスト対象外という方針)
+        property(
+            "sonar.coverage.exclusions",
+            listOf(
+                "**/EcApiApplication.java",
+                "**/config/**",
+                "**/constant/**",
+                "**/exception/ErrorResponse.java",
+            ).joinToString(","),
+        )
     }
 }

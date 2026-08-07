@@ -38,6 +38,15 @@ module "alb" {
   health_check_path   = "/actuator/health"
 }
 
+# WAF（ALBの手前でIPアドレス単位のレートベース制限）
+module "waf" {
+  source = "../../modules/waf"
+
+  project = var.project
+  env     = var.env
+  alb_arn = module.alb.alb_arn
+}
+
 # ECR
 module "ecr" {
   source = "../../modules/ecr"

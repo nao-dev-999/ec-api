@@ -1,10 +1,12 @@
 package com.example.ecapi.config;
 
+import com.example.ecapi.filter.RateLimitingFilter;
 import com.example.ecapi.filter.RequestLoggingFilter;
 import com.example.ecapi.filter.RequestTracingFilter;
 import com.example.ecapi.helper.MessageHelper;
 import com.example.ecapi.service.auth.CustomerUserDetailsService;
 import com.example.ecapi.service.auth.UserDetailsServiceImpl;
+import io.github.bucket4j.distributed.proxy.ProxyManager;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +37,7 @@ public class SecurityConfig {
     private static final String ROLE_CUSTOMER = "CUSTOMER";
 
     private final MessageHelper messageHelper;
+    private final ProxyManager<byte[]> rateLimitProxyManager;
 
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
     private List<String> allowedOrigins;
@@ -108,6 +111,12 @@ public class SecurityConfig {
                                                 }));
 
         http.addFilterBefore(new RequestTracingFilter(), SecurityContextHolderFilter.class);
+        // ✅ レート制限は認証フィルターより前（認証コストをかける前に弾く）
+        // RequestTracingFilter.class を参照するため、上のaddFilterBeforeより後で呼ぶ必要がある
+        // （Spring Securityのフィルター順序解決は、参照先クラスが先に登録済みであることを要求する）
+        http.addFilterBefore(
+                new RateLimitingFilter(rateLimitProxyManager, messageHelper),
+                RequestTracingFilter.class);
         http.addFilterAfter(new RequestLoggingFilter(), RequestTracingFilter.class);
 
         return http.build();
