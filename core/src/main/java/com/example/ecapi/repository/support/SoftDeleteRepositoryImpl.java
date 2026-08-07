@@ -1,7 +1,7 @@
 package com.example.ecapi.repository.support;
 
+import com.example.ecapi.entity.SoftDeletable;
 import jakarta.persistence.EntityManager;
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -29,8 +29,8 @@ import org.springframework.data.jpa.repository.support.SimpleJpaRepository;
  *   <li>物理削除が本当に必要な場合は {@link #hardDeleteById(Object)} を明示的に呼ぶ
  * </ul>
  *
- * <p><b>deleted フィールドを持たないエンティティ:</b> JPA メタモデルを起動時に確認し、 {@code deleted}
- * 属性が存在しないエンティティに対しては一切の挙動変更をしない （標準の {@link SimpleJpaRepository} と同じ動作にフォールバックする）。
+ * <p><b>deleted フィールドを持たないエンティティ:</b> エンティティが {@link SoftDeletable} を実装しているかどうかで判定し、
+ * 実装していないエンティティに対しては一切の挙動変更をしない （標準の {@link SimpleJpaRepository} と同じ動作にフォールバックする）。
  * これにより集計テーブルや中間テーブルなど論理削除対象外のエンティティが混在しても安全。
  *
  * <p><b>このクラスで防げないもの（規約側で引き続き担保が必要）:</b>
@@ -50,10 +50,7 @@ public class SoftDeleteRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID> 
     private final EntityManager entityManager;
     private final JpaEntityInformation<T, ?> entityInformation;
 
-    /** deleted 属性への書き込みに使うField（起動時に1回だけ解決してキャッシュ）。持たないエンティティではnull。 */
-    private final Field deletedField;
-
-    /** このエンティティが deleted 属性を持つか */
+    /** このエンティティが deleted 属性を持つか（{@link SoftDeletable} を実装しているか） */
     private final boolean softDeletable;
 
     public SoftDeleteRepositoryImpl(
@@ -61,21 +58,7 @@ public class SoftDeleteRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID> 
         super(entityInformation, entityManager);
         this.entityManager = entityManager;
         this.entityInformation = entityInformation;
-        this.deletedField = findDeletedField(entityInformation, entityManager);
-        this.softDeletable = deletedField != null;
-    }
-
-    private static Field findDeletedField(JpaEntityInformation<?, ?> info, EntityManager em) {
-        return em.getMetamodel().entity(info.getJavaType()).getAttributes().stream()
-                .filter(attr -> DELETED_ATTRIBUTE.equals(attr.getName()))
-                .findFirst()
-                .map(attr -> (Field) attr.getJavaMember())
-                .map(
-                        field -> {
-                            field.setAccessible(true);
-                            return field;
-                        })
-                .orElse(null);
+        this.softDeletable = SoftDeletable.class.isAssignableFrom(entityInformation.getJavaType());
     }
 
     @Override
@@ -140,7 +123,7 @@ public class SoftDeleteRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID> 
             return;
         }
         markDeleted(entity);
-        save(entity);
+        entityManager.merge(entity);
     }
 
     /** 論理削除属性の有無に関わらず、常に物理DELETEする。deleted属性を持つエンティティで本当に物理削除が必要な場合のみ明示的に呼ぶこと。 */
@@ -149,12 +132,7 @@ public class SoftDeleteRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID> 
     }
 
     private void markDeleted(T entity) {
-        try {
-            deletedField.set(entity, true);
-        } catch (IllegalAccessException e) {
-            throw new IllegalStateException(
-                    "Failed to set deleted flag on " + entity.getClass().getSimpleName(), e);
-        }
+        ((SoftDeletable) entity).setDeleted(true);
     }
 
     private Specification<T> notDeletedSpec() {

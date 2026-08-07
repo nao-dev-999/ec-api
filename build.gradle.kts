@@ -25,6 +25,12 @@ subprojects {
         }
     }
 
+    // 依存関係解決の再現性を保証する(gradle.lockfileを固定)
+    // 依存関係を追加・更新したら ./gradlew dependencies --write-locks で再生成しコミットすること
+    dependencyLocking {
+        lockAllConfigurations()
+    }
+
     tasks.withType<Test> {
         useJUnitPlatform()
         testLogging {

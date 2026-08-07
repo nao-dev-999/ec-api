@@ -16,7 +16,7 @@ import lombok.*;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Product extends BaseEntity {
+public class Product extends BaseEntity implements SoftDeletable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
