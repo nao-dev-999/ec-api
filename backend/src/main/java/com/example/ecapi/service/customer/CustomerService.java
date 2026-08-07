@@ -45,7 +45,7 @@ public class CustomerService {
         try {
             customerRepository.deleteById(id);
             customerRepository.flush();
-        } catch (DataIntegrityViolationException e) {
+        } catch (DataIntegrityViolationException _) {
             throw new CustomerInUseException(id);
         }
         log.info("Customer deleted customerId={}", id);

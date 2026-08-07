@@ -33,6 +33,9 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
+    private static final String CONTENT_TYPE_JSON = "application/json;charset=UTF-8";
+    private static final String ROLE_CUSTOMER = "CUSTOMER";
+
     private final MessageHelper messageHelper;
     private final ProxyManager<byte[]> rateLimitProxyManager;
 
@@ -40,8 +43,11 @@ public class SecurityConfig {
     private List<String> allowedOrigins;
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http) {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // CSRF対策はCookie(same-site=Lax、application.yml)と許可オリジンを絞ったCORSで代替。
+                // クロスサイトのフォーム送信ではセッションCookieが付与されず、
+                // 許可外オリジンからのcredentials付きJSONリクエストはCORSでブロックされる。
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(
                         sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
@@ -62,11 +68,11 @@ public class SecurityConfig {
                                         .requestMatchers("/api/customer/auth/**")
                                         .permitAll()
                                         .requestMatchers("/api/customer/cart/**")
-                                        .hasRole("CUSTOMER")
+                                        .hasRole(ROLE_CUSTOMER)
                                         .requestMatchers("/api/customer/me/**")
-                                        .hasRole("CUSTOMER")
+                                        .hasRole(ROLE_CUSTOMER)
                                         .requestMatchers("/api/orders/**")
-                                        .hasRole("CUSTOMER")
+                                        .hasRole(ROLE_CUSTOMER)
                                         .requestMatchers("/api/admin/**")
                                         .hasAnyRole("ADMIN", "PRODUCT_MANAGER")
                                         .anyRequest()
@@ -77,8 +83,7 @@ public class SecurityConfig {
                                                 (request, response, authException) -> {
                                                     response.setStatus(
                                                             HttpServletResponse.SC_UNAUTHORIZED);
-                                                    response.setContentType(
-                                                            "application/json;charset=UTF-8");
+                                                    response.setContentType(CONTENT_TYPE_JSON);
                                                     response.getWriter()
                                                             .write(
                                                                     """
@@ -93,8 +98,7 @@ public class SecurityConfig {
                                                 (request, response, accessDeniedException) -> {
                                                     response.setStatus(
                                                             HttpServletResponse.SC_FORBIDDEN);
-                                                    response.setContentType(
-                                                            "application/json;charset=UTF-8");
+                                                    response.setContentType(CONTENT_TYPE_JSON);
                                                     response.getWriter()
                                                             .write(
                                                                     """

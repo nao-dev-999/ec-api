@@ -90,7 +90,7 @@ public class ProductService {
         try {
             productRepository.deleteById(id);
             productRepository.flush();
-        } catch (DataIntegrityViolationException e) {
+        } catch (DataIntegrityViolationException _) {
             throw new ProductInUseException(id);
         }
         log.info("Product deleted productId={}", id);
