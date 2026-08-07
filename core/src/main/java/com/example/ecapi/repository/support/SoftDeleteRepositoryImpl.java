@@ -123,6 +123,9 @@ public class SoftDeleteRepositoryImpl<T, ID> extends SimpleJpaRepository<T, ID> 
             return;
         }
         markDeleted(entity);
+        // deleteById() 経由なら entity は既にmanagedなのでmerge()は実質no-op（dirty checkingで足りる）。
+        // ただしdelete(T)はCrudRepositoryの公開APIでもあり、detachedなentityを直接渡す呼び出し元が
+        // 将来現れてもマーク漏れが起きないよう、防御的にmerge()を呼ぶ（戻り値は使わなくても副作用で十分）。
         entityManager.merge(entity);
     }
 
