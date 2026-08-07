@@ -94,8 +94,67 @@ class RateLimitingFilterTest {
         assertThat(otherIpResponse.getStatus()).isEqualTo(200);
     }
 
+    @Test
+    void signupエンドポイントは上限を超えると429を返す() throws Exception {
+        AtomicInteger chainInvocations = new AtomicInteger();
+        FilterChain chain = (req, res) -> chainInvocations.incrementAndGet();
+
+        // LimitTier.SIGNUP の上限は5回/時
+        for (int i = 0; i < 5; i++) {
+            filter.doFilter(signupRequest("203.0.113.20"), new MockHttpServletResponse(), chain);
+        }
+        assertThat(chainInvocations.get()).isEqualTo(5);
+
+        MockHttpServletResponse exceedingResponse = new MockHttpServletResponse();
+        filter.doFilter(signupRequest("203.0.113.20"), exceedingResponse, chain);
+
+        assertThat(exceedingResponse.getStatus()).isEqualTo(429);
+        assertThat(chainInvocations.get()).isEqualTo(5);
+    }
+
+    @Test
+    void auth以外のAPIには一般枠GENERALが適用される() throws Exception {
+        AtomicInteger chainInvocations = new AtomicInteger();
+        FilterChain chain = (req, res) -> chainInvocations.incrementAndGet();
+
+        MockHttpServletRequest request =
+                new MockHttpServletRequest("GET", "/api/customer/products");
+        request.setRemoteAddr("203.0.113.30");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        filter.doFilter(request, response, chain);
+
+        assertThat(response.getStatus()).isEqualTo(200);
+        assertThat(chainInvocations.get()).isEqualTo(1);
+    }
+
+    @Test
+    void actuatorヘルスチェックはレート制限の対象外() throws Exception {
+        AtomicInteger chainInvocations = new AtomicInteger();
+        FilterChain chain = (req, res) -> chainInvocations.incrementAndGet();
+
+        // LOGINティアの上限(10回/分)を超える回数リクエストしても、
+        // shouldNotFilterでスキップされるため429にならない
+        for (int i = 0; i < 15; i++) {
+            MockHttpServletRequest request = new MockHttpServletRequest("GET", "/actuator/health");
+            request.setRemoteAddr("203.0.113.40");
+            MockHttpServletResponse response = new MockHttpServletResponse();
+
+            filter.doFilter(request, response, chain);
+
+            assertThat(response.getStatus()).isEqualTo(200);
+        }
+        assertThat(chainInvocations.get()).isEqualTo(15);
+    }
+
     private MockHttpServletRequest loginRequest(String remoteAddr) {
         MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
+        request.setRemoteAddr(remoteAddr);
+        return request;
+    }
+
+    private MockHttpServletRequest signupRequest(String remoteAddr) {
+        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/signup");
         request.setRemoteAddr(remoteAddr);
         return request;
     }
