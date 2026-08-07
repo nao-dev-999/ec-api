@@ -42,3 +42,8 @@ output "config_sns_topic_arn" {
   description = "AWS Config通知用SNSトピックARN"
   value       = module.config.sns_topic_arn
 }
+
+output "waf_web_acl_arn" {
+  description = "ALBにアソシエートしたWAF WebACLのARN"
+  value       = module.waf.web_acl_arn
+}

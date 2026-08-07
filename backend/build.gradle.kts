@@ -16,6 +16,10 @@ dependencies {
     implementation("org.hibernate.orm:hibernate-core")
     implementation("org.springframework.session:spring-session-data-redis")
 
+    // ─── Bucket4j (レート制限、Redisでインスタンス間の制限値を共有) ─────
+    implementation("com.bucket4j:bucket4j_jdk11-core:8.14.0")
+    implementation("com.bucket4j:bucket4j_jdk11-lettuce:8.14.0")
+
     implementation("org.mapstruct:mapstruct:1.5.5.Final")
     annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
     annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
