@@ -13,13 +13,11 @@ phases:
     commands:
       - echo "=== Building Docker image ==="
       - docker build -f batch/Dockerfile -t $IMAGE_URI .
-      - docker tag $IMAGE_URI $ECR_REPO_URI:latest
 
   post_build:
     commands:
       - echo "=== Pushing image to ECR ==="
       - docker push $IMAGE_URI
-      - docker push $ECR_REPO_URI:latest
       - echo "=== Registering new batch task definition revision ==="
       - |
         aws ecs describe-task-definition \
@@ -37,5 +35,6 @@ phases:
           --requires-compatibilities FARGATE \
           --cpu "$(jq -r '.cpu' task-def.json)" \
           --memory "$(jq -r '.memory' task-def.json)" \
+          --volumes "$(jq -c '.volumes' task-def.json)" \
           --container-definitions "$NEW_CONTAINER_DEFS"
       - echo "=== batch task definition updated ==="

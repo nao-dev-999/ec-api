@@ -1,6 +1,6 @@
 resource "aws_ecr_repository" "app" {
   name                 = "${var.project}-${var.env}-app"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
@@ -33,7 +33,7 @@ resource "aws_ecr_lifecycle_policy" "app" {
 
 resource "aws_ecr_repository" "flyway" {
   name                 = "${var.project}-${var.env}-flyway"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true
@@ -65,7 +65,7 @@ resource "aws_ecr_lifecycle_policy" "flyway" {
 
 resource "aws_ecr_repository" "batch" {
   name                 = "${var.project}-${var.env}-batch"
-  image_tag_mutability = "MUTABLE"
+  image_tag_mutability = "IMMUTABLE"
 
   image_scanning_configuration {
     scan_on_push = true

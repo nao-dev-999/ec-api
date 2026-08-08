@@ -15,24 +15,42 @@ phases:
     commands:
       - echo "=== Building Docker image ==="
       - docker build -f backend/Dockerfile -t $IMAGE_URI .
-      - docker tag $IMAGE_URI $ECR_REPO_URI:latest
       - echo "=== Building Flyway migration image ==="
       - docker build -f backend/Dockerfile.flyway -t $FLYWAY_IMAGE_URI .
-      - docker tag $FLYWAY_IMAGE_URI $FLYWAY_ECR_REPO_URI:latest
 
   post_build:
     commands:
       - echo "=== Pushing image to ECR ==="
       - docker push $IMAGE_URI
-      - docker push $ECR_REPO_URI:latest
       - echo "=== Pushing Flyway image to ECR ==="
       - docker push $FLYWAY_IMAGE_URI
-      - docker push $FLYWAY_ECR_REPO_URI:latest
+      - echo "=== Registering new Flyway task definition revision ==="
+      - |
+        aws ecs describe-task-definition \
+          --task-definition $FLYWAY_TASK_DEF_FAMILY \
+          --query 'taskDefinition' > flyway-task-def.json
+      - |
+        NEW_FLYWAY_CONTAINER_DEFS=$(jq --arg IMAGE "$FLYWAY_IMAGE_URI" \
+          '.containerDefinitions[0].image = $IMAGE | .containerDefinitions' flyway-task-def.json)
+      - |
+        FLYWAY_TASK_DEF_ARN=$(aws ecs register-task-definition \
+          --family $FLYWAY_TASK_DEF_FAMILY \
+          --task-role-arn "$(jq -r '.taskRoleArn' flyway-task-def.json)" \
+          --execution-role-arn "$(jq -r '.executionRoleArn' flyway-task-def.json)" \
+          --network-mode "$(jq -r '.networkMode' flyway-task-def.json)" \
+          --requires-compatibilities FARGATE \
+          --cpu "$(jq -r '.cpu' flyway-task-def.json)" \
+          --memory "$(jq -r '.memory' flyway-task-def.json)" \
+          --volumes "$(jq -c '.volumes' flyway-task-def.json)" \
+          --container-definitions "$NEW_FLYWAY_CONTAINER_DEFS" \
+          --query 'taskDefinition.taskDefinitionArn' \
+          --output text)
+      - echo "Flyway task definition = $FLYWAY_TASK_DEF_ARN"
       - echo "=== Running Flyway migration ==="
       - |
         TASK_ARN=$(aws ecs run-task \
           --cluster $ECS_CLUSTER \
-          --task-definition $FLYWAY_TASK_DEF_FAMILY \
+          --task-definition $FLYWAY_TASK_DEF_ARN \
           --launch-type FARGATE \
           --network-configuration "awsvpcConfiguration={subnets=[$FLYWAY_SUBNET],securityGroups=[$FLYWAY_SG],assignPublicIp=DISABLED}" \
           --query "tasks[0].taskArn" \

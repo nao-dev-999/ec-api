@@ -326,6 +326,13 @@ resource "aws_ecs_task_definition" "flyway" {
       image     = "${var.flyway_image_url}:${var.flyway_image_tag}"
       essential = true
 
+      # ECS.5(FSBP): ルートファイルシステムを読み取り専用に制限。
+      # Flywayはレポート生成等で一時ファイルを書く場合があるため/tmpのみ書き込み可能にする
+      readonlyRootFilesystem = true
+      mountPoints = [
+        { sourceVolume = "tmp", containerPath = "/tmp", readOnly = false }
+      ]
+
       command = ["migrate"]
 
       environment = [
@@ -355,6 +362,10 @@ resource "aws_ecs_task_definition" "flyway" {
       }
     }
   ])
+
+  volume {
+    name = "tmp"
+  }
 
   tags = {
     Project = var.project
@@ -390,6 +401,13 @@ resource "aws_ecs_task_definition" "batch" {
       image     = "${var.batch_image_url}:${var.batch_image_tag}"
       essential = true
 
+      # ECS.5(FSBP): ルートファイルシステムを読み取り専用に制限。
+      # JVMのjava.io.tmpdir、および帳票出力ジョブの一時ファイル用に/tmpのみ書き込み可能にする
+      readonlyRootFilesystem = true
+      mountPoints = [
+        { sourceVolume = "tmp", containerPath = "/tmp", readOnly = false }
+      ]
+
       environment = [
         { name = "SPRING_PROFILES_ACTIVE", value = var.env },
         { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${var.db_host}:5432/${var.db_name}" },
@@ -416,6 +434,10 @@ resource "aws_ecs_task_definition" "batch" {
       }
     }
   ])
+
+  volume {
+    name = "tmp"
+  }
 
   tags = {
     Project = var.project
