@@ -78,3 +78,15 @@ variable "waf_auth_rate_limit_threshold" {
   type        = number
   default     = 1
 }
+
+variable "alb_target_response_time_threshold" {
+  description = "ALBのTargetResponseTime(秒)アラームの閾値。アプリの応答遅延を検知する"
+  type        = number
+  default     = 3
+}
+
+variable "alb_elb_5xx_threshold" {
+  description = "ALB自身が返すHTTPCode_ELB_5XX_Countアラームの閾値（5分間の合計）。ターゲット側ではなくALB自体の異常（WAF fail closed等）を検知する"
+  type        = number
+  default     = 5
+}
