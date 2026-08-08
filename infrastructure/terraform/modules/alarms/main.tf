@@ -457,6 +457,36 @@ resource "aws_cloudwatch_metric_alarm" "alb_elb_5xx" {
 }
 
 # ---------------------------------------------------------------------------
+# ALB: RejectedConnectionCount（ALBの最大接続数に達し、接続そのものを拒否した数）
+# 通常のエラー(5xx等)より深刻。ALBのキャパシティ限界を示すため、閾値は低めに設定する
+# ---------------------------------------------------------------------------
+resource "aws_cloudwatch_metric_alarm" "alb_rejected_connections" {
+  alarm_name        = "${var.project}-${var.env}-alb-rejected-connections"
+  alarm_description = "ALBが最大接続数に達し、接続を拒否している(RejectedConnectionCount)"
+
+  namespace   = "AWS/ApplicationELB"
+  metric_name = "RejectedConnectionCount"
+  dimensions = {
+    LoadBalancer = var.alb_arn_suffix
+  }
+
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = var.alb_rejected_connections_threshold
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+  ok_actions    = [aws_sns_topic.alarms.arn]
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+# ---------------------------------------------------------------------------
 # CloudWatchダッシュボード（上記アラームの元メトリクスを1画面に集約）
 # ---------------------------------------------------------------------------
 locals {
@@ -510,6 +540,7 @@ locals {
           ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", var.alb_arn_suffix, { label = "Target 5xx", stat = "Sum", yAxis = "right" }],
           ["AWS/ApplicationELB", "HTTPCode_ELB_5XX_Count", "LoadBalancer", var.alb_arn_suffix, { label = "ELB 5xx", stat = "Sum", yAxis = "right" }],
           ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", var.alb_arn_suffix, { label = "TargetResponseTime", stat = "Average", yAxis = "left" }],
+          ["AWS/ApplicationELB", "RejectedConnectionCount", "LoadBalancer", var.alb_arn_suffix, { label = "RejectedConnectionCount", stat = "Sum", yAxis = "right" }],
         ]
       }
     },

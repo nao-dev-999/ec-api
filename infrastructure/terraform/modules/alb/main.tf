@@ -1,4 +1,5 @@
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 # ---------------------------------------------------------------------------
 # ALBアクセスログ保存用S3バケット
@@ -93,6 +94,13 @@ resource "aws_s3_bucket_policy" "access_logs" {
             "s3:x-amz-acl"      = "bucket-owner-full-control"
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
           }
+          # このアカウント/リージョン内のELB(ALB/NLB)からの配信のみ許可する。
+          # 特定のALBのARN(aws_lb.this.arn)に絞ると、そのALBがこのバケットポリシーに
+          # depends_onで依存している関係上、循環参照になってしまうため、
+          # サービス種別+アカウント+リージョンのワイルドカードで絞り込む。
+          ArnLike = {
+            "aws:SourceArn" = "arn:aws:elasticloadbalancing:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"
+          }
         }
       },
       {
@@ -104,6 +112,9 @@ resource "aws_s3_bucket_policy" "access_logs" {
         Condition = {
           StringEquals = {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+          ArnLike = {
+            "aws:SourceArn" = "arn:aws:elasticloadbalancing:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"
           }
         }
       }
