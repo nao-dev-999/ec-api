@@ -31,6 +31,12 @@ spring:
 
 server:
   port: 8080
+  # ALBのidle_timeout(60秒)より長く設定すること。
+  # 同じ/短いと、ALBが接続を再利用しようとした直後にTomcatが先に閉じてしまい、
+  # 502 Bad Gatewayが断続的に発生する。未設定時のTomcatデフォルトはconnectionTimeoutと
+  # 同じ60秒でALBと同値になり危険なため明示する。
+  tomcat:
+    keep-alive-timeout: 65s
   servlet:
     session:
       cookie:
