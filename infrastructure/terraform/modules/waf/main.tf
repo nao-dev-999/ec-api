@@ -125,6 +125,22 @@ resource "aws_s3_bucket_public_access_block" "waf_logs" {
   restrict_public_buckets = true
 }
 
+resource "aws_s3_bucket_server_side_encryption_configuration" "waf_logs" {
+  bucket = aws_s3_bucket.waf_logs.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_versioning" "waf_logs" {
+  bucket = aws_s3_bucket.waf_logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
 # コスト削減のため、一定期間経過後にオブジェクトを自動削除する
 resource "aws_s3_bucket_lifecycle_configuration" "waf_logs" {
   bucket = aws_s3_bucket.waf_logs.id
@@ -137,6 +153,15 @@ resource "aws_s3_bucket_lifecycle_configuration" "waf_logs" {
 
     expiration {
       days = var.waf_log_retention_days
+    }
+
+    # versioning有効化に伴い、旧バージョンも同様に整理する
+    noncurrent_version_expiration {
+      noncurrent_days = var.waf_log_retention_days
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
     }
   }
 }

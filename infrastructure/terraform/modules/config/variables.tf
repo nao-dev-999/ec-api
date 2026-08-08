@@ -11,3 +11,9 @@ variable "notification_emails" {
   type        = list(string)
   default     = []
 }
+
+variable "config_log_retention_days" {
+  description = "AWS Config記録データの保持日数。コスト削減のため、経過後は自動削除する。"
+  type        = number
+  default     = 365
+}

@@ -32,6 +32,37 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "config" {
   }
 }
 
+resource "aws_s3_bucket_versioning" "config" {
+  bucket = aws_s3_bucket.config.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# コスト削減のため、一定期間経過後に自動削除する
+resource "aws_s3_bucket_lifecycle_configuration" "config" {
+  bucket = aws_s3_bucket.config.id
+
+  rule {
+    id     = "expire-config-records"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      days = var.config_log_retention_days
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = var.config_log_retention_days
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
 # AWS Config公式ドキュメントのバケットポリシー要件（confused deputy対策のSourceAccount条件を含む）
 resource "aws_s3_bucket_policy" "config" {
   bucket = aws_s3_bucket.config.id

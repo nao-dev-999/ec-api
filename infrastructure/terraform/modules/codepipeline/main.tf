@@ -35,6 +35,41 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "artifacts" {
   }
 }
 
+# ビルドアーティファクト(Dockerビルドコンテキスト等)を保存するため、パブリックアクセスを禁止する
+resource "aws_s3_bucket_public_access_block" "artifacts" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+# CodePipelineの実行ごとに生成されるアーティファクトが無期限に蓄積しないよう、
+# 一定期間経過後に自動削除する
+resource "aws_s3_bucket_lifecycle_configuration" "artifacts" {
+  bucket = aws_s3_bucket.artifacts.id
+
+  rule {
+    id     = "expire-pipeline-artifacts"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      days = 30
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = 30
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
 # ---------------------------------------------------------------------------
 # IAM Role for CodePipeline
 # ---------------------------------------------------------------------------
