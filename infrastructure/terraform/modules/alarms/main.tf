@@ -399,6 +399,64 @@ resource "aws_cloudwatch_metric_alarm" "waf_auth_rate_limit_triggered" {
 }
 
 # ---------------------------------------------------------------------------
+# ALB: アプリの応答時間(TargetResponseTime)の悪化を検知
+# ---------------------------------------------------------------------------
+resource "aws_cloudwatch_metric_alarm" "alb_target_response_time_high" {
+  alarm_name        = "${var.project}-${var.env}-alb-target-response-time-high"
+  alarm_description = "ALB配下のアプリの応答時間が閾値を超えている"
+
+  namespace   = "AWS/ApplicationELB"
+  metric_name = "TargetResponseTime"
+  dimensions = {
+    LoadBalancer = var.alb_arn_suffix
+  }
+
+  statistic           = "Average"
+  period              = 300
+  evaluation_periods  = 3
+  threshold           = var.alb_target_response_time_threshold
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+  ok_actions    = [aws_sns_topic.alarms.arn]
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+# ---------------------------------------------------------------------------
+# ALB: ALB自身が返す5xx（ターゲット側ではなくALB/WAF側の異常。WAF fail closed発生時等もここに現れる）
+# ---------------------------------------------------------------------------
+resource "aws_cloudwatch_metric_alarm" "alb_elb_5xx" {
+  alarm_name        = "${var.project}-${var.env}-alb-elb-5xx"
+  alarm_description = "ALB自身が返す5xxレスポンス(HTTPCode_ELB_5XX_Count)が急増している"
+
+  namespace   = "AWS/ApplicationELB"
+  metric_name = "HTTPCode_ELB_5XX_Count"
+  dimensions = {
+    LoadBalancer = var.alb_arn_suffix
+  }
+
+  statistic           = "Sum"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = var.alb_elb_5xx_threshold
+  comparison_operator = "GreaterThanOrEqualToThreshold"
+  treat_missing_data  = "notBreaching"
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+  ok_actions    = [aws_sns_topic.alarms.arn]
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+# ---------------------------------------------------------------------------
 # CloudWatchダッシュボード（上記アラームの元メトリクスを1画面に集約）
 # ---------------------------------------------------------------------------
 locals {
@@ -449,7 +507,9 @@ locals {
         period = 300
         metrics = [
           ["AWS/ApplicationELB", "UnHealthyHostCount", "LoadBalancer", var.alb_arn_suffix, "TargetGroup", var.alb_target_group_arn_suffix, { label = "UnHealthyHostCount", yAxis = "left" }],
-          ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", var.alb_arn_suffix, { label = "5xx", stat = "Sum", yAxis = "right" }],
+          ["AWS/ApplicationELB", "HTTPCode_Target_5XX_Count", "LoadBalancer", var.alb_arn_suffix, { label = "Target 5xx", stat = "Sum", yAxis = "right" }],
+          ["AWS/ApplicationELB", "HTTPCode_ELB_5XX_Count", "LoadBalancer", var.alb_arn_suffix, { label = "ELB 5xx", stat = "Sum", yAxis = "right" }],
+          ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", var.alb_arn_suffix, { label = "TargetResponseTime", stat = "Average", yAxis = "left" }],
         ]
       }
     },
