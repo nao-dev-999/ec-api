@@ -93,14 +93,15 @@ module "ecs" {
 # ALB -> ECSタスクへのアウトバウンドをアプリポート(8080)のみに限定する。
 # module.alb と module.ecs は互いに参照し合う関係（ecsはalb_sg_idを、albの本来の宛先はecs_sg_id）にあり、
 # モジュール間の循環参照を避けるため、このルールはenv層で両モジュールのSG IDを参照する形で定義する。
-resource "aws_security_group_rule" "alb_egress_to_ecs" {
-  type                     = "egress"
-  security_group_id        = module.alb.alb_sg_id
-  from_port                = 8080
-  to_port                  = 8080
-  protocol                 = "tcp"
-  source_security_group_id = module.ecs.ecs_sg_id
-  description              = "Allow to ECS Fargate tasks (app port)"
+# aws_security_group.alb はインラインルールを一切持たない（modules/alb/main.tf参照）ため、
+# この別リソースとの混在によるルール競合・永続的diffは発生しない。
+resource "aws_vpc_security_group_egress_rule" "alb_egress_to_ecs" {
+  security_group_id            = module.alb.alb_sg_id
+  description                  = "Allow to ECS Fargate tasks (app port)"
+  from_port                    = 8080
+  to_port                      = 8080
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = module.ecs.ecs_sg_id
 }
 
 # CodePipeline

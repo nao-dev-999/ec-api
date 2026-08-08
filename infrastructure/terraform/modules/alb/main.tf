@@ -147,31 +147,39 @@ resource "aws_security_group" "alb" {
   name   = "${var.project}-${var.env}-alb-sg"
   vpc_id = var.vpc_id
 
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # アウトバウンドはここでは定義しない。
-  # ECSタスクのポート(8080)のみへの最小権限アウトバウンドは、
-  # modules/ecsとの循環モジュール参照を避けるため envs/dev/main.tf 側で
-  # aws_security_group_rule として別途定義する。
-  # （このリソースにegressブロックが無い場合、TerraformはこのSGの
-  #   デフォルトアウトバウンド全許可ルールを削除し、明示的に許可したもの以外は拒否する）
+  # このSGのルールは全て aws_vpc_security_group_ingress_rule / aws_vpc_security_group_egress_rule
+  # （別リソース）で定義する。インラインのingress/egressブロックとは絶対に混在させないこと。
+  # 混在させると、Terraformの既知の不具合によりルールの競合・永続的なdiff（apply後も
+  # 差分が消えない状態）が発生する。
+  # （このリソースにingress/egressブロックが無い場合、TerraformはこのSGに対する
+  #   デフォルトのアウトバウンド全許可ルールを削除し、明示的に許可したもの以外は
+  #   全方向拒否の状態で作成する）
 
   tags = {
     Name = "${var.project}-${var.env}-alb-sg"
   }
 }
+
+resource "aws_vpc_security_group_ingress_rule" "alb_http" {
+  security_group_id = aws_security_group.alb.id
+  description       = "Allow HTTP from internet (redirected to HTTPS)"
+  from_port         = 80
+  to_port           = 80
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
+resource "aws_vpc_security_group_ingress_rule" "alb_https" {
+  security_group_id = aws_security_group.alb.id
+  description       = "Allow HTTPS from internet"
+  from_port         = 443
+  to_port           = 443
+  ip_protocol       = "tcp"
+  cidr_ipv4         = "0.0.0.0/0"
+}
+
+# アウトバウンド(ECSタスクのアプリポートへの許可)は module.ecs との循環モジュール参照を
+# 避けるため envs/dev/main.tf 側で aws_vpc_security_group_egress_rule として定義する。
 
 resource "aws_lb_target_group" "this" {
   name        = "${var.project}-${var.env}-tg"
