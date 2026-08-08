@@ -252,6 +252,11 @@ resource "aws_ecs_task_definition" "app" {
       image     = "${var.app_image_url}:${var.app_image_tag}"
       essential = true
 
+      # SIGTERM送信からSIGKILLまでの猶予秒数。Fargateデフォルトと同値(30秒)だが、
+      # ALBのderegistration_delay・アプリのtimeout-per-shutdown-phase(25秒)との
+      # 整合が重要なため明示する。
+      stopTimeout = 30
+
       portMappings = [{
         containerPort = 8080
         protocol      = "tcp"
