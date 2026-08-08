@@ -35,6 +35,38 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "cloudtrail" {
   }
 }
 
+# 監査ログの改ざん・誤削除を防ぐためバージョニングを有効化する
+resource "aws_s3_bucket_versioning" "cloudtrail" {
+  bucket = aws_s3_bucket.cloudtrail.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+# コスト削減のため、一定期間経過後に自動削除する
+resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail" {
+  bucket = aws_s3_bucket.cloudtrail.id
+
+  rule {
+    id     = "expire-cloudtrail-logs"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      days = var.cloudtrail_log_retention_days
+    }
+
+    noncurrent_version_expiration {
+      noncurrent_days = var.cloudtrail_log_retention_days
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
 # AWS公式ドキュメントのバケットポリシー要件（confused deputy対策のSourceArn条件を含む）
 resource "aws_s3_bucket_policy" "cloudtrail" {
   bucket = aws_s3_bucket.cloudtrail.id
