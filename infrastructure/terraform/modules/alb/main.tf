@@ -1,4 +1,5 @@
 data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
 
 # ---------------------------------------------------------------------------
 # ALBアクセスログ保存用S3バケット
@@ -93,6 +94,13 @@ resource "aws_s3_bucket_policy" "access_logs" {
             "s3:x-amz-acl"      = "bucket-owner-full-control"
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
           }
+          # このアカウント/リージョン内のELB(ALB/NLB)からの配信のみ許可する。
+          # 特定のALBのARN(aws_lb.this.arn)に絞ると、そのALBがこのバケットポリシーに
+          # depends_onで依存している関係上、循環参照になってしまうため、
+          # サービス種別+アカウント+リージョンのワイルドカードで絞り込む。
+          ArnLike = {
+            "aws:SourceArn" = "arn:aws:elasticloadbalancing:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"
+          }
         }
       },
       {
@@ -104,6 +112,9 @@ resource "aws_s3_bucket_policy" "access_logs" {
         Condition = {
           StringEquals = {
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+          ArnLike = {
+            "aws:SourceArn" = "arn:aws:elasticloadbalancing:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"
           }
         }
       }
@@ -204,7 +215,7 @@ resource "aws_lb_target_group" "this" {
   }
 
   tags = {
-    Name = "${var.project}-${var.env}-tg"
+    Name    = "${var.project}-${var.env}-tg"
     Project = var.project
     Env     = var.env
   }
@@ -214,6 +225,11 @@ resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.this.arn
   port              = 80
   protocol          = "HTTP"
+
+  # ALBがデフォルトで付与する"server: awselb/2.0"ヘッダーを削除し、バージョン情報の
+  # 開示を最小化する(情報漏洩対策。過去にTerraform経由で反映されない不具合報告があった
+  # ため、apply後にdig/curlで実際に反映されているか確認すること)
+  routing_http_response_server_enabled = false
 
   # HTTPは常にHTTPSへリダイレクトする（メンテナンス応答はHTTPS側で返す）
   default_action {
@@ -233,6 +249,8 @@ resource "aws_lb_listener" "https" {
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
   certificate_arn   = aws_acm_certificate.self_signed.arn
+
+  routing_http_response_server_enabled = false
 
   default_action {
     type             = var.maintenance_mode_enabled ? "fixed-response" : "forward"

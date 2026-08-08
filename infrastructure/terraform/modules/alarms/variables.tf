@@ -90,3 +90,9 @@ variable "alb_elb_5xx_threshold" {
   type        = number
   default     = 5
 }
+
+variable "alb_rejected_connections_threshold" {
+  description = "ALBのRejectedConnectionCountアラームの閾値（5分間の合計）。ALBが最大接続数に達したことを示すため、通常は1件でも異常として扱う"
+  type        = number
+  default     = 1
+}
