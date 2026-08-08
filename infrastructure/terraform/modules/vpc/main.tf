@@ -108,3 +108,79 @@ resource "aws_route_table_association" "private" {
   subnet_id      = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private.id
 }
+
+# ---------------------------------------------------------------------------
+# デフォルトセキュリティグループ (EC2.2 / FSBP)
+# VPC作成時にAWSが自動生成する全許可のデフォルトSGを、全ルール削除の上でterraform管理下に置く。
+# 誤ってこのSGにアタッチされたリソースがあっても通信できないようにする「使わせない」ためのSG。
+# ---------------------------------------------------------------------------
+resource "aws_default_security_group" "this" {
+  vpc_id = aws_vpc.this.id
+
+  # ingress/egressブロックを空にすることで、全ルールを削除する
+  tags = {
+    Name = "${var.project}-${var.env}-default-sg-restricted"
+  }
+}
+
+# ---------------------------------------------------------------------------
+# VPC Flow Logs
+# 不正通信の事後調査・異常な通信パターンの検知のため、VPC内の全トラフィックメタデータを記録する
+# ---------------------------------------------------------------------------
+resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
+  name              = "/vpc/${var.project}-${var.env}/flow-logs"
+  retention_in_days = var.flow_log_retention_days
+
+  tags = {
+    Name = "${var.project}-${var.env}-vpc-flow-logs"
+  }
+}
+
+resource "aws_iam_role" "vpc_flow_logs" {
+  name = "${var.project}-${var.env}-vpc-flow-logs-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "vpc-flow-logs.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Name = "${var.project}-${var.env}-vpc-flow-logs-role"
+  }
+}
+
+resource "aws_iam_role_policy" "vpc_flow_logs" {
+  name = "vpc-flow-logs-delivery"
+  role = aws_iam_role.vpc_flow_logs.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents",
+        "logs:DescribeLogGroups",
+        "logs:DescribeLogStreams"
+      ]
+      Resource = "${aws_cloudwatch_log_group.vpc_flow_logs.arn}:*"
+    }]
+  })
+}
+
+resource "aws_flow_log" "this" {
+  vpc_id               = aws_vpc.this.id
+  traffic_type          = "ALL"
+  log_destination_type  = "cloud-watch-logs"
+  log_destination       = aws_cloudwatch_log_group.vpc_flow_logs.arn
+  iam_role_arn           = aws_iam_role.vpc_flow_logs.arn
+
+  tags = {
+    Name = "${var.project}-${var.env}-vpc-flow-log"
+  }
+}
