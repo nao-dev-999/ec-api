@@ -1,4 +1,10 @@
 spring:
+  # SIGTERM後、処理中のリクエストを完了させてから終了するための猶予秒数。
+  # ECSタスク定義のstopTimeout(30秒)より短くし、SIGKILLで強制終了される前に
+  # 確実にグレースフル完了させる。
+  lifecycle:
+    timeout-per-shutdown-phase: 25s
+
   datasource:
     url: jdbc:postgresql://localhost:5432/ec_db
 
@@ -31,6 +37,9 @@ spring:
 
 server:
   port: 8080
+  # SIGTERM受信後、処理中のリクエストを完了させてから終了する(デフォルトはimmediateで即終了)。
+  # ALBのderegistration_delay・ECSのstopTimeoutの猶予を活かすために必須。
+  shutdown: graceful
   # ALBのidle_timeout(60秒)より長く設定すること。
   # 同じ/短いと、ALBが接続を再利用しようとした直後にTomcatが先に閉じてしまい、
   # 502 Bad Gatewayが断続的に発生する。未設定時のTomcatデフォルトはconnectionTimeoutと
