@@ -51,3 +51,30 @@ variable "notification_emails" {
   type        = list(string)
   default     = []
 }
+
+variable "waf_web_acl_metric_name" {
+  description = "WAF WebACLのCloudWatchメトリクス名（AWS/WAFV2名前空間のWebACLディメンションに使用）"
+  type        = string
+}
+
+variable "waf_auth_rate_limit_metric_name" {
+  description = "WAF auth-rate-limitルールのCloudWatchメトリクス名（Ruleディメンションに使用）"
+  type        = string
+}
+
+variable "waf_general_rate_limit_metric_name" {
+  description = "WAF general-rate-limitルールのCloudWatchメトリクス名（Ruleディメンションに使用）"
+  type        = string
+}
+
+variable "waf_blocked_requests_threshold" {
+  description = "WAF全体(全ルール合計)のBlockedRequestsアラームの閾値（5分間の合計）"
+  type        = number
+  default     = 100
+}
+
+variable "waf_auth_rate_limit_threshold" {
+  description = "WAF auth-rate-limitルールのBlockedRequestsアラームの閾値（5分間の合計）。ログイン・サインアップへのブルートフォース試行を検知する"
+  type        = number
+  default     = 1
+}

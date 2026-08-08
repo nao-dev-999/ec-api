@@ -126,7 +126,7 @@ module "config" {
   notification_emails = var.config_notification_emails
 }
 
-# CloudWatch Alarms（アプリのERRORログ / ECS起動数0 / CPU使用率90%以上 → SNS通知）
+# CloudWatch Alarms（アプリのERRORログ / ECS起動数0 / CPU使用率90%以上 / WAFブロック多発 → SNS通知）
 module "alarms" {
   source = "../../modules/alarms"
 
@@ -143,6 +143,10 @@ module "alarms" {
   alb_target_group_arn_suffix = module.alb.target_group_arn_suffix
   rds_instance_id             = module.rds.db_instance_id
   redis_cluster_id            = module.ecs.redis_cluster_id
+
+  waf_web_acl_metric_name            = module.waf.web_acl_metric_name
+  waf_auth_rate_limit_metric_name    = module.waf.auth_rate_limit_metric_name
+  waf_general_rate_limit_metric_name = module.waf.general_rate_limit_metric_name
 
   notification_emails = var.alarm_notification_emails
 }
