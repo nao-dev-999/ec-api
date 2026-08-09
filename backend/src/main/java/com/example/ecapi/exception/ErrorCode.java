@@ -11,6 +11,7 @@ public enum ErrorCode {
     EMPLOYEE_NOT_FOUND("employee.notFound", HttpStatus.NOT_FOUND),
     CATEGORY_NOT_FOUND("category.notFound", HttpStatus.NOT_FOUND),
     CART_ITEM_NOT_FOUND("cart.item.notFound", HttpStatus.NOT_FOUND),
+    REVIEW_NOT_FOUND("review.notFound", HttpStatus.NOT_FOUND),
 
     // 409 Conflict
     INSUFFICIENT_STOCK("order.insufficientStock", HttpStatus.CONFLICT),
@@ -21,6 +22,8 @@ public enum ErrorCode {
     ORDER_CANNOT_BE_CANCELLED("order.cancel.notAllowed", HttpStatus.CONFLICT),
     PRODUCT_IN_USE("product.inUse", HttpStatus.CONFLICT),
     CUSTOMER_IN_USE("customer.inUse", HttpStatus.CONFLICT),
+    REVIEW_ALREADY_EXISTS("review.alreadyExists", HttpStatus.CONFLICT),
+    REVIEW_NOT_ALLOWED("review.notAllowed", HttpStatus.CONFLICT),
 
     // 401 Unauthorized
     AUTHENTICATION_FAILED("error.authentication", HttpStatus.UNAUTHORIZED),

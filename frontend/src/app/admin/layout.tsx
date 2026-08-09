@@ -12,6 +12,7 @@ import {
   Users,
   UserCog,
   Receipt,
+  Star,
 } from "lucide-react";
 import "./admin.css";
 
@@ -22,6 +23,7 @@ const NAV_ITEMS = [
   { href: "/admin/customers", label: "顧客管理", Icon: Users },
   { href: "/admin/employees", label: "従業員管理", Icon: UserCog },
   { href: "/admin/orders", label: "注文管理", Icon: Receipt },
+  { href: "/admin/reviews", label: "レビュー管理", Icon: Star },
 ];
 
 export default function AdminLayout({
@@ -65,9 +67,7 @@ export default function AdminLayout({
           <Link
             key={href}
             href={href}
-            className={
-              "admin-nav-link" + (pathname === href ? " active" : "")
-            }
+            className={"admin-nav-link" + (pathname === href ? " active" : "")}
           >
             <Icon size={16} />
             <span>{label}</span>
