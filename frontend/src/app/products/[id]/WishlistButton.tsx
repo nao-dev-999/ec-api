@@ -1,17 +1,41 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
-import { addWishlistItem, removeWishlistItem } from "@/lib/api/wishlist";
+import {
+  addWishlistItem,
+  getWishlist,
+  removeWishlistItem,
+} from "@/lib/api/wishlist";
 import { ApiError } from "@/lib/api/client";
 import { getErrorMessage } from "@/lib/errors/messages";
 
 export default function WishlistButton({ productId }: { productId: number }) {
   const router = useRouter();
   const [added, setAdded] = useState(false);
+  const [checking, setChecking] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getWishlist({ suppressAuthRedirect: true })
+      .then((items) => {
+        if (!cancelled) {
+          setAdded(items.some((item) => item.productId === productId));
+        }
+      })
+      .catch(() => {
+        // 未ログイン等で取得できない場合は未登録として扱う（ゲスト閲覧を妨げない）
+      })
+      .finally(() => {
+        if (!cancelled) setChecking(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [productId]);
 
   async function handleToggle() {
     setMessage(null);
@@ -37,7 +61,7 @@ export default function WishlistButton({ productId }: { productId: number }) {
 
   return (
     <div style={{ marginTop: 12 }}>
-      <button onClick={handleToggle} disabled={submitting}>
+      <button onClick={handleToggle} disabled={submitting || checking}>
         <Heart
           size={16}
           fill={added ? "currentColor" : "none"}

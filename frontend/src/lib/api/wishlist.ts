@@ -14,8 +14,10 @@ export type WishlistItem = {
   createdAt: string;
 };
 
-export function getWishlist(): Promise<WishlistItem[]> {
-  return apiFetch<WishlistItem[]>("/api/customer/wishlist");
+export function getWishlist(options?: {
+  suppressAuthRedirect?: boolean;
+}): Promise<WishlistItem[]> {
+  return apiFetch<WishlistItem[]>("/api/customer/wishlist", options);
 }
 
 export function addWishlistItem(productId: number): Promise<WishlistItem> {
