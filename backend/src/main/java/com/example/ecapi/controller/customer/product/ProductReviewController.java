@@ -33,7 +33,8 @@ public class ProductReviewController {
 
     @GetMapping
     public ResponseEntity<ProductReviewsResponse> listByProduct(@PathVariable Long productId) {
-        var reviews = reviewService.listByProduct(productId).stream().map(this::toResponse).toList();
+        var reviews =
+                reviewService.listByProduct(productId).stream().map(this::toResponse).toList();
         ReviewSummaryResult summary = reviewService.getSummary(productId);
         return ResponseEntity.ok(
                 new ProductReviewsResponse(

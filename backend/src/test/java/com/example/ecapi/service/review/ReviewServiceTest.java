@@ -170,8 +170,7 @@ class ReviewServiceTest {
         void shouldThrowExceptionWhenNotOwnReview() {
             when(reviewRepository.findByIdAndCustomerId(100L, 999L)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(
-                            () -> reviewService.update(new UpdateReview(100L, 999L, 3, "普通", 0)))
+            assertThatThrownBy(() -> reviewService.update(new UpdateReview(100L, 999L, 3, "普通", 0)))
                     .isInstanceOf(ReviewNotFoundException.class);
         }
     }
@@ -235,7 +234,8 @@ class ReviewServiceTest {
             when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
             when(reviewRepository.findAllByProductIdOrderByCreatedAtDesc(PRODUCT_ID))
                     .thenReturn(List.of(review));
-            when(customerRepository.findAllById(List.of(CUSTOMER_ID))).thenReturn(List.of(customer));
+            when(customerRepository.findAllById(List.of(CUSTOMER_ID)))
+                    .thenReturn(List.of(customer));
 
             List<ReviewResult> result = reviewService.listByProduct(PRODUCT_ID);
 

@@ -18,8 +18,8 @@ import org.springframework.web.bind.annotation.*;
 /**
  * レビュー投稿・編集・削除 REST コントローラー（顧客本人のみ、要ログイン）
  *
- * <p>{@code /api/customer/reviews/**} は {@link com.example.ecapi.config.SecurityConfig} で
- * {@code CUSTOMER} ロール必須にしている。商品ごとのレビュー参照（認証不要）は {@link
+ * <p>{@code /api/customer/reviews/**} は {@link com.example.ecapi.config.SecurityConfig} で {@code
+ * CUSTOMER} ロール必須にしている。商品ごとのレビュー参照（認証不要）は {@link
  * com.example.ecapi.controller.customer.product.ProductReviewController} を参照。
  *
  * <pre>

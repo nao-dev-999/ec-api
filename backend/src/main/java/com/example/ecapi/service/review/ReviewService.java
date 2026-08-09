@@ -49,7 +49,8 @@ public class ReviewService {
 
         Map<Long, Customer> customersById =
                 customerRepository
-                        .findAllById(reviews.stream().map(Review::getCustomerId).distinct().toList())
+                        .findAllById(
+                                reviews.stream().map(Review::getCustomerId).distinct().toList())
                         .stream()
                         .collect(Collectors.toMap(Customer::getId, Function.identity()));
 
@@ -126,10 +127,7 @@ public class ReviewService {
         return toResult(saved, product, customer);
     }
 
-    /**
-     * 自分自身のレビューのみ更新可能。他人のレビューIDを指定した場合は{@link ReviewNotFoundException}を返し、
-     * 存在有無を推測されないようにする。
-     */
+    /** 自分自身のレビューのみ更新可能。他人のレビューIDを指定した場合は{@link ReviewNotFoundException}を返し、 存在有無を推測されないようにする。 */
     @Transactional
     public ReviewResult update(UpdateReview dto) {
         Review review =
