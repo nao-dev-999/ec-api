@@ -28,3 +28,9 @@ variable "waf_log_retention_days" {
   default     = 30
   description = "WAFログを保存するS3バケットのオブジェクト保持日数。コスト削減のため、経過後は自動削除する。"
 }
+
+variable "managed_rules_count_mode" {
+  type        = bool
+  default     = false
+  description = "true にすると、AWSマネージドルールグループ(Common/KnownBadInputs/SQLi/IPReputation)を検知のみ(カウント)で動作させ、実際のブロックは行わない。新規追加直後は誤検知(false positive)がないかWAFログ/CloudWatchで監視するため、一時的にtrueにすることを推奨。"
+}
