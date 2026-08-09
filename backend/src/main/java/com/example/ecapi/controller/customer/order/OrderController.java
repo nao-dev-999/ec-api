@@ -114,6 +114,8 @@ public class OrderController {
                 result.customerName(),
                 result.status(),
                 result.totalAmount(),
+                result.couponCode(),
+                result.discountAmount(),
                 result.items().stream()
                         .map(
                                 i ->
@@ -134,6 +136,7 @@ public class OrderController {
                 customerId,
                 request.items().stream()
                         .map(item -> new CreateOrderItem(item.productId(), item.quantity()))
-                        .toList());
+                        .toList(),
+                request.couponCode());
     }
 }

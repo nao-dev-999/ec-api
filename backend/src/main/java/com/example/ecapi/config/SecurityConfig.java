@@ -76,6 +76,8 @@ public class SecurityConfig {
                                         // 投稿・編集・削除のみここでCUSTOMER必須にする。
                                         .requestMatchers("/api/customer/reviews/**")
                                         .hasRole(ROLE_CUSTOMER)
+                                        .requestMatchers("/api/customer/wishlist/**")
+                                        .hasRole(ROLE_CUSTOMER)
                                         .requestMatchers("/api/orders/**")
                                         .hasRole(ROLE_CUSTOMER)
                                         .requestMatchers("/api/admin/**")

@@ -49,6 +49,20 @@ public class AdminProductController {
         return ResponseEntity.ok(toAdminProductResponse(productService.findById(id)));
     }
 
+    /**
+     * 在庫が閾値以下の商品を在庫の少ない順に取得します（低在庫アラート、画面表示用）。
+     *
+     * @param threshold この値以下の在庫数を対象とする（デフォルト10）
+     */
+    @GetMapping("/low-stock")
+    public ResponseEntity<List<AdminProductResponse>> getLowStock(
+            @RequestParam(defaultValue = "10") int threshold) {
+        return ResponseEntity.ok(
+                productService.getLowStockProducts(Math.max(threshold, 0)).stream()
+                        .map(this::toAdminProductResponse)
+                        .toList());
+    }
+
     @PostMapping
     public ResponseEntity<AdminProductResponse> create(
             @Valid @RequestBody CreateProductRequest request) {

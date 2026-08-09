@@ -47,6 +47,14 @@ public class CustomerOrder extends BaseEntity implements SoftDeletable {
     @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
 
+    // 適用したクーポンのコード（未使用時はnull）。Couponへの外部キーではなく、
+    // クーポンが後から削除・変更されても注文履歴上の適用結果は変わらないようにするため値のみ保持する。
+    @Column(name = "coupon_code", length = 30)
+    private String couponCode;
+
+    @Column(name = "discount_amount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
     // 注文明細（1 対多）。外部からの直接操作を防ぐため、getter/setterはaddItem/removeItem経由に限定する。
     @Setter(AccessLevel.NONE)
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -16,6 +16,7 @@ import com.example.ecapi.repository.CustomerOrderRepository;
 import com.example.ecapi.repository.CustomerRepository;
 import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.service.cart.CartService;
+import com.example.ecapi.service.coupon.CouponService;
 import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.CreateOrderItem;
 import com.example.ecapi.service.order.dto.OrderResult;
@@ -48,6 +49,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final CustomerRepository customerRepository;
     private final CartService cartService;
+    private final CouponService couponService;
 
     public Page<OrderResult> findAll(Pageable pageable) {
         return toOrderResultPage(orderRepository.findAll(pageable));
@@ -83,11 +85,14 @@ public class OrderService {
     }
 
     /**
-     * 在庫チェック → 在庫減算 → 注文作成を1トランザクションで実行します。
+     * 在庫チェック → 在庫減算 → クーポン適用 → 注文作成を1トランザクションで実行します。
      *
      * @throws CustomerNotFoundException 顧客が見つからない場合
      * @throws ProductNotFoundException 注文に含まれる商品が見つからない場合
      * @throws InsufficientStockException 在庫が不足している場合
+     * @throws com.example.ecapi.exception.CouponNotFoundException クーポンコードを指定し、該当するクーポンが存在しない場合
+     * @throws com.example.ecapi.exception.CouponNotAllowedException
+     *     指定したクーポンが無効化済み・有効期限外・利用上限到達・使用済みの場合
      */
     @Transactional
     public OrderResult create(CreateOrder createOrder) {
@@ -122,10 +127,20 @@ public class OrderService {
             order.addItem(detail);
         }
 
-        order.setTotalAmount(
+        BigDecimal subtotal =
                 order.getItems().stream()
                         .map(CustomerOrderDetail::getSubtotal)
-                        .reduce(BigDecimal.ZERO, BigDecimal::add));
+                        .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (createOrder.couponCode() != null && !createOrder.couponCode().isBlank()) {
+            discountAmount =
+                    couponService.validateAndApply(
+                            createOrder.couponCode(), customer.getId(), subtotal);
+            order.setCouponCode(createOrder.couponCode());
+        }
+        order.setDiscountAmount(discountAmount);
+        order.setTotalAmount(subtotal.subtract(discountAmount));
 
         CustomerOrder saved = orderRepository.save(order);
         cartService.clearCart(customer.getId());
@@ -193,6 +208,8 @@ public class OrderService {
                 resolveCustomerName(customer),
                 customerOrder.getStatus(),
                 customerOrder.getTotalAmount(),
+                customerOrder.getCouponCode(),
+                customerOrder.getDiscountAmount(),
                 items.stream()
                         .map(
                                 item ->

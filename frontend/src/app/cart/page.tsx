@@ -20,6 +20,7 @@ export default function CartPage() {
   const [items, setItems] = useState<CartItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [couponCode, setCouponCode] = useState("");
 
   useEffect(() => {
     getCart()
@@ -73,6 +74,7 @@ export default function CartPage() {
           productId: i.productId!,
           quantity: i.quantity!,
         })),
+        couponCode: couponCode.trim() || undefined,
       });
       router.push(`/orders/${order.id}`);
     } catch (err) {
@@ -121,6 +123,15 @@ export default function CartPage() {
               </li>
             ))}
           </ul>
+          <div style={{ margin: "16px 0", textAlign: "right" }}>
+            <label htmlFor="couponCode">クーポンコード（任意）: </label>
+            <input
+              id="couponCode"
+              value={couponCode}
+              onChange={(e) => setCouponCode(e.target.value)}
+              style={{ width: 160 }}
+            />
+          </div>
           <p style={{ margin: "16px 0", textAlign: "right" }}>
             合計: <span className="price price-lg">¥{total}</span>
           </p>

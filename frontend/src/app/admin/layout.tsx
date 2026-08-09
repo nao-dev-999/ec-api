@@ -13,17 +13,25 @@ import {
   UserCog,
   Receipt,
   Star,
+  Ticket,
+  AlertTriangle,
 } from "lucide-react";
 import "./admin.css";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "管理トップ", Icon: LayoutDashboard },
   { href: "/admin/products", label: "商品管理", Icon: Package },
+  {
+    href: "/admin/products/alerts",
+    label: "在庫アラート",
+    Icon: AlertTriangle,
+  },
   { href: "/admin/categories", label: "カテゴリ管理", Icon: FolderTree },
   { href: "/admin/customers", label: "顧客管理", Icon: Users },
   { href: "/admin/employees", label: "従業員管理", Icon: UserCog },
   { href: "/admin/orders", label: "注文管理", Icon: Receipt },
   { href: "/admin/reviews", label: "レビュー管理", Icon: Star },
+  { href: "/admin/coupons", label: "クーポン管理", Icon: Ticket },
 ];
 
 export default function AdminLayout({

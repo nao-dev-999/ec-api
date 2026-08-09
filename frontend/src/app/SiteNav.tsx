@@ -11,12 +11,14 @@ import {
   User,
   LogIn,
   LogOut,
+  Heart,
 } from "lucide-react";
 import { getMe } from "@/lib/api/me";
 import { customerLogout } from "@/lib/api/customerAuth";
 
 const NAV_ITEMS = [
   { href: "/products", label: "商品一覧", Icon: Package },
+  { href: "/wishlist", label: "お気に入り", Icon: Heart },
   { href: "/cart", label: "カート", Icon: ShoppingCart },
   { href: "/orders", label: "注文履歴", Icon: Receipt },
   { href: "/mypage", label: "マイページ", Icon: User },

@@ -40,6 +40,15 @@ public class ProductService {
                 .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
+    /** 管理画面向け: 在庫が閾値以下の商品を在庫の少ない順に取得（低在庫アラート） */
+    public List<ProductResult> getLowStockProducts(int threshold) {
+        return productRepository
+                .findByDeletedFalseAndStockLessThanEqualOrderByStockAsc(threshold)
+                .stream()
+                .map(this::toProductResult)
+                .toList();
+    }
+
     public List<ProductResult> searchProducts(String name, String description, BigDecimal price) {
         Specification<Product> spec =
                 ProductSpecification.byCriteria(name, description, price)

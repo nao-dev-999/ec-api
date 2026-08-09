@@ -74,6 +74,8 @@ class OrderControllerTest {
                         "Test Customer",
                         OrderStatus.PENDING,
                         BigDecimal.valueOf(200.00),
+                        null,
+                        BigDecimal.ZERO,
                         List.of(),
                         LocalDateTime.now(),
                         LocalDateTime.now(),
@@ -86,6 +88,8 @@ class OrderControllerTest {
                         "Test Customer",
                         OrderStatus.PENDING,
                         BigDecimal.valueOf(200.00),
+                        null,
+                        BigDecimal.ZERO,
                         List.of(itemResponse),
                         LocalDateTime.now(),
                         LocalDateTime.now(),
@@ -162,7 +166,7 @@ class OrderControllerTest {
         void shouldCreateOrder() throws Exception {
             when(orderService.create(any())).thenReturn(orderResult);
 
-            OrderRequest request = new OrderRequest(List.of(new OrderItemRequest(1L, 2)));
+            OrderRequest request = new OrderRequest(List.of(new OrderItemRequest(1L, 2)), null);
 
             mockMvc.perform(
                             post("/api/orders")
@@ -177,7 +181,7 @@ class OrderControllerTest {
         @WithMockLoginUser
         @DisplayName("items が空の場合、400を返すこと")
         void shouldReturnBadRequestWhenItemsIsEmpty() throws Exception {
-            OrderRequest invalidRequest = new OrderRequest(List.of());
+            OrderRequest invalidRequest = new OrderRequest(List.of(), null);
 
             mockMvc.perform(
                             post("/api/orders")
@@ -190,7 +194,8 @@ class OrderControllerTest {
         @WithMockLoginUser
         @DisplayName("quantity が0以下の場合、400を返すこと")
         void shouldReturnBadRequestWhenQuantityIsZero() throws Exception {
-            OrderRequest invalidRequest = new OrderRequest(List.of(new OrderItemRequest(1L, 0)));
+            OrderRequest invalidRequest =
+                    new OrderRequest(List.of(new OrderItemRequest(1L, 0)), null);
 
             mockMvc.perform(
                             post("/api/orders")
@@ -215,6 +220,8 @@ class OrderControllerTest {
                             "Test Customer",
                             OrderStatus.CANCELLED,
                             BigDecimal.valueOf(200.00),
+                            null,
+                            BigDecimal.ZERO,
                             List.of(),
                             LocalDateTime.now(),
                             LocalDateTime.now(),
