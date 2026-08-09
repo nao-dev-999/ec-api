@@ -119,6 +119,30 @@ class AdminProductControllerTest {
     }
 
     @Nested
+    @DisplayName("GET /api/admin/products/low-stock")
+    class GetLowStockProductsTest {
+        @Test
+        @DisplayName("デフォルトの閾値で在庫の少ない商品を取得できること")
+        void shouldGetLowStockProductsWithDefaultThreshold() throws Exception {
+            when(productService.getLowStockProducts(10)).thenReturn(List.of(productResult));
+
+            mockMvc.perform(get("/api/admin/products/low-stock"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].id").value(productResponse.id()));
+        }
+
+        @Test
+        @DisplayName("閾値を指定して在庫の少ない商品を取得できること")
+        void shouldGetLowStockProductsWithGivenThreshold() throws Exception {
+            when(productService.getLowStockProducts(5)).thenReturn(List.of(productResult));
+
+            mockMvc.perform(get("/api/admin/products/low-stock").param("threshold", "5"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].id").value(productResponse.id()));
+        }
+    }
+
+    @Nested
     @DisplayName("GET /api/admin/products/{id}")
     class GetProductByIdTest {
         @Test

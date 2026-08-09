@@ -69,6 +69,12 @@ jacoco {
     toolVersion = "0.8.14"
 }
 
+// core モジュール（entity/repository）は backend のテスト実行時にしか実行されず、
+// 独自の test/jacoco タスクを持たない。ここで明示的に取り込まないと、backend のテストで
+// 実際には実行されているにもかかわらず jacocoTestReport（ひいては Sonar）から完全に
+// 抜け落ち、新規追加した entity/repository のカバレッジが常に「計測不能」になってしまう。
+val coreSourceSets = project(":core").extensions.getByType<SourceSetContainer>()
+
 tasks.jacocoTestReport {
     dependsOn(tasks.test)
     reports {
@@ -79,7 +85,7 @@ tasks.jacocoTestReport {
     // カバレッジ計測対象から除外するクラス
     classDirectories.setFrom(
         files(
-            classDirectories.files.map {
+            (classDirectories.files + coreSourceSets["main"].output.classesDirs.files).map {
                 fileTree(it) {
                     exclude(
                         "**/EcApiApplication.class", // エントリポイント
@@ -90,5 +96,8 @@ tasks.jacocoTestReport {
                 }
             },
         ),
+    )
+    sourceDirectories.setFrom(
+        files(sourceDirectories.files + coreSourceSets["main"].allJava.srcDirs),
     )
 }

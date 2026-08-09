@@ -61,6 +61,30 @@ class CouponServiceTest {
     }
 
     @Nested
+    @DisplayName("findById")
+    class FindByIdTest {
+
+        @Test
+        @DisplayName("指定したIDのクーポンを取得できること")
+        void shouldFindCouponById() {
+            when(couponRepository.findById(1L)).thenReturn(Optional.of(coupon));
+
+            CouponResult result = couponService.findById(1L);
+
+            assertThat(result.code()).isEqualTo("SAVE500");
+        }
+
+        @Test
+        @DisplayName("指定したIDのクーポンが見つからない場合、CouponNotFoundException をスローすること")
+        void shouldThrowExceptionWhenNotFound() {
+            when(couponRepository.findById(99L)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> couponService.findById(99L))
+                    .isInstanceOf(CouponNotFoundException.class);
+        }
+    }
+
+    @Nested
     @DisplayName("create")
     class CreateTest {
 

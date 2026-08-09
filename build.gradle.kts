@@ -114,3 +114,19 @@ sonar {
         )
     }
 }
+
+// core モジュールは entity/repository のみで自身の test/jacoco タスクを持たず、
+// backend のテスト実行を通じてのみカバレッジが得られる。backend/build.gradle.kts 側で
+// jacocoTestReport に core のクラスを含めるよう設定した上で、ここで core プロジェクトの
+// カバレッジレポート参照先を backend の集約レポートに向ける（指定しないと core 配下の
+// 新規行は「カバレッジ情報なし＝未カバー」として Quality Gate に計上されてしまう）。
+project(":core") {
+    sonar {
+        properties {
+            property(
+                "sonar.coverage.jacoco.xmlReportPaths",
+                "$rootDir/backend/build/reports/jacoco/test/jacocoTestReport.xml",
+            )
+        }
+    }
+}
