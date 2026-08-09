@@ -71,6 +71,11 @@ public class SecurityConfig {
                                         .hasRole(ROLE_CUSTOMER)
                                         .requestMatchers("/api/customer/me/**")
                                         .hasRole(ROLE_CUSTOMER)
+                                        // レビューの参照(/api/customer/products/{id}/reviews)は
+                                        // 上の /api/customer/products/** ルールで既に permitAll。
+                                        // 投稿・編集・削除のみここでCUSTOMER必須にする。
+                                        .requestMatchers("/api/customer/reviews/**")
+                                        .hasRole(ROLE_CUSTOMER)
                                         .requestMatchers("/api/orders/**")
                                         .hasRole(ROLE_CUSTOMER)
                                         .requestMatchers("/api/admin/**")
