@@ -80,6 +80,28 @@ export default function OrderDetailPage({
             ))}
           </tbody>
           <tfoot>
+            {!!order.discountAmount && (
+              <>
+                <tr>
+                  <td colSpan={3}>小計</td>
+                  <td className="num">
+                    ¥
+                    {(
+                      (order.totalAmount ?? 0) + order.discountAmount
+                    ).toLocaleString()}
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={3}>
+                    クーポン割引
+                    {order.couponCode ? `（${order.couponCode}）` : ""}
+                  </td>
+                  <td className="num">
+                    -¥{order.discountAmount.toLocaleString()}
+                  </td>
+                </tr>
+              </>
+            )}
             <tr>
               <td colSpan={3}>合計</td>
               <td className="num">¥{order.totalAmount?.toLocaleString()}</td>

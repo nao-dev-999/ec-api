@@ -8,6 +8,10 @@ const ERROR_MESSAGES: Record<string, string> = {
   REVIEW_NOT_ALLOWED:
     "配送完了した購入実績がある商品のみレビューを投稿できます",
   REVIEW_ALREADY_EXISTS: "この商品にはすでにレビューを投稿済みです",
+  COUPON_NOT_FOUND: "クーポンが見つかりません",
+  COUPON_NOT_ALLOWED:
+    "このクーポンは利用できません（期限切れ、利用上限に達している、またはすでに使用済みです）",
+  COUPON_CODE_DUPLICATE: "このクーポンコードはすでに使用されています",
 };
 
 export function getErrorMessage(err: unknown, fallback: string): string {

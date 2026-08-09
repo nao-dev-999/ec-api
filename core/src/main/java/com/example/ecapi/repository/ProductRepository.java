@@ -19,6 +19,9 @@ public interface ProductRepository
     // 商品名のあいまい検索（大文字小文字無視）
     List<Product> findByNameContainingIgnoreCaseAndDeletedFalse(String keyword);
 
+    // 低在庫アラート向け: 在庫が閾値以下の商品を在庫の少ない順に取得
+    List<Product> findByDeletedFalseAndStockLessThanEqualOrderByStockAsc(int threshold);
+
     // 価格範囲検索（JPQL）
     @Query(
             """

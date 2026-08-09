@@ -256,4 +256,32 @@ class ProductServiceTest {
                     .isInstanceOf(ProductInUseException.class);
         }
     }
+
+    @Nested
+    @DisplayName("getLowStockProducts")
+    class GetLowStockProductsTest {
+
+        @Test
+        @DisplayName("在庫が閾値以下の商品を取得できること")
+        void shouldReturnLowStockProducts() {
+            when(productRepository.findByDeletedFalseAndStockLessThanEqualOrderByStockAsc(10))
+                    .thenReturn(List.of(product));
+
+            List<ProductResult> result = productService.getLowStockProducts(10);
+
+            assertThat(result).hasSize(1);
+            assertThat(result.getFirst().id()).isEqualTo(1L);
+        }
+
+        @Test
+        @DisplayName("該当商品がない場合、空のリストを返すこと")
+        void shouldReturnEmptyListWhenNoLowStockProducts() {
+            when(productRepository.findByDeletedFalseAndStockLessThanEqualOrderByStockAsc(0))
+                    .thenReturn(Collections.emptyList());
+
+            List<ProductResult> result = productService.getLowStockProducts(0);
+
+            assertThat(result).isEmpty();
+        }
+    }
 }

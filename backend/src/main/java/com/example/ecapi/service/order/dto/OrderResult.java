@@ -11,6 +11,8 @@ public record OrderResult(
         String customerName,
         OrderStatus status,
         BigDecimal totalAmount,
+        String couponCode,
+        BigDecimal discountAmount,
         List<OrderResultItem> items,
         LocalDateTime orderedAt,
         LocalDateTime updatedAt,

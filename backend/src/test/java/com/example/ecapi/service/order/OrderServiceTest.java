@@ -19,6 +19,7 @@ import com.example.ecapi.repository.CustomerOrderRepository;
 import com.example.ecapi.repository.CustomerRepository;
 import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.service.cart.CartService;
+import com.example.ecapi.service.coupon.CouponService;
 import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.CreateOrderItem;
 import com.example.ecapi.service.order.dto.OrderResult;
@@ -49,6 +50,7 @@ class OrderServiceTest {
     @Mock private ProductRepository productRepository;
     @Mock private CustomerRepository customerRepository;
     @Mock private CartService cartService;
+    @Mock private CouponService couponService;
 
     @InjectMocks private OrderService orderService;
 
@@ -87,6 +89,8 @@ class OrderServiceTest {
                         "Test Customer",
                         OrderStatus.PENDING,
                         BigDecimal.valueOf(200.00),
+                        null,
+                        BigDecimal.ZERO,
                         List.of(),
                         LocalDateTime.now(),
                         LocalDateTime.now(),
@@ -187,7 +191,8 @@ class OrderServiceTest {
         @Test
         @DisplayName("注文を正常に作成できること")
         void shouldCreateOrder() {
-            CreateOrder createOrder = new CreateOrder(1L, List.of(new CreateOrderItem(1L, 2)));
+            CreateOrder createOrder =
+                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 2)), null);
             when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
@@ -200,7 +205,8 @@ class OrderServiceTest {
         @Test
         @DisplayName("注文対象の商品が存在しない場合、ProductNotFoundException をスローすること")
         void shouldThrowExceptionWhenProductNotFound() {
-            CreateOrder createOrder = new CreateOrder(1L, List.of(new CreateOrderItem(99L, 2)));
+            CreateOrder createOrder =
+                    new CreateOrder(1L, List.of(new CreateOrderItem(99L, 2)), null);
 
             when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
             when(productRepository.findById(99L)).thenReturn(Optional.empty());
@@ -212,7 +218,8 @@ class OrderServiceTest {
         @Test
         @DisplayName("在庫が不足している場合、InsufficientStockException をスローすること")
         void shouldThrowExceptionWhenStockInsufficient() {
-            CreateOrder createOrder = new CreateOrder(1L, List.of(new CreateOrderItem(1L, 20)));
+            CreateOrder createOrder =
+                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 20)), null);
 
             when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
@@ -224,7 +231,8 @@ class OrderServiceTest {
         @Test
         @DisplayName("注文作成後に在庫が減算されること")
         void shouldDecrementStockAfterOrderCreation() {
-            CreateOrder createOrder = new CreateOrder(1L, List.of(new CreateOrderItem(1L, 3)));
+            CreateOrder createOrder =
+                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 3)), null);
 
             when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
@@ -234,6 +242,45 @@ class OrderServiceTest {
 
             // stock 10 - 3 = 7
             assertThat(product.getStock()).isEqualTo(7);
+        }
+
+        @Test
+        @DisplayName("クーポンコードを指定した場合、割引が適用されること")
+        void shouldApplyCouponDiscount() {
+            CreateOrder createOrder =
+                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 2)), "SAVE500");
+
+            when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+            when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+            when(couponService.validateAndApply("SAVE500", 1L, BigDecimal.valueOf(200.00)))
+                    .thenReturn(BigDecimal.valueOf(50.00));
+            when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
+
+            orderService.create(createOrder);
+
+            org.mockito.ArgumentCaptor<CustomerOrder> captor =
+                    org.mockito.ArgumentCaptor.forClass(CustomerOrder.class);
+            verify(orderRepository).save(captor.capture());
+            assertThat(captor.getValue().getCouponCode()).isEqualTo("SAVE500");
+            assertThat(captor.getValue().getDiscountAmount()).isEqualByComparingTo("50.00");
+            assertThat(captor.getValue().getTotalAmount()).isEqualByComparingTo("150.00");
+        }
+
+        @Test
+        @DisplayName("クーポンが利用できない場合、CouponNotAllowedException をスローすること")
+        void shouldThrowExceptionWhenCouponNotAllowed() {
+            CreateOrder createOrder =
+                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 2)), "EXPIRED");
+
+            when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+            when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+            when(couponService.validateAndApply("EXPIRED", 1L, BigDecimal.valueOf(200.00)))
+                    .thenThrow(
+                            new com.example.ecapi.exception.CouponNotAllowedException("EXPIRED"));
+
+            assertThatThrownBy(() -> orderService.create(createOrder))
+                    .isInstanceOf(com.example.ecapi.exception.CouponNotAllowedException.class);
+            verify(orderRepository, org.mockito.Mockito.never()).save(any(CustomerOrder.class));
         }
     }
 

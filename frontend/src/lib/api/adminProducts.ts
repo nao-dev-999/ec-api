@@ -37,3 +37,9 @@ export function updateAdminProduct(
 export function deleteAdminProduct(id: number): Promise<void> {
   return apiFetch<void>(`/api/admin/products/${id}`, { method: "DELETE" });
 }
+
+export function getLowStockProducts(threshold = 10): Promise<AdminProduct[]> {
+  return apiFetch<AdminProduct[]>(
+    `/api/admin/products/low-stock?threshold=${threshold}`,
+  );
+}

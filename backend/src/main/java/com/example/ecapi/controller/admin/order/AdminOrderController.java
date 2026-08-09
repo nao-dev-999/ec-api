@@ -62,6 +62,8 @@ public class AdminOrderController {
                 result.customerName(),
                 result.status(),
                 result.totalAmount(),
+                result.couponCode(),
+                result.discountAmount(),
                 result.items().stream()
                         .map(
                                 i ->

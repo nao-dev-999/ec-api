@@ -5,6 +5,7 @@ import { ArrowLeft } from "lucide-react";
 import { getProduct } from "@/lib/api/products";
 import { ApiError } from "@/lib/api/client";
 import AddToCartButton from "./AddToCartButton";
+import WishlistButton from "./WishlistButton";
 import ProductReviews from "./ProductReviews";
 
 export const dynamic = "force-dynamic";
@@ -53,6 +54,7 @@ export default async function ProductDetailPage({
         <span className="badge">在庫: {product.stock}</span>
       </p>
       <AddToCartButton productId={product.id!} />
+      <WishlistButton productId={product.id!} />
       <ProductReviews productId={product.id!} />
     </main>
   );
