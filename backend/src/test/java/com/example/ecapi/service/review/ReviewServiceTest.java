@@ -20,6 +20,7 @@ import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.repository.ReviewRepository;
 import com.example.ecapi.service.review.dto.CreateReview;
 import com.example.ecapi.service.review.dto.ReviewResult;
+import com.example.ecapi.service.review.dto.ReviewSummaryResult;
 import com.example.ecapi.service.review.dto.UpdateReview;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -33,6 +34,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -221,6 +224,59 @@ class ReviewServiceTest {
 
             assertThatThrownBy(() -> reviewService.deleteByAdmin(999L))
                     .isInstanceOf(ReviewNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("getSummary")
+    class GetSummaryTest {
+
+        @Test
+        @DisplayName("平均評価・件数を取得できること")
+        void shouldReturnSummary() {
+            when(reviewRepository.findAverageRatingByProductId(PRODUCT_ID))
+                    .thenReturn(Optional.of(4.5));
+            when(reviewRepository.countByProductId(PRODUCT_ID)).thenReturn(2L);
+
+            ReviewSummaryResult result = reviewService.getSummary(PRODUCT_ID);
+
+            assertThat(result.averageRating()).isEqualTo(4.5);
+            assertThat(result.reviewCount()).isEqualTo(2L);
+        }
+
+        @Test
+        @DisplayName("レビューが0件の場合、平均評価0を返すこと")
+        void shouldReturnZeroAverageWhenNoReviews() {
+            when(reviewRepository.findAverageRatingByProductId(PRODUCT_ID))
+                    .thenReturn(Optional.empty());
+            when(reviewRepository.countByProductId(PRODUCT_ID)).thenReturn(0L);
+
+            ReviewSummaryResult result = reviewService.getSummary(PRODUCT_ID);
+
+            assertThat(result.averageRating()).isEqualTo(0.0);
+            assertThat(result.reviewCount()).isEqualTo(0L);
+        }
+    }
+
+    @Nested
+    @DisplayName("listAllForAdmin")
+    class ListAllForAdminTest {
+
+        @Test
+        @DisplayName("全レビューをページングで取得できること")
+        void shouldReturnAllReviews() {
+            PageRequest pageable = PageRequest.of(0, 20);
+            when(reviewRepository.findAll(pageable))
+                    .thenReturn(new PageImpl<>(List.of(review), pageable, 1));
+            when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
+            when(customerRepository.findAllById(List.of(CUSTOMER_ID)))
+                    .thenReturn(List.of(customer));
+
+            var result = reviewService.listAllForAdmin(pageable);
+
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).productName()).isEqualTo("Test Product");
+            assertThat(result.getContent().get(0).customerName()).isEqualTo("山田");
         }
     }
 
