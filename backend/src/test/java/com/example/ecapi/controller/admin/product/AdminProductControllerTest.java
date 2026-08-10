@@ -1,6 +1,7 @@
 package com.example.ecapi.controller.admin.product;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -29,6 +30,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -79,13 +82,13 @@ class AdminProductControllerTest {
         @Test
         @DisplayName("検索条件なしで全商品を取得できること")
         void shouldGetAllProductsWithoutCriteria() throws Exception {
-            when(productService.searchProducts(null, null, null))
-                    .thenReturn(List.of(productResult));
+            when(productService.searchProducts(eq(null), eq(null), eq(null), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(productResult)));
 
             mockMvc.perform(get("/api/admin/products"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[0].id").value(productResponse.id()))
-                    .andExpect(jsonPath("$[0].name").value(productResponse.name()));
+                    .andExpect(jsonPath("$.content[0].id").value(productResponse.id()))
+                    .andExpect(jsonPath("$.content[0].name").value(productResponse.name()));
         }
 
         @Test
@@ -95,8 +98,9 @@ class AdminProductControllerTest {
             String description = "Desc";
             BigDecimal price = BigDecimal.valueOf(150.00);
 
-            when(productService.searchProducts(name, description, price))
-                    .thenReturn(List.of(productResult));
+            when(productService.searchProducts(
+                            eq(name), eq(description), eq(price), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(productResult)));
 
             mockMvc.perform(
                             get("/api/admin/products")
@@ -104,19 +108,19 @@ class AdminProductControllerTest {
                                     .param("description", description)
                                     .param("price", price.toString()))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[0].id").value(productResponse.id()))
-                    .andExpect(jsonPath("$[0].name").value(productResponse.name()));
+                    .andExpect(jsonPath("$.content[0].id").value(productResponse.id()))
+                    .andExpect(jsonPath("$.content[0].name").value(productResponse.name()));
         }
 
         @Test
-        @DisplayName("検索結果が0件の場合、空のリストを返すこと")
-        void shouldReturnEmptyListWhenNoProductsFound() throws Exception {
-            when(productService.searchProducts(any(), any(), any()))
-                    .thenReturn(Collections.emptyList());
+        @DisplayName("検索結果が0件の場合、空のページを返すこと")
+        void shouldReturnEmptyPageWhenNoProductsFound() throws Exception {
+            when(productService.searchProducts(any(), any(), any(), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(Collections.emptyList()));
 
             mockMvc.perform(get("/api/admin/products"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$").isEmpty());
+                    .andExpect(jsonPath("$.content").isEmpty());
         }
     }
 

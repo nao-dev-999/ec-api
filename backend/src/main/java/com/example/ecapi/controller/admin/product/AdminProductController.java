@@ -3,6 +3,7 @@ package com.example.ecapi.controller.admin.product;
 import com.example.ecapi.controller.admin.product.dto.AdminProductResponse;
 import com.example.ecapi.controller.admin.product.dto.CreateProductRequest;
 import com.example.ecapi.controller.admin.product.dto.UpdateProductRequest;
+import com.example.ecapi.controller.common.dto.PageResponse;
 import com.example.ecapi.exception.ProductIdMismatchException;
 import com.example.ecapi.service.product.ProductService;
 import com.example.ecapi.service.product.dto.CreateProduct;
@@ -12,6 +13,10 @@ import jakarta.validation.Valid;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -21,27 +26,37 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class AdminProductController {
 
+    private static final int MAX_PAGE_SIZE = 100;
+
     private final ProductService productService;
 
     /**
-     * 全商品を取得、または検索条件に合致する商品を取得します。 検索条件が複数指定された場合はAND条件で検索されます。
+     * 全商品を取得、または検索条件に合致する商品をページング取得します。 検索条件が複数指定された場合はAND条件で検索されます。
      *
      * @param name 商品名（部分一致、大文字小文字無視）
      * @param description 商品説明（部分一致、大文字小文字無視）
      * @param price 価格（指定値以下）
-     * @return 検索結果の商品リスト
+     * @return 検索結果の商品ページ {@link AdminProductResponse}
      */
     @GetMapping
-    public ResponseEntity<List<AdminProductResponse>> getAll(
+    public ResponseEntity<PageResponse<AdminProductResponse>> getAll(
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String description,
-            @RequestParam(required = false) BigDecimal price) {
+            @RequestParam(required = false) BigDecimal price,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         name = name == null ? null : name.trim();
         description = description == null ? null : description.trim();
-        return ResponseEntity.ok(
-                productService.searchProducts(name, description, price).stream()
-                        .map(this::toAdminProductResponse)
-                        .toList());
+        Pageable pageable =
+                PageRequest.of(
+                        Math.max(page, 0),
+                        Math.clamp(size, 1, MAX_PAGE_SIZE),
+                        Sort.by("name").ascending());
+        Page<AdminProductResponse> result =
+                productService
+                        .searchProducts(name, description, price, pageable)
+                        .map(this::toAdminProductResponse);
+        return ResponseEntity.ok(PageResponse.from(result));
     }
 
     @GetMapping("/{id}")

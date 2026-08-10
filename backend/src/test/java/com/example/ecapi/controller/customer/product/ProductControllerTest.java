@@ -1,6 +1,7 @@
 package com.example.ecapi.controller.customer.product;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -15,6 +16,7 @@ import com.example.ecapi.service.product.ProductService;
 import com.example.ecapi.service.product.dto.ProductResult;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -23,6 +25,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
@@ -64,6 +68,33 @@ class ProductControllerTest {
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         1);
+    }
+
+    @Nested
+    @DisplayName("GET /api/customer/products")
+    class GetAllProductsTest {
+        @Test
+        @DisplayName("商品をページングで取得できること")
+        void shouldGetAllProducts() throws Exception {
+            when(productService.searchProducts(eq(null), eq(null), eq(null), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(productResult)));
+
+            mockMvc.perform(get("/api/customer/products"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].id").value(productResponse.id()))
+                    .andExpect(jsonPath("$.content[0].name").value(productResponse.name()));
+        }
+
+        @Test
+        @DisplayName("page・sizeを指定して取得できること")
+        void shouldGetProductsWithPageAndSize() throws Exception {
+            when(productService.searchProducts(eq(null), eq(null), eq(null), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(productResult)));
+
+            mockMvc.perform(get("/api/customer/products").param("page", "1").param("size", "10"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].id").value(productResponse.id()));
+        }
     }
 
     @Nested

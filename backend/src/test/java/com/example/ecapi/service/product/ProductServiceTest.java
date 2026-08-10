@@ -28,7 +28,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -123,39 +126,43 @@ class ProductServiceTest {
     @DisplayName("searchProducts")
     class SearchProductsTest {
 
+        private final Pageable pageable = PageRequest.of(0, 20);
+
         @Test
         @DisplayName("検索条件なしで全商品を取得できること")
         void shouldReturnAllProductsWithoutCriteria() {
-            when(productRepository.findAll(any(Specification.class), any(Sort.class)))
-                    .thenReturn(List.of(product));
+            when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(product), pageable, 1));
 
-            List<ProductResult> result = productService.searchProducts(null, null, null);
+            Page<ProductResult> result = productService.searchProducts(null, null, null, pageable);
 
-            assertThat(result).hasSize(1);
+            assertThat(result.getContent()).hasSize(1);
         }
 
         @Test
         @DisplayName("検索条件を指定して商品を取得できること")
         void shouldReturnFilteredProducts() {
-            when(productRepository.findAll(any(Specification.class), any(Sort.class)))
-                    .thenReturn(List.of(product));
+            when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(List.of(product), pageable, 1));
 
-            List<ProductResult> result =
-                    productService.searchProducts("Test", "Desc", BigDecimal.valueOf(150.00));
+            Page<ProductResult> result =
+                    productService.searchProducts(
+                            "Test", "Desc", BigDecimal.valueOf(150.00), pageable);
 
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).name()).isEqualTo("Test Product");
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).name()).isEqualTo("Test Product");
         }
 
         @Test
-        @DisplayName("条件に合致する商品がない場合、空のリストを返すこと")
-        void shouldReturnEmptyListWhenNoMatch() {
-            when(productRepository.findAll(any(Specification.class), any(Sort.class)))
-                    .thenReturn(Collections.emptyList());
+        @DisplayName("条件に合致する商品がない場合、空のページを返すこと")
+        void shouldReturnEmptyPageWhenNoMatch() {
+            when(productRepository.findAll(any(Specification.class), any(Pageable.class)))
+                    .thenReturn(new PageImpl<>(Collections.emptyList(), pageable, 0));
 
-            List<ProductResult> result = productService.searchProducts("NotExist", null, null);
+            Page<ProductResult> result =
+                    productService.searchProducts("NotExist", null, null, pageable);
 
-            assertThat(result).isEmpty();
+            assertThat(result.getContent()).isEmpty();
         }
     }
 
