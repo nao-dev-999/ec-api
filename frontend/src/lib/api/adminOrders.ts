@@ -2,7 +2,7 @@ import { apiFetch } from "./client";
 import type { components } from "./schema.d.ts";
 
 /**
- * NOTE: couponCode/discountAmount はバックエンドに追加済みだが、
+ * NOTE: couponCode/discountAmount/配送先スナップショットはバックエンドに追加済みだが、
  * schema.d.ts はまだ再生成前のため交差型で補っている。
  * `npm run generate:api-types` 実行後は生成された型に直接含まれるはずなので、
  * この交差型は不要になる（形は同一）。
@@ -10,6 +10,13 @@ import type { components } from "./schema.d.ts";
 export type AdminOrder = components["schemas"]["AdminOrderResponse"] & {
   couponCode?: string | null;
   discountAmount?: number;
+  shippingRecipientName?: string | null;
+  shippingPostalCode?: string | null;
+  shippingPrefecture?: string | null;
+  shippingCity?: string | null;
+  shippingAddressLine1?: string | null;
+  shippingAddressLine2?: string | null;
+  shippingPhoneNumber?: string | null;
 };
 export type OrderStatus = NonNullable<AdminOrder["status"]>;
 export type AdminOrderPage = Omit<

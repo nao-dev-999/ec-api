@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public record CreateProductRequest(
@@ -15,4 +16,5 @@ public record CreateProductRequest(
                         inclusive = false,
                         message = "{validation.product.price.decimalMin}")
                 BigDecimal price,
-        @Min(value = 0, message = "{validation.product.stock.min}") int stock) {}
+        @Min(value = 0, message = "{validation.product.stock.min}") int stock,
+        @Size(max = 2048, message = "{validation.product.imageUrl.size}") String imageUrl) {}

@@ -56,6 +56,7 @@ class AdminProductControllerTest {
                         "Description",
                         BigDecimal.valueOf(100.00),
                         10,
+                        null,
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         1);
@@ -66,6 +67,7 @@ class AdminProductControllerTest {
                         "Description",
                         BigDecimal.valueOf(100.00),
                         10,
+                        null,
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         1);
@@ -175,7 +177,7 @@ class AdminProductControllerTest {
         void shouldCreateProduct() throws Exception {
             CreateProductRequest request =
                     new CreateProductRequest(
-                            "New Product", "New Desc", BigDecimal.valueOf(200.00), 20);
+                            "New Product", "New Desc", BigDecimal.valueOf(200.00), 20, null);
 
             when(productService.create(any(CreateProduct.class))).thenReturn(productResult);
 
@@ -192,7 +194,7 @@ class AdminProductControllerTest {
         @DisplayName("バリデーションエラーの場合、400を返すこと")
         void shouldReturnBadRequestWhenValidationFails() throws Exception {
             CreateProductRequest invalidRequest =
-                    new CreateProductRequest("", "New Desc", BigDecimal.valueOf(-10.00), -5);
+                    new CreateProductRequest("", "New Desc", BigDecimal.valueOf(-10.00), -5, null);
 
             mockMvc.perform(
                             post("/api/admin/products")
@@ -218,6 +220,7 @@ class AdminProductControllerTest {
                             "Updated Desc",
                             BigDecimal.valueOf(120.00),
                             15,
+                            null,
                             1);
 
             when(productService.update(any(UpdateProduct.class))).thenReturn(productResult);
@@ -241,6 +244,7 @@ class AdminProductControllerTest {
                             "Updated Desc",
                             BigDecimal.valueOf(120.00),
                             15,
+                            null,
                             1);
 
             doThrow(new ProductNotFoundException("Product not found"))
@@ -264,6 +268,7 @@ class AdminProductControllerTest {
                             "Updated Desc",
                             BigDecimal.valueOf(120.00),
                             15,
+                            null,
                             1);
 
             doThrow(new OptimisticLockException("Optimistic lock failed"))
@@ -287,6 +292,7 @@ class AdminProductControllerTest {
                             "Updated Desc",
                             BigDecimal.valueOf(120.00),
                             15,
+                            null,
                             null);
 
             mockMvc.perform(
@@ -308,6 +314,7 @@ class AdminProductControllerTest {
                             "Updated Desc",
                             BigDecimal.valueOf(120.00),
                             15,
+                            null,
                             1);
 
             mockMvc.perform(

@@ -232,7 +232,21 @@ export default function AdminProductsPage() {
                       }}
                     >
                       <span className="card-icon">
-                        <Package size={18} />
+                        {product.imageUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={product.imageUrl}
+                            alt=""
+                            style={{
+                              width: "100%",
+                              height: "100%",
+                              objectFit: "cover",
+                              borderRadius: "inherit",
+                            }}
+                          />
+                        ) : (
+                          <Package size={18} />
+                        )}
                       </span>
                       <Link href={`/admin/products/${product.id}`}>
                         {product.name}

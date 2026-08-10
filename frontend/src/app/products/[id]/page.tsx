@@ -46,6 +46,20 @@ export default async function ProductDetailPage({
         商品一覧に戻る
       </Link>
       <h1>{product.name}</h1>
+      {product.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={product.imageUrl}
+          alt={product.name}
+          style={{
+            width: "100%",
+            maxHeight: 320,
+            objectFit: "cover",
+            borderRadius: 8,
+            marginBottom: 12,
+          }}
+        />
+      )}
       <p style={{ marginBottom: 12 }}>{product.description}</p>
       <p style={{ marginBottom: 8 }}>
         <span className="price price-lg">¥{product.price}</span>

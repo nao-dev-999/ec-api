@@ -63,6 +63,7 @@ public class ProductController {
                 result.description(),
                 result.price(),
                 result.stock(),
+                result.imageUrl(),
                 result.createdAt(),
                 result.updatedAt(),
                 result.version());

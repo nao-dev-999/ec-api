@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { MapPin } from "lucide-react";
 import {
   getMe,
   updateEmail,
@@ -50,7 +52,9 @@ export default function MyPage() {
       setMe(updated);
       setEmailMessage("メールアドレスを更新しました");
     } catch (err) {
-      setEmailMessage(getErrorMessage(err, "メールアドレスの更新に失敗しました"));
+      setEmailMessage(
+        getErrorMessage(err, "メールアドレスの更新に失敗しました"),
+      );
     } finally {
       setEmailSubmitting(false);
     }
@@ -73,7 +77,9 @@ export default function MyPage() {
       setNewPassword("");
       setPasswordMessage("パスワードを更新しました");
     } catch (err) {
-      setPasswordMessage(getErrorMessage(err, "パスワードの更新に失敗しました"));
+      setPasswordMessage(
+        getErrorMessage(err, "パスワードの更新に失敗しました"),
+      );
     } finally {
       setPasswordSubmitting(false);
     }
@@ -86,6 +92,16 @@ export default function MyPage() {
   return (
     <main style={{ padding: 24, maxWidth: 400 }}>
       <h1>マイページ</h1>
+
+      <section style={{ marginBottom: 32 }}>
+        <Link
+          href="/mypage/addresses"
+          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+        >
+          <MapPin size={16} />
+          配送先住所を管理
+        </Link>
+      </section>
 
       <section style={{ marginBottom: 32 }}>
         <h2>メールアドレス変更</h2>

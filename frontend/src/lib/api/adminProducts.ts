@@ -1,11 +1,22 @@
 import { apiFetch } from "./client";
 import type { components } from "./schema.d.ts";
 
-export type AdminProduct = components["schemas"]["AdminProductResponse"];
+/**
+ * NOTE: imageUrl はバックエンドに追加済みだが、schema.d.ts はまだ再生成前のため
+ * 交差型で補っている。`npm run generate:api-types` 実行後は生成された型に
+ * 直接含まれるはずなので、この交差型は不要になる（形は同一）。
+ */
+export type AdminProduct = components["schemas"]["AdminProductResponse"] & {
+  imageUrl?: string | null;
+};
 export type CreateProductRequest =
-  components["schemas"]["CreateProductRequest"];
+  components["schemas"]["CreateProductRequest"] & {
+    imageUrl?: string | null;
+  };
 export type UpdateProductRequest =
-  components["schemas"]["UpdateProductRequest"];
+  components["schemas"]["UpdateProductRequest"] & {
+    imageUrl?: string | null;
+  };
 
 export function getAdminProducts(): Promise<AdminProduct[]> {
   return apiFetch<AdminProduct[]>("/api/admin/products");

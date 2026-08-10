@@ -49,11 +49,6 @@ class AdminCustomerControllerTest {
                         null,
                         null,
                         null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         0);
@@ -61,11 +56,6 @@ class AdminCustomerControllerTest {
                 new AdminCustomerResponse(
                         1L,
                         "test@example.com",
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
                         null,
                         null,
                         null,

@@ -6,15 +6,18 @@ import com.example.ecapi.entity.Customer;
 import com.example.ecapi.entity.CustomerOrder;
 import com.example.ecapi.entity.CustomerOrderDetail;
 import com.example.ecapi.entity.Product;
+import com.example.ecapi.entity.ShippingAddress;
 import com.example.ecapi.exception.CustomerNotFoundException;
 import com.example.ecapi.exception.InsufficientStockException;
 import com.example.ecapi.exception.OrderCannotBeCancelledException;
 import com.example.ecapi.exception.OrderNotFoundException;
 import com.example.ecapi.exception.ProductNotFoundException;
+import com.example.ecapi.exception.ShippingAddressNotFoundException;
 import com.example.ecapi.repository.CustomerOrderDetailRepository;
 import com.example.ecapi.repository.CustomerOrderRepository;
 import com.example.ecapi.repository.CustomerRepository;
 import com.example.ecapi.repository.ProductRepository;
+import com.example.ecapi.repository.ShippingAddressRepository;
 import com.example.ecapi.service.cart.CartService;
 import com.example.ecapi.service.coupon.CouponService;
 import com.example.ecapi.service.order.dto.CreateOrder;
@@ -48,6 +51,7 @@ public class OrderService {
     private final CustomerOrderDetailRepository orderDetailRepository;
     private final ProductRepository productRepository;
     private final CustomerRepository customerRepository;
+    private final ShippingAddressRepository shippingAddressRepository;
     private final CartService cartService;
     private final CouponService couponService;
 
@@ -93,6 +97,7 @@ public class OrderService {
      * @throws com.example.ecapi.exception.CouponNotFoundException クーポンコードを指定し、該当するクーポンが存在しない場合
      * @throws com.example.ecapi.exception.CouponNotAllowedException
      *     指定したクーポンが無効化済み・有効期限外・利用上限到達・使用済みの場合
+     * @throws ShippingAddressNotFoundException 指定された配送先住所が存在しない、または他顧客の住所の場合
      */
     @Transactional
     public OrderResult create(CreateOrder createOrder) {
@@ -101,11 +106,26 @@ public class OrderService {
                         .findById(createOrder.customerId())
                         .orElseThrow(() -> new CustomerNotFoundException(createOrder.customerId()));
 
+        ShippingAddress shippingAddress =
+                shippingAddressRepository
+                        .findByIdAndCustomerId(createOrder.shippingAddressId(), customer.getId())
+                        .orElseThrow(
+                                () ->
+                                        new ShippingAddressNotFoundException(
+                                                createOrder.shippingAddressId()));
+
         CustomerOrder order = new CustomerOrder();
         order.setCustomer(customer);
         order.setStatus(OrderStatus.PENDING);
         order.setPaymentStatus(OrderPaymentStatus.AUTHORIZED);
         order.setOrderedAt(Instant.now());
+        order.setShippingRecipientName(shippingAddress.getRecipientName());
+        order.setShippingPostalCode(shippingAddress.getPostalCode());
+        order.setShippingPrefecture(shippingAddress.getPrefecture());
+        order.setShippingCity(shippingAddress.getCity());
+        order.setShippingAddressLine1(shippingAddress.getAddressLine1());
+        order.setShippingAddressLine2(shippingAddress.getAddressLine2());
+        order.setShippingPhoneNumber(shippingAddress.getPhoneNumber());
 
         for (CreateOrderItem item : createOrder.items()) {
             Product product =
@@ -214,6 +234,13 @@ public class OrderService {
                 customerOrder.getTotalAmount(),
                 customerOrder.getCouponCode(),
                 customerOrder.getDiscountAmount(),
+                customerOrder.getShippingRecipientName(),
+                customerOrder.getShippingPostalCode(),
+                customerOrder.getShippingPrefecture(),
+                customerOrder.getShippingCity(),
+                customerOrder.getShippingAddressLine1(),
+                customerOrder.getShippingAddressLine2(),
+                customerOrder.getShippingPhoneNumber(),
                 items.stream()
                         .map(
                                 item ->

@@ -16,6 +16,7 @@ export default function NewAdminProductPage() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("0");
+  const [imageUrl, setImageUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -41,6 +42,7 @@ export default function NewAdminProductPage() {
         description,
         price: priceValue,
         stock: stockValue,
+        imageUrl: imageUrl.trim() || undefined,
       });
       showToast("商品を作成しました");
       router.push(`/admin/products/${product.id}`);
@@ -94,7 +96,7 @@ export default function NewAdminProductPage() {
               style={{ display: "block", width: "100%" }}
             />
           </div>
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 16 }}>
             <label htmlFor="stock">在庫数</label>
             <input
               id="stock"
@@ -103,6 +105,16 @@ export default function NewAdminProductPage() {
               required
               value={stock}
               onChange={(e) => setStock(e.target.value)}
+              style={{ display: "block", width: "100%" }}
+            />
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <label htmlFor="imageUrl">画像URL（任意）</label>
+            <input
+              id="imageUrl"
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
               style={{ display: "block", width: "100%" }}
             />
           </div>

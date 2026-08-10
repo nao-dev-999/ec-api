@@ -76,6 +76,13 @@ class OrderControllerTest {
                         BigDecimal.valueOf(200.00),
                         null,
                         BigDecimal.ZERO,
+                        "Test Recipient",
+                        "100-0001",
+                        "東京都",
+                        "千代田区",
+                        "1-1-1",
+                        null,
+                        "090-1111-2222",
                         List.of(),
                         LocalDateTime.now(),
                         LocalDateTime.now(),
@@ -90,6 +97,13 @@ class OrderControllerTest {
                         BigDecimal.valueOf(200.00),
                         null,
                         BigDecimal.ZERO,
+                        "Test Recipient",
+                        "100-0001",
+                        "東京都",
+                        "千代田区",
+                        "1-1-1",
+                        null,
+                        "090-1111-2222",
                         List.of(itemResponse),
                         LocalDateTime.now(),
                         LocalDateTime.now(),
@@ -166,7 +180,7 @@ class OrderControllerTest {
         void shouldCreateOrder() throws Exception {
             when(orderService.create(any())).thenReturn(orderResult);
 
-            OrderRequest request = new OrderRequest(List.of(new OrderItemRequest(1L, 2)), null);
+            OrderRequest request = new OrderRequest(List.of(new OrderItemRequest(1L, 2)), null, 1L);
 
             mockMvc.perform(
                             post("/api/orders")
@@ -181,7 +195,7 @@ class OrderControllerTest {
         @WithMockLoginUser
         @DisplayName("items が空の場合、400を返すこと")
         void shouldReturnBadRequestWhenItemsIsEmpty() throws Exception {
-            OrderRequest invalidRequest = new OrderRequest(List.of(), null);
+            OrderRequest invalidRequest = new OrderRequest(List.of(), null, 1L);
 
             mockMvc.perform(
                             post("/api/orders")
@@ -195,7 +209,7 @@ class OrderControllerTest {
         @DisplayName("quantity が0以下の場合、400を返すこと")
         void shouldReturnBadRequestWhenQuantityIsZero() throws Exception {
             OrderRequest invalidRequest =
-                    new OrderRequest(List.of(new OrderItemRequest(1L, 0)), null);
+                    new OrderRequest(List.of(new OrderItemRequest(1L, 0)), null, 1L);
 
             mockMvc.perform(
                             post("/api/orders")
@@ -222,6 +236,13 @@ class OrderControllerTest {
                             BigDecimal.valueOf(200.00),
                             null,
                             BigDecimal.ZERO,
+                            "Test Recipient",
+                            "100-0001",
+                            "東京都",
+                            "千代田区",
+                            "1-1-1",
+                            null,
+                            "090-1111-2222",
                             List.of(),
                             LocalDateTime.now(),
                             LocalDateTime.now(),

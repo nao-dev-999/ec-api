@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   getCart,
@@ -10,6 +11,10 @@ import {
 } from "@/lib/api/cart";
 import { createOrder } from "@/lib/api/orders";
 import { previewCoupon, type CouponPreview } from "@/lib/api/coupons";
+import {
+  getShippingAddresses,
+  type ShippingAddress,
+} from "@/lib/api/shippingAddresses";
 import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/app/Toast";
 import { getErrorMessage } from "@/lib/errors/messages";
@@ -27,6 +32,8 @@ export default function CartPage() {
   );
   const [couponChecking, setCouponChecking] = useState(false);
   const [couponMessage, setCouponMessage] = useState<string | null>(null);
+  const [addresses, setAddresses] = useState<ShippingAddress[] | null>(null);
+  const [shippingAddressId, setShippingAddressId] = useState<number | "">("");
 
   useEffect(() => {
     getCart()
@@ -37,6 +44,22 @@ export default function CartPage() {
           return;
         }
         setError(getErrorMessage(err, "カートの取得に失敗しました"));
+      });
+  }, [router]);
+
+  useEffect(() => {
+    getShippingAddresses()
+      .then((result) => {
+        setAddresses(result);
+        const defaultAddress = result.find((a) => a.isDefault) ?? result[0];
+        if (defaultAddress) setShippingAddressId(defaultAddress.id);
+      })
+      .catch((err) => {
+        if (err instanceof ApiError && err.status === 401) {
+          router.push("/login");
+          return;
+        }
+        setError(getErrorMessage(err, "配送先住所の取得に失敗しました"));
       });
   }, [router]);
 
@@ -91,7 +114,7 @@ export default function CartPage() {
   }
 
   async function handleCheckout() {
-    if (!items || items.length === 0) return;
+    if (!items || items.length === 0 || !shippingAddressId) return;
     setError(null);
     setPlacingOrder(true);
     try {
@@ -101,6 +124,7 @@ export default function CartPage() {
           quantity: i.quantity!,
         })),
         couponCode: couponCode.trim() || undefined,
+        shippingAddressId,
       });
       router.push(`/orders/${order.id}`);
     } catch (err) {
@@ -111,7 +135,8 @@ export default function CartPage() {
   }
 
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
-  if (items === null) return <p style={{ padding: 24 }}>読み込み中...</p>;
+  if (items === null || addresses === null)
+    return <p style={{ padding: 24 }}>読み込み中...</p>;
 
   const total = items.reduce((sum, i) => sum + (i.subtotal ?? 0), 0);
 
@@ -198,7 +223,38 @@ export default function CartPage() {
               合計: <span className="price price-lg">¥{total}</span>
             </p>
           )}
-          <button onClick={handleCheckout} disabled={placingOrder}>
+          <div style={{ margin: "16px 0", textAlign: "right" }}>
+            {addresses.length === 0 ? (
+              <p>
+                配送先住所が登録されていません。
+                <Link href="/mypage/addresses/new">配送先を追加</Link>
+                してください。
+              </p>
+            ) : (
+              <>
+                <label htmlFor="shippingAddressId">配送先: </label>
+                <select
+                  id="shippingAddressId"
+                  value={shippingAddressId}
+                  onChange={(e) => setShippingAddressId(Number(e.target.value))}
+                >
+                  {addresses.map((address) => (
+                    <option key={address.id} value={address.id}>
+                      {address.recipientName} 様 〒{address.postalCode}{" "}
+                      {address.prefecture}
+                      {address.city}
+                      {address.addressLine1}
+                      {address.isDefault ? "（既定）" : ""}
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
+          </div>
+          <button
+            onClick={handleCheckout}
+            disabled={placingOrder || !shippingAddressId}
+          >
             {placingOrder ? "注文中..." : "購入する"}
           </button>
         </>

@@ -57,11 +57,6 @@ class CustomerMeControllerTest {
                         null,
                         null,
                         null,
-                        null,
-                        null,
-                        null,
-                        null,
-                        null,
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         0);
@@ -95,11 +90,6 @@ class CustomerMeControllerTest {
                     new CustomerResult(
                             1L,
                             "new@example.com",
-                            null,
-                            null,
-                            null,
-                            null,
-                            null,
                             null,
                             null,
                             null,

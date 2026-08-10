@@ -80,6 +80,8 @@ public class SecurityConfig {
                                         .hasRole(ROLE_CUSTOMER)
                                         .requestMatchers("/api/customer/coupons/**")
                                         .hasRole(ROLE_CUSTOMER)
+                                        .requestMatchers("/api/customer/shipping-addresses/**")
+                                        .hasRole(ROLE_CUSTOMER)
                                         .requestMatchers("/api/orders/**")
                                         .hasRole(ROLE_CUSTOMER)
                                         .requestMatchers("/api/admin/**")

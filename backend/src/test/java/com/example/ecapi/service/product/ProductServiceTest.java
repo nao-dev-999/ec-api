@@ -61,6 +61,7 @@ class ProductServiceTest {
                         "Description",
                         BigDecimal.valueOf(100.00),
                         10,
+                        null,
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         1);
@@ -168,7 +169,8 @@ class ProductServiceTest {
             when(productRepository.save(any(Product.class))).thenReturn(product);
 
             CreateProduct createProduct =
-                    new CreateProduct("New Product", "New Desc", BigDecimal.valueOf(200.00), 20);
+                    new CreateProduct(
+                            "New Product", "New Desc", BigDecimal.valueOf(200.00), 20, null);
 
             ProductResult result = productService.create(createProduct);
 
@@ -191,6 +193,7 @@ class ProductServiceTest {
                             "Updated Desc",
                             BigDecimal.valueOf(120.00),
                             15,
+                            null,
                             1);
 
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
@@ -212,6 +215,7 @@ class ProductServiceTest {
                             "Updated Desc",
                             BigDecimal.valueOf(120.00),
                             15,
+                            null,
                             1);
 
             when(productRepository.findById(99L)).thenReturn(Optional.empty());

@@ -37,19 +37,6 @@ public class Customer extends BaseEntity implements SoftDeletable {
     @Column(name = "phone_number")
     private String phoneNumber;
 
-    @Column(name = "postal_code")
-    private String postalCode;
-
-    private String prefecture;
-
-    private String city;
-
-    @Column(name = "address_line1")
-    private String addressLine1;
-
-    @Column(name = "address_line2")
-    private String addressLine2;
-
     @Column(name = "is_deleted", nullable = false)
     private boolean deleted = false;
 }

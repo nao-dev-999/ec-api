@@ -1,7 +1,14 @@
 import { apiFetch } from "./client";
 import type { components } from "./schema.d.ts";
 
-export type Product = components["schemas"]["ProductResponse"];
+/**
+ * NOTE: imageUrl はバックエンドに追加済みだが、schema.d.ts はまだ再生成前のため
+ * 交差型で補っている。`npm run generate:api-types` 実行後は生成された型に
+ * 直接含まれるはずなので、この交差型は不要になる（形は同一）。
+ */
+export type Product = components["schemas"]["ProductResponse"] & {
+  imageUrl?: string | null;
+};
 
 export type ProductSearchParams = {
   name?: string;
