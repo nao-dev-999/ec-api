@@ -76,6 +76,10 @@ override.tf.json
 .linux_command.md
 /batch/tmp/
 
+# 負荷試験用テストデータ生成物(容量が大きく環境依存のためコミットしない)
+/scripts/loadtest/out/
+__pycache__/
+
 # CLAUDE
 CLAUDE.md
 .claude/
