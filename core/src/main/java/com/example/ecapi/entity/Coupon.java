@@ -10,9 +10,9 @@ import lombok.Setter;
 /**
  * クーポンエンティティ（定額割引、コード入力式）
  *
- * <p>{@code validFrom}/{@code validTo} はいずれも null 可（未設定側は無期限）。{@code usageLimit} が
- * null の場合は全体の利用回数上限なし。1顧客につき同一クーポンは1回のみ利用可能（サービス層で
- * {@link com.example.ecapi.entity.CustomerOrder#getCouponCode()} の利用履歴から判定）。
+ * <p>{@code validFrom}/{@code validTo} はいずれも null 可（未設定側は無期限）。{@code usageLimit} が null
+ * の場合は全体の利用回数上限なし。1顧客につき同一クーポンは1回のみ利用可能（サービス層で {@link
+ * com.example.ecapi.entity.CustomerOrder#getCouponCode()} の利用履歴から判定）。
  */
 @Entity
 @Table(name = "coupon")
