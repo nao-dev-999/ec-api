@@ -26,6 +26,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -68,6 +69,19 @@ class WishlistControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.content[0].productId").value(10))
                     .andExpect(jsonPath("$.content[0].productName").value("Test Product"));
+        }
+
+        @Test
+        @WithMockLoginUser
+        @DisplayName("お気に入りが0件の場合、空のリストを返すこと")
+        void shouldReturnEmptyListWhenWishlistIsEmpty() throws Exception {
+            Pageable pageable = PageRequest.of(0, 20);
+            when(wishlistService.getWishlist(anyLong(), any(Pageable.class)))
+                    .thenReturn(Page.empty(pageable));
+
+            mockMvc.perform(get("/api/customer/wishlist"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content").isEmpty());
         }
     }
 
@@ -162,6 +176,15 @@ class WishlistControllerTest {
             mockMvc.perform(delete("/api/customer/wishlist/items/{productId}", 10L))
                     .andExpect(status().isNoContent());
             verify(wishlistService).removeItem(anyLong(), org.mockito.ArgumentMatchers.eq(10L));
+        }
+
+        @Test
+        @WithMockLoginUser
+        @DisplayName("未登録の商品を指定した場合も、冪等に204を返すこと")
+        void shouldReturnNoContentWhenItemNotRegistered() throws Exception {
+            mockMvc.perform(delete("/api/customer/wishlist/items/{productId}", 99L))
+                    .andExpect(status().isNoContent());
+            verify(wishlistService).removeItem(anyLong(), org.mockito.ArgumentMatchers.eq(99L));
         }
     }
 }

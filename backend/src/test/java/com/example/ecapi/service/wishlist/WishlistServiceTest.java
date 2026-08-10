@@ -78,6 +78,19 @@ class WishlistServiceTest {
             assertThat(result.getContent().getFirst().productId()).isEqualTo(PRODUCT_ID);
             assertThat(result.getContent().getFirst().productName()).isEqualTo("Test Product");
         }
+
+        @Test
+        @DisplayName("登録済み商品が削除済みの場合、ProductNotFoundException をスローすること")
+        void shouldThrowExceptionWhenProductNoLongerExists() {
+            Pageable pageable = PageRequest.of(0, 20);
+            when(wishlistItemRepository.findAllByCustomerId(CUSTOMER_ID, pageable))
+                    .thenReturn(new PageImpl<>(List.of(wishlistItem), pageable, 1));
+            when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of());
+
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                            () -> wishlistService.getWishlist(CUSTOMER_ID, pageable))
+                    .isInstanceOf(ProductNotFoundException.class);
+        }
     }
 
     @Nested
