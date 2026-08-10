@@ -5,8 +5,8 @@ variable "public_subnet_cidrs" { type = list(string) }
 variable "private_subnet_cidrs" { type = list(string) }
 variable "availability_zones" { type = list(string) }
 
-variable "flow_log_retention_days" {
-  description = "VPC Flow LogsのCloudWatch Logs保持日数"
+variable "vpc_flow_log_retention_days" {
+  description = "VPC Flow Logsを保存するS3バケットのオブジェクト保持日数。コスト削減のため、経過後は自動削除する。"
   type        = number
   default     = 30
 }
