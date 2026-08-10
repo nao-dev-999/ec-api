@@ -14,10 +14,28 @@ export type WishlistItem = {
   createdAt: string;
 };
 
-export function getWishlist(options?: {
-  suppressAuthRedirect?: boolean;
-}): Promise<WishlistItem[]> {
-  return apiFetch<WishlistItem[]>("/api/customer/wishlist", options);
+export type WishlistPage = {
+  content: WishlistItem[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
+export function getWishlist(page = 0, size = 20): Promise<WishlistPage> {
+  return apiFetch<WishlistPage>(
+    `/api/customer/wishlist?page=${page}&size=${size}`,
+  );
+}
+
+export function getWishlistItem(
+  productId: number,
+  options?: { suppressAuthRedirect?: boolean },
+): Promise<WishlistItem> {
+  return apiFetch<WishlistItem>(
+    `/api/customer/wishlist/items/${productId}`,
+    options,
+  );
 }
 
 export function addWishlistItem(productId: number): Promise<WishlistItem> {

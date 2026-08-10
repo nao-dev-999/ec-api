@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Heart } from "lucide-react";
 import {
   addWishlistItem,
-  getWishlist,
+  getWishlistItem,
   removeWishlistItem,
 } from "@/lib/api/wishlist";
 import { ApiError } from "@/lib/api/client";
@@ -20,14 +20,13 @@ export default function WishlistButton({ productId }: { productId: number }) {
 
   useEffect(() => {
     let cancelled = false;
-    getWishlist({ suppressAuthRedirect: true })
-      .then((items) => {
-        if (!cancelled) {
-          setAdded(items.some((item) => item.productId === productId));
-        }
+    getWishlistItem(productId, { suppressAuthRedirect: true })
+      .then(() => {
+        if (!cancelled) setAdded(true);
       })
       .catch(() => {
-        // 未ログイン等で取得できない場合は未登録として扱う（ゲスト閲覧を妨げない）
+        // 404（未登録）・401（未ログイン）いずれも未登録として扱う（ゲスト閲覧を妨げない）
+        if (!cancelled) setAdded(false);
       })
       .finally(() => {
         if (!cancelled) setChecking(false);

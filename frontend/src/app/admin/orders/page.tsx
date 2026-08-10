@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Receipt, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Receipt, Eye, Ticket, ChevronLeft, ChevronRight } from "lucide-react";
 import { getAdminOrders, type AdminOrder } from "@/lib/api/adminOrders";
 import OrderStatusBadge from "../../OrderStatusBadge";
 import { getErrorMessage } from "@/lib/errors/messages";
@@ -28,7 +28,9 @@ export default function AdminOrdersPage() {
         setTotalPages(Math.max(1, result.totalPages ?? 1));
         setTotalElements(result.totalElements ?? 0);
       })
-      .catch((err) => setError(getErrorMessage(err, "注文一覧の取得に失敗しました")));
+      .catch((err) =>
+        setError(getErrorMessage(err, "注文一覧の取得に失敗しました")),
+      );
   }, [page]);
 
   if (error) return <p style={{ padding: 24, color: "red" }}>{error}</p>;
@@ -61,6 +63,15 @@ export default function AdminOrdersPage() {
             </div>
 
             <OrderStatusBadge status={order.status} />
+            {order.couponCode && (
+              <span className="badge" style={{ marginLeft: 8 }}>
+                <Ticket
+                  size={12}
+                  style={{ marginRight: 4, verticalAlign: "text-bottom" }}
+                />
+                {order.couponCode} (-¥{order.discountAmount?.toLocaleString()})
+              </span>
+            )}
 
             <div className="card-divider" />
 

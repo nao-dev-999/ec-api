@@ -168,6 +168,7 @@ public class OrderService {
 
     /**
      * JOIN FETCH 済みの Product を直接更新します（N+1 回避、JPA dirty checking で保存されます）。
+     * クーポンを使用した注文の場合、そのクーポンの利用回数を戻し、同じ顧客が再度利用できるようにします。
      *
      * @throws OrderNotFoundException 指定されたIDの注文が見つからない場合
      * @throws OrderCannotBeCancelledException 配達完了またはキャンセル済みの注文をキャンセルしようとした場合
@@ -188,6 +189,9 @@ public class OrderService {
         log.info("Order cancelled orderId={}", id);
         order.getItems()
                 .forEach(e -> e.getProduct().setStock(e.getProduct().getStock() + e.getQuantity()));
+        if (order.getCouponCode() != null) {
+            couponService.releaseUsage(order.getCouponCode());
+        }
         return toOrderResult(orderRepository.save(order));
     }
 

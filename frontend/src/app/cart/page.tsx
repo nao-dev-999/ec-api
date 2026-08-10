@@ -9,6 +9,7 @@ import {
   type CartItem,
 } from "@/lib/api/cart";
 import { createOrder } from "@/lib/api/orders";
+import { previewCoupon, type CouponPreview } from "@/lib/api/coupons";
 import { ApiError } from "@/lib/api/client";
 import { useToast } from "@/app/Toast";
 import { getErrorMessage } from "@/lib/errors/messages";
@@ -21,6 +22,11 @@ export default function CartPage() {
   const [error, setError] = useState<string | null>(null);
   const [placingOrder, setPlacingOrder] = useState(false);
   const [couponCode, setCouponCode] = useState("");
+  const [couponPreview, setCouponPreview] = useState<CouponPreview | null>(
+    null,
+  );
+  const [couponChecking, setCouponChecking] = useState(false);
+  const [couponMessage, setCouponMessage] = useState<string | null>(null);
 
   useEffect(() => {
     getCart()
@@ -61,6 +67,26 @@ export default function CartPage() {
       setItems((prev) => prev!.filter((i) => i.productId !== productId));
     } catch (err) {
       showToast(getErrorMessage(err, "削除に失敗しました"), "error");
+    }
+  }
+
+  async function handleCheckCoupon(subtotal: number) {
+    const code = couponCode.trim();
+    setCouponMessage(null);
+    setCouponPreview(null);
+    if (!code) return;
+    setCouponChecking(true);
+    try {
+      const preview = await previewCoupon(code, subtotal);
+      setCouponPreview(preview);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        router.push("/login");
+        return;
+      }
+      setCouponMessage(getErrorMessage(err, "クーポンの確認に失敗しました"));
+    } finally {
+      setCouponChecking(false);
     }
   }
 
@@ -128,13 +154,50 @@ export default function CartPage() {
             <input
               id="couponCode"
               value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
-              style={{ width: 160 }}
+              onChange={(e) => {
+                setCouponCode(e.target.value);
+                setCouponPreview(null);
+                setCouponMessage(null);
+              }}
+              style={{ width: 160, marginRight: 8 }}
             />
+            <button
+              type="button"
+              onClick={() => handleCheckCoupon(total)}
+              disabled={couponChecking || !couponCode.trim()}
+            >
+              {couponChecking ? "確認中..." : "確認"}
+            </button>
+            {couponMessage && (
+              <p style={{ color: "red", marginTop: 8 }}>{couponMessage}</p>
+            )}
+            {couponPreview && (
+              <p style={{ marginTop: 8 }}>
+                クーポン「{couponPreview.code}」適用: -¥
+                {couponPreview.discountAmount.toLocaleString()}
+              </p>
+            )}
           </div>
-          <p style={{ margin: "16px 0", textAlign: "right" }}>
-            合計: <span className="price price-lg">¥{total}</span>
-          </p>
+          {couponPreview ? (
+            <>
+              <p style={{ margin: "4px 0", textAlign: "right" }}>
+                小計: ¥{total.toLocaleString()}
+              </p>
+              <p style={{ margin: "4px 0", textAlign: "right" }}>
+                割引: -¥{couponPreview.discountAmount.toLocaleString()}
+              </p>
+              <p style={{ margin: "16px 0", textAlign: "right" }}>
+                合計:{" "}
+                <span className="price price-lg">
+                  ¥{(total - couponPreview.discountAmount).toLocaleString()}
+                </span>
+              </p>
+            </>
+          ) : (
+            <p style={{ margin: "16px 0", textAlign: "right" }}>
+              合計: <span className="price price-lg">¥{total}</span>
+            </p>
+          )}
           <button onClick={handleCheckout} disabled={placingOrder}>
             {placingOrder ? "注文中..." : "購入する"}
           </button>

@@ -99,6 +99,12 @@ export default function AdminOrderDetailPage({
           注文日: {formatDate(order.orderedAt)}
         </p>
         <OrderStatusBadge status={order.status} />
+        {order.couponCode && (
+          <p className="card-desc" style={{ marginTop: 8 }}>
+            クーポン: {order.couponCode}（-¥
+            {order.discountAmount?.toLocaleString()}）
+          </p>
+        )}
 
         <table className="order-table">
           <thead>
@@ -120,6 +126,25 @@ export default function AdminOrderDetailPage({
             ))}
           </tbody>
           <tfoot>
+            {!!order.discountAmount && (
+              <>
+                <tr>
+                  <td colSpan={3}>小計</td>
+                  <td className="num">
+                    ¥
+                    {(
+                      (order.totalAmount ?? 0) + order.discountAmount
+                    ).toLocaleString()}
+                  </td>
+                </tr>
+                <tr>
+                  <td colSpan={3}>クーポン割引</td>
+                  <td className="num">
+                    -¥{order.discountAmount.toLocaleString()}
+                  </td>
+                </tr>
+              </>
+            )}
             <tr>
               <td colSpan={3}>合計</td>
               <td className="num">¥{order.totalAmount?.toLocaleString()}</td>

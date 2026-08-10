@@ -13,6 +13,7 @@ public enum ErrorCode {
     CART_ITEM_NOT_FOUND("cart.item.notFound", HttpStatus.NOT_FOUND),
     REVIEW_NOT_FOUND("review.notFound", HttpStatus.NOT_FOUND),
     COUPON_NOT_FOUND("coupon.notFound", HttpStatus.NOT_FOUND),
+    WISHLIST_ITEM_NOT_FOUND("wishlist.item.notFound", HttpStatus.NOT_FOUND),
 
     // 409 Conflict
     INSUFFICIENT_STOCK("order.insufficientStock", HttpStatus.CONFLICT),

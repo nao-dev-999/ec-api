@@ -327,6 +327,29 @@ class OrderServiceTest {
         }
 
         @Test
+        @DisplayName("クーポンを使用した注文をキャンセルした場合、クーポンの利用回数が解放されること")
+        void shouldReleaseCouponUsageWhenCancellingOrderWithCoupon() {
+            customerOrder.setCouponCode("SAVE500");
+            when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
+            when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
+
+            orderService.cancel(1L, 0);
+
+            verify(couponService).releaseUsage("SAVE500");
+        }
+
+        @Test
+        @DisplayName("クーポンを使用していない注文をキャンセルした場合、クーポン解放は呼ばれないこと")
+        void shouldNotReleaseCouponUsageWhenOrderHasNoCoupon() {
+            when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
+            when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
+
+            orderService.cancel(1L, 0);
+
+            verify(couponService, org.mockito.Mockito.never()).releaseUsage(any());
+        }
+
+        @Test
         @DisplayName("指定したIDの注文が見つからない場合、OrderNotFoundException をスローすること")
         void shouldThrowExceptionWhenOrderNotFound() {
             when(orderRepository.findByIdWithItems(99L)).thenReturn(Optional.empty());

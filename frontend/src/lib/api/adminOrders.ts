@@ -1,10 +1,23 @@
 import { apiFetch } from "./client";
 import type { components } from "./schema.d.ts";
 
-export type AdminOrder = components["schemas"]["AdminOrderResponse"];
+/**
+ * NOTE: couponCode/discountAmount はバックエンドに追加済みだが、
+ * schema.d.ts はまだ再生成前のため交差型で補っている。
+ * `npm run generate:api-types` 実行後は生成された型に直接含まれるはずなので、
+ * この交差型は不要になる（形は同一）。
+ */
+export type AdminOrder = components["schemas"]["AdminOrderResponse"] & {
+  couponCode?: string | null;
+  discountAmount?: number;
+};
 export type OrderStatus = NonNullable<AdminOrder["status"]>;
-export type AdminOrderPage =
-  components["schemas"]["PageResponseAdminOrderResponse"];
+export type AdminOrderPage = Omit<
+  components["schemas"]["PageResponseAdminOrderResponse"],
+  "content"
+> & {
+  content?: AdminOrder[];
+};
 
 export function getAdminOrders(page = 0, size = 20): Promise<AdminOrderPage> {
   return apiFetch<AdminOrderPage>(

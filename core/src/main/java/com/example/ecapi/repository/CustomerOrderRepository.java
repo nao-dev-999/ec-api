@@ -26,7 +26,8 @@ public interface CustomerOrderRepository extends JpaRepository<CustomerOrder, Lo
 
     List<CustomerOrder> findByStatusAndDeletedFalse(OrderStatus status);
 
-    boolean existsByCustomerIdAndCouponCodeAndDeletedFalse(Long customerId, String couponCode);
+    boolean existsByCustomerIdAndCouponCodeAndDeletedFalseAndStatusNot(
+            Long customerId, String couponCode, OrderStatus excludedStatus);
 
     @Query(
             """

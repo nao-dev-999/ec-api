@@ -1,5 +1,6 @@
 package com.example.ecapi.service.coupon;
 
+import com.example.ecapi.constant.OrderStatus;
 import com.example.ecapi.entity.Coupon;
 import com.example.ecapi.exception.CouponCodeDuplicateException;
 import com.example.ecapi.exception.CouponNotAllowedException;
@@ -100,6 +101,19 @@ public class CouponService {
     }
 
     /**
+     * クーポンコードを検証し、実際に適用した場合の割引額を返します（注文への適用や利用回数の加算は行わない）。 カート画面等での事前確認向け。
+     *
+     * @param subtotal 割引適用前の注文小計
+     * @return 適用した場合の割引額（{@code subtotal} を上限とする）
+     * @throws CouponNotFoundException 指定されたコードのクーポンが存在しない場合
+     * @throws CouponNotAllowedException 無効化済み・有効期限外・利用上限到達・当該顧客が使用済みの場合
+     */
+    public BigDecimal preview(String code, Long customerId, BigDecimal subtotal) {
+        Coupon coupon = findApplicableCoupon(code, customerId);
+        return coupon.getDiscountAmount().min(subtotal);
+    }
+
+    /**
      * クーポンコードを検証し、割引額を確定・適用します（利用回数のインクリメントを含む）。 呼び出し元（注文作成）のトランザクションに参加します。
      *
      * @param subtotal 割引適用前の注文小計
@@ -109,24 +123,7 @@ public class CouponService {
      */
     @Transactional
     public BigDecimal validateAndApply(String code, Long customerId, BigDecimal subtotal) {
-        Coupon coupon =
-                couponRepository
-                        .findByCode(code)
-                        .orElseThrow(() -> new CouponNotFoundException(code));
-
-        Instant now = Instant.now();
-        boolean withinPeriod =
-                (coupon.getValidFrom() == null || !now.isBefore(coupon.getValidFrom()))
-                        && (coupon.getValidTo() == null || !now.isAfter(coupon.getValidTo()));
-        boolean withinUsageLimit =
-                coupon.getUsageLimit() == null || coupon.getUsageCount() < coupon.getUsageLimit();
-        boolean alreadyUsedByCustomer =
-                customerOrderRepository.existsByCustomerIdAndCouponCodeAndDeletedFalse(
-                        customerId, code);
-
-        if (!coupon.isActive() || !withinPeriod || !withinUsageLimit || alreadyUsedByCustomer) {
-            throw new CouponNotAllowedException(code);
-        }
+        Coupon coupon = findApplicableCoupon(code, customerId);
 
         coupon.setUsageCount(coupon.getUsageCount() + 1);
         couponRepository.save(coupon);
@@ -138,6 +135,48 @@ public class CouponService {
                 customerId,
                 discount);
         return discount;
+    }
+
+    /**
+     * 注文キャンセルに伴い、クーポンの利用回数・当該顧客の使用済み判定を解放します。 クーポンコードが指定されていない注文（{@code couponCode ==
+     * null}）の場合は何もしません。
+     */
+    @Transactional
+    public void releaseUsage(String couponCode) {
+        if (couponCode == null) {
+            return;
+        }
+        couponRepository
+                .findByCode(couponCode)
+                .ifPresent(
+                        coupon -> {
+                            coupon.setUsageCount(Math.max(0, coupon.getUsageCount() - 1));
+                            couponRepository.save(coupon);
+                            log.info("Coupon usage released code={}", couponCode);
+                        });
+    }
+
+    private Coupon findApplicableCoupon(String code, Long customerId) {
+        Coupon coupon =
+                couponRepository
+                        .findByCode(code)
+                        .orElseThrow(() -> new CouponNotFoundException(code));
+
+        Instant now = Instant.now();
+        boolean withinPeriod =
+                (coupon.getValidFrom() == null || !now.isBefore(coupon.getValidFrom()))
+                        && (coupon.getValidTo() == null || !now.isAfter(coupon.getValidTo()));
+        boolean withinUsageLimit =
+                coupon.getUsageLimit() == null || coupon.getUsageCount() < coupon.getUsageLimit();
+        // キャンセル済みの注文は「使用済み」判定から除外し、同じクーポンを再利用可能にする。
+        boolean alreadyUsedByCustomer =
+                customerOrderRepository.existsByCustomerIdAndCouponCodeAndDeletedFalseAndStatusNot(
+                        customerId, code, OrderStatus.CANCELLED);
+
+        if (!coupon.isActive() || !withinPeriod || !withinUsageLimit || alreadyUsedByCustomer) {
+            throw new CouponNotAllowedException(code);
+        }
+        return coupon;
     }
 
     private Instant toInstant(LocalDateTime dateTime) {
