@@ -3,6 +3,7 @@ package com.example.ecapi.service.order;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -280,7 +281,7 @@ class OrderServiceTest {
 
             assertThatThrownBy(() -> orderService.create(createOrder))
                     .isInstanceOf(com.example.ecapi.exception.CouponNotAllowedException.class);
-            verify(orderRepository, org.mockito.Mockito.never()).save(any(CustomerOrder.class));
+            verify(orderRepository, never()).save(any(CustomerOrder.class));
         }
     }
 
@@ -346,7 +347,7 @@ class OrderServiceTest {
 
             orderService.cancel(1L, 0);
 
-            verify(couponService, org.mockito.Mockito.never()).releaseUsage(any());
+            verify(couponService, never()).releaseUsage(any());
         }
 
         @Test
@@ -366,7 +367,7 @@ class OrderServiceTest {
 
             assertThatThrownBy(() -> orderService.cancel(1L, 0))
                     .isInstanceOf(OrderCannotBeCancelledException.class);
-            verify(orderRepository, org.mockito.Mockito.never()).save(any(CustomerOrder.class));
+            verify(orderRepository, never()).save(any(CustomerOrder.class));
         }
 
         @Test
@@ -377,7 +378,7 @@ class OrderServiceTest {
 
             assertThatThrownBy(() -> orderService.cancel(1L, 0))
                     .isInstanceOf(OrderCannotBeCancelledException.class);
-            verify(orderRepository, org.mockito.Mockito.never()).save(any(CustomerOrder.class));
+            verify(orderRepository, never()).save(any(CustomerOrder.class));
         }
     }
 }

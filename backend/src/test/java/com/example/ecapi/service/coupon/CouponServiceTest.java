@@ -124,16 +124,10 @@ class CouponServiceTest {
         @DisplayName("コードが重複する場合、CouponCodeDuplicateException をスローすること")
         void shouldThrowExceptionWhenCodeDuplicate() {
             when(couponRepository.existsByCode("SAVE500")).thenReturn(true);
+            CreateCoupon request =
+                    new CreateCoupon("SAVE500", BigDecimal.valueOf(500), null, null, null);
 
-            assertThatThrownBy(
-                            () ->
-                                    couponService.create(
-                                            new CreateCoupon(
-                                                    "SAVE500",
-                                                    BigDecimal.valueOf(500),
-                                                    null,
-                                                    null,
-                                                    null)))
+            assertThatThrownBy(() -> couponService.create(request))
                     .isInstanceOf(CouponCodeDuplicateException.class);
             verify(couponRepository, never()).save(any(Coupon.class));
         }
@@ -195,11 +189,9 @@ class CouponServiceTest {
         @DisplayName("指定したIDのクーポンが見つからない場合、CouponNotFoundException をスローすること")
         void shouldThrowExceptionWhenNotFound() {
             when(couponRepository.findById(99L)).thenReturn(Optional.empty());
+            UpdateCoupon request = new UpdateCoupon(99L, null, null, null, null, null, 0);
 
-            assertThatThrownBy(
-                            () ->
-                                    couponService.update(
-                                            new UpdateCoupon(99L, null, null, null, null, null, 0)))
+            assertThatThrownBy(() -> couponService.update(request))
                     .isInstanceOf(CouponNotFoundException.class);
         }
 
@@ -265,11 +257,10 @@ class CouponServiceTest {
         @DisplayName("存在しないコードの場合、CouponNotFoundException をスローすること")
         void shouldThrowExceptionWhenCodeNotFound() {
             when(couponRepository.findByCode("INVALID")).thenReturn(Optional.empty());
+            BigDecimal subtotal = BigDecimal.valueOf(1000);
 
             assertThatThrownBy(
-                            () ->
-                                    couponService.validateAndApply(
-                                            "INVALID", CUSTOMER_ID, BigDecimal.valueOf(1000)))
+                            () -> couponService.validateAndApply("INVALID", CUSTOMER_ID, subtotal))
                     .isInstanceOf(CouponNotFoundException.class);
         }
 
@@ -278,11 +269,10 @@ class CouponServiceTest {
         void shouldThrowExceptionWhenInactive() {
             coupon.setActive(false);
             when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
+            BigDecimal subtotal = BigDecimal.valueOf(1000);
 
             assertThatThrownBy(
-                            () ->
-                                    couponService.validateAndApply(
-                                            "SAVE500", CUSTOMER_ID, BigDecimal.valueOf(1000)))
+                            () -> couponService.validateAndApply("SAVE500", CUSTOMER_ID, subtotal))
                     .isInstanceOf(CouponNotAllowedException.class);
         }
 
@@ -292,11 +282,10 @@ class CouponServiceTest {
             coupon.setValidTo(
                     LocalDateTime.now().minusDays(1).atZone(ZoneId.systemDefault()).toInstant());
             when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
+            BigDecimal subtotal = BigDecimal.valueOf(1000);
 
             assertThatThrownBy(
-                            () ->
-                                    couponService.validateAndApply(
-                                            "SAVE500", CUSTOMER_ID, BigDecimal.valueOf(1000)))
+                            () -> couponService.validateAndApply("SAVE500", CUSTOMER_ID, subtotal))
                     .isInstanceOf(CouponNotAllowedException.class);
         }
 
@@ -306,11 +295,10 @@ class CouponServiceTest {
             coupon.setUsageLimit(1);
             coupon.setUsageCount(1);
             when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
+            BigDecimal subtotal = BigDecimal.valueOf(1000);
 
             assertThatThrownBy(
-                            () ->
-                                    couponService.validateAndApply(
-                                            "SAVE500", CUSTOMER_ID, BigDecimal.valueOf(1000)))
+                            () -> couponService.validateAndApply("SAVE500", CUSTOMER_ID, subtotal))
                     .isInstanceOf(CouponNotAllowedException.class);
         }
 
@@ -323,11 +311,10 @@ class CouponServiceTest {
                             "SAVE500",
                             com.example.ecapi.constant.OrderStatus.CANCELLED))
                     .thenReturn(true);
+            BigDecimal subtotal = BigDecimal.valueOf(1000);
 
             assertThatThrownBy(
-                            () ->
-                                    couponService.validateAndApply(
-                                            "SAVE500", CUSTOMER_ID, BigDecimal.valueOf(1000)))
+                            () -> couponService.validateAndApply("SAVE500", CUSTOMER_ID, subtotal))
                     .isInstanceOf(CouponNotAllowedException.class);
         }
     }
@@ -359,11 +346,9 @@ class CouponServiceTest {
         void shouldThrowExceptionWhenNotAllowed() {
             coupon.setActive(false);
             when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
+            BigDecimal subtotal = BigDecimal.valueOf(1000);
 
-            assertThatThrownBy(
-                            () ->
-                                    couponService.preview(
-                                            "SAVE500", CUSTOMER_ID, BigDecimal.valueOf(1000)))
+            assertThatThrownBy(() -> couponService.preview("SAVE500", CUSTOMER_ID, subtotal))
                     .isInstanceOf(CouponNotAllowedException.class);
         }
     }
