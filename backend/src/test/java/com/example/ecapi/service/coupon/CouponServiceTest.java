@@ -85,6 +85,24 @@ class CouponServiceTest {
     }
 
     @Nested
+    @DisplayName("findAll")
+    class FindAllTest {
+
+        @Test
+        @DisplayName("クーポン一覧をページングで取得できること")
+        void shouldFindAllCoupons() {
+            PageRequest pageable = PageRequest.of(0, 20);
+            when(couponRepository.findAll(pageable))
+                    .thenReturn(new PageImpl<>(List.of(coupon), pageable, 1));
+
+            var result = couponService.findAll(pageable);
+
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).code()).isEqualTo("SAVE500");
+        }
+    }
+
+    @Nested
     @DisplayName("create")
     class CreateTest {
 
@@ -112,24 +130,6 @@ class CouponServiceTest {
             assertThatThrownBy(() -> couponService.create(request))
                     .isInstanceOf(CouponCodeDuplicateException.class);
             verify(couponRepository, never()).save(any(Coupon.class));
-        }
-    }
-
-    @Nested
-    @DisplayName("findAll")
-    class FindAllTest {
-
-        @Test
-        @DisplayName("クーポン一覧をページングで取得できること")
-        void shouldFindAllCoupons() {
-            PageRequest pageable = PageRequest.of(0, 20);
-            when(couponRepository.findAll(pageable))
-                    .thenReturn(new PageImpl<>(List.of(coupon), pageable, 1));
-
-            var result = couponService.findAll(pageable);
-
-            assertThat(result.getContent()).hasSize(1);
-            assertThat(result.getContent().get(0).code()).isEqualTo("SAVE500");
         }
     }
 
@@ -221,8 +221,10 @@ class CouponServiceTest {
         @DisplayName("有効なクーポンの場合、割引額を返し利用回数が加算されること")
         void shouldApplyValidCoupon() {
             when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
-            when(customerOrderRepository.existsByCustomerIdAndCouponCodeAndDeletedFalse(
-                            CUSTOMER_ID, "SAVE500"))
+            when(customerOrderRepository.existsByCustomerIdAndCouponCodeAndDeletedFalseAndStatusNot(
+                            CUSTOMER_ID,
+                            "SAVE500",
+                            com.example.ecapi.constant.OrderStatus.CANCELLED))
                     .thenReturn(false);
             when(couponRepository.save(any(Coupon.class))).thenReturn(coupon);
 
@@ -238,8 +240,10 @@ class CouponServiceTest {
         @DisplayName("割引額が小計を上回る場合、小計を上限として適用されること")
         void shouldCapDiscountAtSubtotal() {
             when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
-            when(customerOrderRepository.existsByCustomerIdAndCouponCodeAndDeletedFalse(
-                            CUSTOMER_ID, "SAVE500"))
+            when(customerOrderRepository.existsByCustomerIdAndCouponCodeAndDeletedFalseAndStatusNot(
+                            CUSTOMER_ID,
+                            "SAVE500",
+                            com.example.ecapi.constant.OrderStatus.CANCELLED))
                     .thenReturn(false);
             when(couponRepository.save(any(Coupon.class))).thenReturn(coupon);
 
@@ -302,14 +306,97 @@ class CouponServiceTest {
         @DisplayName("当該顧客が使用済みの場合、CouponNotAllowedException をスローすること")
         void shouldThrowExceptionWhenAlreadyUsedByCustomer() {
             when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
-            when(customerOrderRepository.existsByCustomerIdAndCouponCodeAndDeletedFalse(
-                            CUSTOMER_ID, "SAVE500"))
+            when(customerOrderRepository.existsByCustomerIdAndCouponCodeAndDeletedFalseAndStatusNot(
+                            CUSTOMER_ID,
+                            "SAVE500",
+                            com.example.ecapi.constant.OrderStatus.CANCELLED))
                     .thenReturn(true);
             BigDecimal subtotal = BigDecimal.valueOf(1000);
 
             assertThatThrownBy(
                             () -> couponService.validateAndApply("SAVE500", CUSTOMER_ID, subtotal))
                     .isInstanceOf(CouponNotAllowedException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("preview")
+    class PreviewTest {
+
+        @Test
+        @DisplayName("有効なクーポンの場合、割引額を返し利用回数は加算されないこと")
+        void shouldReturnDiscountWithoutIncrementingUsageCount() {
+            when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
+            when(customerOrderRepository.existsByCustomerIdAndCouponCodeAndDeletedFalseAndStatusNot(
+                            CUSTOMER_ID,
+                            "SAVE500",
+                            com.example.ecapi.constant.OrderStatus.CANCELLED))
+                    .thenReturn(false);
+
+            BigDecimal discount =
+                    couponService.preview("SAVE500", CUSTOMER_ID, BigDecimal.valueOf(1000));
+
+            assertThat(discount).isEqualByComparingTo("500");
+            assertThat(coupon.getUsageCount()).isZero();
+            verify(couponRepository, never()).save(any(Coupon.class));
+        }
+
+        @Test
+        @DisplayName("利用できないクーポンの場合、CouponNotAllowedException をスローすること")
+        void shouldThrowExceptionWhenNotAllowed() {
+            coupon.setActive(false);
+            when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
+            BigDecimal subtotal = BigDecimal.valueOf(1000);
+
+            assertThatThrownBy(() -> couponService.preview("SAVE500", CUSTOMER_ID, subtotal))
+                    .isInstanceOf(CouponNotAllowedException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("releaseUsage")
+    class ReleaseUsageTest {
+
+        @Test
+        @DisplayName("利用回数が1以上減算されること")
+        void shouldDecrementUsageCount() {
+            coupon.setUsageCount(3);
+            when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
+            when(couponRepository.save(any(Coupon.class))).thenReturn(coupon);
+
+            couponService.releaseUsage("SAVE500");
+
+            assertThat(coupon.getUsageCount()).isEqualTo(2);
+        }
+
+        @Test
+        @DisplayName("利用回数が0の場合、負数にならないこと")
+        void shouldNotGoBelowZero() {
+            coupon.setUsageCount(0);
+            when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
+            when(couponRepository.save(any(Coupon.class))).thenReturn(coupon);
+
+            couponService.releaseUsage("SAVE500");
+
+            assertThat(coupon.getUsageCount()).isZero();
+        }
+
+        @Test
+        @DisplayName("クーポンコードがnullの場合、何もしないこと")
+        void shouldDoNothingWhenCodeIsNull() {
+            couponService.releaseUsage(null);
+
+            verify(couponRepository, never()).findByCode(any());
+        }
+
+        @Test
+        @DisplayName("該当するクーポンが存在しない場合、何もしないこと")
+        void shouldDoNothingWhenCouponNotFound() {
+            when(couponRepository.findByCode("UNKNOWN")).thenReturn(Optional.empty());
+
+            couponService.releaseUsage("UNKNOWN");
+
+            verify(couponRepository, never()).save(any(Coupon.class));
         }
     }
 }

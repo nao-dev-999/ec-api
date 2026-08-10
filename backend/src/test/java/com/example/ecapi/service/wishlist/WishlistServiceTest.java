@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.entity.WishlistItem;
 import com.example.ecapi.exception.ProductNotFoundException;
+import com.example.ecapi.exception.WishlistItemNotFoundException;
 import com.example.ecapi.repository.ProductRepository;
 import com.example.ecapi.repository.WishlistItemRepository;
 import com.example.ecapi.service.wishlist.dto.WishlistItemResult;
@@ -24,6 +25,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -62,27 +67,57 @@ class WishlistServiceTest {
         @Test
         @DisplayName("顧客のお気に入り一覧を取得できること")
         void shouldReturnWishlist() {
-            when(wishlistItemRepository.findAllByCustomerIdOrderByCreatedAtDesc(CUSTOMER_ID))
-                    .thenReturn(List.of(wishlistItem));
+            Pageable pageable = PageRequest.of(0, 20);
+            when(wishlistItemRepository.findAllByCustomerId(CUSTOMER_ID, pageable))
+                    .thenReturn(new PageImpl<>(List.of(wishlistItem), pageable, 1));
             when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of(product));
 
-            List<WishlistItemResult> result = wishlistService.getWishlist(CUSTOMER_ID);
+            Page<WishlistItemResult> result = wishlistService.getWishlist(CUSTOMER_ID, pageable);
 
-            assertThat(result).hasSize(1);
-            assertThat(result.getFirst().productId()).isEqualTo(PRODUCT_ID);
-            assertThat(result.getFirst().productName()).isEqualTo("Test Product");
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().getFirst().productId()).isEqualTo(PRODUCT_ID);
+            assertThat(result.getContent().getFirst().productName()).isEqualTo("Test Product");
         }
 
         @Test
         @DisplayName("登録済み商品が削除済みの場合、ProductNotFoundException をスローすること")
         void shouldThrowExceptionWhenProductNoLongerExists() {
-            when(wishlistItemRepository.findAllByCustomerIdOrderByCreatedAtDesc(CUSTOMER_ID))
-                    .thenReturn(List.of(wishlistItem));
+            Pageable pageable = PageRequest.of(0, 20);
+            when(wishlistItemRepository.findAllByCustomerId(CUSTOMER_ID, pageable))
+                    .thenReturn(new PageImpl<>(List.of(wishlistItem), pageable, 1));
             when(productRepository.findAllById(List.of(PRODUCT_ID))).thenReturn(List.of());
 
             org.assertj.core.api.Assertions.assertThatThrownBy(
-                            () -> wishlistService.getWishlist(CUSTOMER_ID))
+                            () -> wishlistService.getWishlist(CUSTOMER_ID, pageable))
                     .isInstanceOf(ProductNotFoundException.class);
+        }
+    }
+
+    @Nested
+    @DisplayName("getItem")
+    class GetItemTest {
+
+        @Test
+        @DisplayName("登録済みの商品の場合、登録内容を返すこと")
+        void shouldReturnItemWhenRegistered() {
+            when(wishlistItemRepository.findByCustomerIdAndProductId(CUSTOMER_ID, PRODUCT_ID))
+                    .thenReturn(Optional.of(wishlistItem));
+            when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
+
+            WishlistItemResult result = wishlistService.getItem(CUSTOMER_ID, PRODUCT_ID);
+
+            assertThat(result.productId()).isEqualTo(PRODUCT_ID);
+        }
+
+        @Test
+        @DisplayName("未登録の商品の場合、WishlistItemNotFoundException をスローすること")
+        void shouldThrowExceptionWhenNotRegistered() {
+            when(wishlistItemRepository.findByCustomerIdAndProductId(CUSTOMER_ID, PRODUCT_ID))
+                    .thenReturn(Optional.empty());
+
+            org.assertj.core.api.Assertions.assertThatThrownBy(
+                            () -> wishlistService.getItem(CUSTOMER_ID, PRODUCT_ID))
+                    .isInstanceOf(WishlistItemNotFoundException.class);
         }
     }
 
