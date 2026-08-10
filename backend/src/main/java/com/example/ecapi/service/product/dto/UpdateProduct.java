@@ -9,4 +9,5 @@ public record UpdateProduct(
         String description,
         BigDecimal price,
         Integer stock,
+        String imageUrl,
         Integer version) {}

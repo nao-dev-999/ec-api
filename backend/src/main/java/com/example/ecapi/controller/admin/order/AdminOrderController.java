@@ -64,6 +64,13 @@ public class AdminOrderController {
                 result.totalAmount(),
                 result.couponCode(),
                 result.discountAmount(),
+                result.shippingRecipientName(),
+                result.shippingPostalCode(),
+                result.shippingPrefecture(),
+                result.shippingCity(),
+                result.shippingAddressLine1(),
+                result.shippingAddressLine2(),
+                result.shippingPhoneNumber(),
                 result.items().stream()
                         .map(
                                 i ->

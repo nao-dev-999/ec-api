@@ -9,6 +9,7 @@ public record ProductResponse(
         String description,
         BigDecimal price,
         int stock,
+        String imageUrl,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         Integer version) {}

@@ -49,6 +49,7 @@ class ProductControllerTest {
                         "Description",
                         BigDecimal.valueOf(100.00),
                         10,
+                        null,
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         1);
@@ -59,6 +60,7 @@ class ProductControllerTest {
                         "Description",
                         BigDecimal.valueOf(100.00),
                         10,
+                        null,
                         LocalDateTime.now(),
                         LocalDateTime.now(),
                         1);

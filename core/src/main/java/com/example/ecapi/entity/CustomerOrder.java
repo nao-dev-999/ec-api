@@ -55,6 +55,29 @@ public class CustomerOrder extends BaseEntity implements SoftDeletable {
     @Column(name = "discount_amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
+    // 配送先住所のスナップショット。ShippingAddressへの外部キーではなく、
+    // 住所帳が後から編集・削除されても注文時点の配送先が変わらないよう値のみ保持する。
+    @Column(name = "shipping_recipient_name", length = 100)
+    private String shippingRecipientName;
+
+    @Column(name = "shipping_postal_code", length = 10)
+    private String shippingPostalCode;
+
+    @Column(name = "shipping_prefecture")
+    private String shippingPrefecture;
+
+    @Column(name = "shipping_city")
+    private String shippingCity;
+
+    @Column(name = "shipping_address_line1")
+    private String shippingAddressLine1;
+
+    @Column(name = "shipping_address_line2")
+    private String shippingAddressLine2;
+
+    @Column(name = "shipping_phone_number", length = 20)
+    private String shippingPhoneNumber;
+
     // 注文明細（1 対多）。外部からの直接操作を防ぐため、getter/setterはaddItem/removeItem経由に限定する。
     @Setter(AccessLevel.NONE)
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)

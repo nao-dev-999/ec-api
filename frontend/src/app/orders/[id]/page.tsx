@@ -60,6 +60,20 @@ export default function OrderDetailPage({
         </p>
         <OrderStatusBadge status={order.status} />
 
+        {order.shippingRecipientName && (
+          <div style={{ margin: "16px 0" }}>
+            <h2 style={{ fontSize: "1rem" }}>配送先</h2>
+            <p>{order.shippingRecipientName} 様</p>
+            <p>
+              〒{order.shippingPostalCode} {order.shippingPrefecture}
+              {order.shippingCity}
+              {order.shippingAddressLine1}
+              {order.shippingAddressLine2}
+            </p>
+            <p>{order.shippingPhoneNumber}</p>
+          </div>
+        )}
+
         <table className="order-table">
           <thead>
             <tr>

@@ -93,6 +93,7 @@ public class AdminProductController {
                 result.description(),
                 result.price(),
                 result.stock(),
+                result.imageUrl(),
                 result.createdAt(),
                 result.updatedAt(),
                 result.version());
@@ -100,7 +101,11 @@ public class AdminProductController {
 
     private CreateProduct toCreateProduct(CreateProductRequest request) {
         return new CreateProduct(
-                request.name(), request.description(), request.price(), request.stock());
+                request.name(),
+                request.description(),
+                request.price(),
+                request.stock(),
+                request.imageUrl());
     }
 
     private UpdateProduct toUpdateProduct(Long id, UpdateProductRequest request) {
@@ -110,6 +115,7 @@ public class AdminProductController {
                 request.description(),
                 request.price(),
                 request.stock(),
+                request.imageUrl(),
                 request.version());
     }
 }

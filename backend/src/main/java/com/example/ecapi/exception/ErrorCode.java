@@ -14,6 +14,7 @@ public enum ErrorCode {
     REVIEW_NOT_FOUND("review.notFound", HttpStatus.NOT_FOUND),
     COUPON_NOT_FOUND("coupon.notFound", HttpStatus.NOT_FOUND),
     WISHLIST_ITEM_NOT_FOUND("wishlist.item.notFound", HttpStatus.NOT_FOUND),
+    SHIPPING_ADDRESS_NOT_FOUND("shippingAddress.notFound", HttpStatus.NOT_FOUND),
 
     // 409 Conflict
     INSUFFICIENT_STOCK("order.insufficientStock", HttpStatus.CONFLICT),

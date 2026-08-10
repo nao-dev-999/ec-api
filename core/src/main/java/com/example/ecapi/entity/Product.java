@@ -34,6 +34,9 @@ public class Product extends BaseEntity implements SoftDeletable {
     @Column(nullable = false)
     private Integer stock;
 
+    @Column(name = "image_url", length = 2048)
+    private String imageUrl;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "product_category",

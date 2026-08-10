@@ -116,6 +116,13 @@ public class OrderController {
                 result.totalAmount(),
                 result.couponCode(),
                 result.discountAmount(),
+                result.shippingRecipientName(),
+                result.shippingPostalCode(),
+                result.shippingPrefecture(),
+                result.shippingCity(),
+                result.shippingAddressLine1(),
+                result.shippingAddressLine2(),
+                result.shippingPhoneNumber(),
                 result.items().stream()
                         .map(
                                 i ->
@@ -137,6 +144,7 @@ public class OrderController {
                 request.items().stream()
                         .map(item -> new CreateOrderItem(item.productId(), item.quantity()))
                         .toList(),
-                request.couponCode());
+                request.couponCode(),
+                request.shippingAddressId());
     }
 }

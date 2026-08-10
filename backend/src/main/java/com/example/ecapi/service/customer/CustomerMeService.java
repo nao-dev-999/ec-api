@@ -76,11 +76,6 @@ public class CustomerMeService {
                 customer.getLastNameKana(),
                 customer.getFirstNameKana(),
                 customer.getPhoneNumber(),
-                customer.getPostalCode(),
-                customer.getPrefecture(),
-                customer.getCity(),
-                customer.getAddressLine1(),
-                customer.getAddressLine2(),
                 LocalDateTime.ofInstant(customer.getCreatedAt(), ZoneId.systemDefault()),
                 LocalDateTime.ofInstant(customer.getUpdatedAt(), ZoneId.systemDefault()),
                 customer.getVersion());

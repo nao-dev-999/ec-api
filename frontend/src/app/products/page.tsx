@@ -17,7 +17,24 @@ export default async function ProductsPage() {
       <ul>
         {products.map((product) => (
           <li key={product.id}>
-            <Link href={`/products/${product.id}`} style={{ flex: 1 }}>
+            <Link
+              href={`/products/${product.id}`}
+              style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}
+            >
+              {product.imageUrl && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={product.imageUrl}
+                  alt=""
+                  style={{
+                    width: 48,
+                    height: 48,
+                    objectFit: "cover",
+                    borderRadius: 6,
+                    flexShrink: 0,
+                  }}
+                />
+              )}
               <span style={{ display: "block", fontWeight: 600 }}>
                 {product.name}
               </span>

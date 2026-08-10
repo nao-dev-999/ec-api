@@ -82,6 +82,7 @@ public class ProductService {
             product.setDescription(updateProduct.description());
         if (updateProduct.price() != null) product.setPrice(updateProduct.price());
         if (updateProduct.stock() != null) product.setStock(updateProduct.stock());
+        if (updateProduct.imageUrl() != null) product.setImageUrl(updateProduct.imageUrl());
         product.setVersion(updateProduct.version());
         log.info("Product updated productId={}", updateProduct.id());
         return toProductResult(productRepository.save(product));
@@ -111,6 +112,7 @@ public class ProductService {
         product.setDescription(createProduct.description());
         product.setPrice(createProduct.price());
         product.setStock(createProduct.stock());
+        product.setImageUrl(createProduct.imageUrl());
         return product;
     }
 
@@ -121,6 +123,7 @@ public class ProductService {
                 product.getDescription(),
                 product.getPrice(),
                 product.getStock(),
+                product.getImageUrl(),
                 LocalDateTime.ofInstant(product.getCreatedAt(), ZoneId.systemDefault()),
                 LocalDateTime.ofInstant(product.getUpdatedAt(), ZoneId.systemDefault()),
                 product.getVersion());

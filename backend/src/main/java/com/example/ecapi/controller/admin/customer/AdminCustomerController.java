@@ -40,11 +40,6 @@ public class AdminCustomerController {
                 result.lastNameKana(),
                 result.firstNameKana(),
                 result.phoneNumber(),
-                result.postalCode(),
-                result.prefecture(),
-                result.city(),
-                result.addressLine1(),
-                result.addressLine2(),
                 result.createdAt(),
                 result.updatedAt(),
                 result.version());

@@ -35,6 +35,7 @@ export default function AdminProductDetailPage({
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isNotFound, setIsNotFound] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -53,6 +54,7 @@ export default function AdminProductDetailPage({
         setDescription(p.description ?? "");
         setPrice(String(p.price ?? ""));
         setStock(String(p.stock ?? ""));
+        setImageUrl(p.imageUrl ?? "");
       })
       .catch((e) => {
         if (e instanceof ApiError && e.status === 404) setIsNotFound(true);
@@ -100,6 +102,7 @@ export default function AdminProductDetailPage({
         description,
         price: priceValue,
         stock: stockValue,
+        imageUrl,
         version: product.version!,
       });
       setProduct(updated);
@@ -187,7 +190,7 @@ export default function AdminProductDetailPage({
               style={{ display: "block", width: "100%" }}
             />
           </div>
-          <div style={{ marginBottom: 24 }}>
+          <div style={{ marginBottom: 16 }}>
             <label htmlFor="stock">在庫数</label>
             <input
               id="stock"
@@ -198,6 +201,30 @@ export default function AdminProductDetailPage({
               onChange={(e) => setStock(e.target.value)}
               style={{ display: "block", width: "100%" }}
             />
+          </div>
+          <div style={{ marginBottom: 24 }}>
+            <label htmlFor="imageUrl">画像URL（任意）</label>
+            <input
+              id="imageUrl"
+              type="url"
+              value={imageUrl}
+              onChange={(e) => setImageUrl(e.target.value)}
+              style={{ display: "block", width: "100%" }}
+            />
+            {imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={imageUrl}
+                alt=""
+                style={{
+                  marginTop: 8,
+                  maxWidth: 160,
+                  maxHeight: 160,
+                  objectFit: "cover",
+                  borderRadius: 6,
+                }}
+              />
+            )}
           </div>
           <button type="submit" disabled={submitting}>
             {submitting ? "更新中..." : "更新"}

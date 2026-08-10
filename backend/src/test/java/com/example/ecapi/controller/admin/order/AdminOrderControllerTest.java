@@ -52,6 +52,13 @@ class AdminOrderControllerTest {
                         BigDecimal.valueOf(1000),
                         "SAVE500",
                         BigDecimal.valueOf(500),
+                        "Test Recipient",
+                        "100-0001",
+                        "東京都",
+                        "千代田区",
+                        "1-1-1",
+                        null,
+                        "090-1111-2222",
                         List.of(
                                 new OrderResultItem(
                                         100L,

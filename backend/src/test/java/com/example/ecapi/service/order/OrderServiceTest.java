@@ -11,14 +11,17 @@ import com.example.ecapi.constant.OrderStatus;
 import com.example.ecapi.entity.Customer;
 import com.example.ecapi.entity.CustomerOrder;
 import com.example.ecapi.entity.Product;
+import com.example.ecapi.entity.ShippingAddress;
 import com.example.ecapi.exception.InsufficientStockException;
 import com.example.ecapi.exception.OrderCannotBeCancelledException;
 import com.example.ecapi.exception.OrderNotFoundException;
 import com.example.ecapi.exception.ProductNotFoundException;
+import com.example.ecapi.exception.ShippingAddressNotFoundException;
 import com.example.ecapi.repository.CustomerOrderDetailRepository;
 import com.example.ecapi.repository.CustomerOrderRepository;
 import com.example.ecapi.repository.CustomerRepository;
 import com.example.ecapi.repository.ProductRepository;
+import com.example.ecapi.repository.ShippingAddressRepository;
 import com.example.ecapi.service.cart.CartService;
 import com.example.ecapi.service.coupon.CouponService;
 import com.example.ecapi.service.order.dto.CreateOrder;
@@ -50,6 +53,7 @@ class OrderServiceTest {
     @Mock private CustomerOrderDetailRepository orderDetailRepository;
     @Mock private ProductRepository productRepository;
     @Mock private CustomerRepository customerRepository;
+    @Mock private ShippingAddressRepository shippingAddressRepository;
     @Mock private CartService cartService;
     @Mock private CouponService couponService;
 
@@ -59,6 +63,7 @@ class OrderServiceTest {
     private OrderResult orderResult;
     private Product product;
     private Customer customer;
+    private ShippingAddress shippingAddress;
 
     @BeforeEach
     void setUp() {
@@ -73,12 +78,29 @@ class OrderServiceTest {
         product.setStock(10);
         product.setVersion(1);
 
+        shippingAddress = new ShippingAddress();
+        shippingAddress.setId(1L);
+        shippingAddress.setCustomerId(1L);
+        shippingAddress.setRecipientName("Test Recipient");
+        shippingAddress.setPostalCode("100-0001");
+        shippingAddress.setPrefecture("東京都");
+        shippingAddress.setCity("千代田区");
+        shippingAddress.setAddressLine1("1-1-1");
+        shippingAddress.setPhoneNumber("090-1111-2222");
+        shippingAddress.setDefault(true);
+
         customerOrder = new CustomerOrder();
         customerOrder.setId(1L);
         customerOrder.setCustomer(customer);
         customerOrder.setStatus(OrderStatus.PENDING);
         customerOrder.setTotalAmount(BigDecimal.valueOf(200.00));
         customerOrder.setOrderedAt(Instant.now());
+        customerOrder.setShippingRecipientName("Test Recipient");
+        customerOrder.setShippingPostalCode("100-0001");
+        customerOrder.setShippingPrefecture("東京都");
+        customerOrder.setShippingCity("千代田区");
+        customerOrder.setShippingAddressLine1("1-1-1");
+        customerOrder.setShippingPhoneNumber("090-1111-2222");
         ReflectionTestUtils.setField(customerOrder, "createdAt", Instant.now());
         ReflectionTestUtils.setField(customerOrder, "updatedAt", Instant.now());
         customerOrder.setVersion(1);
@@ -92,6 +114,13 @@ class OrderServiceTest {
                         BigDecimal.valueOf(200.00),
                         null,
                         BigDecimal.ZERO,
+                        "Test Recipient",
+                        "100-0001",
+                        "東京都",
+                        "千代田区",
+                        "1-1-1",
+                        null,
+                        "090-1111-2222",
                         List.of(),
                         LocalDateTime.now(),
                         LocalDateTime.now(),
@@ -193,8 +222,10 @@ class OrderServiceTest {
         @DisplayName("注文を正常に作成できること")
         void shouldCreateOrder() {
             CreateOrder createOrder =
-                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 2)), null);
+                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 2)), null, 1L);
             when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+            when(shippingAddressRepository.findByIdAndCustomerId(1L, 1L))
+                    .thenReturn(Optional.of(shippingAddress));
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
             OrderResult result = orderService.create(createOrder);
@@ -207,9 +238,11 @@ class OrderServiceTest {
         @DisplayName("注文対象の商品が存在しない場合、ProductNotFoundException をスローすること")
         void shouldThrowExceptionWhenProductNotFound() {
             CreateOrder createOrder =
-                    new CreateOrder(1L, List.of(new CreateOrderItem(99L, 2)), null);
+                    new CreateOrder(1L, List.of(new CreateOrderItem(99L, 2)), null, 1L);
 
             when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+            when(shippingAddressRepository.findByIdAndCustomerId(1L, 1L))
+                    .thenReturn(Optional.of(shippingAddress));
             when(productRepository.findById(99L)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> orderService.create(createOrder))
@@ -220,9 +253,11 @@ class OrderServiceTest {
         @DisplayName("在庫が不足している場合、InsufficientStockException をスローすること")
         void shouldThrowExceptionWhenStockInsufficient() {
             CreateOrder createOrder =
-                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 20)), null);
+                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 20)), null, 1L);
 
             when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+            when(shippingAddressRepository.findByIdAndCustomerId(1L, 1L))
+                    .thenReturn(Optional.of(shippingAddress));
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
 
             assertThatThrownBy(() -> orderService.create(createOrder))
@@ -233,9 +268,11 @@ class OrderServiceTest {
         @DisplayName("注文作成後に在庫が減算されること")
         void shouldDecrementStockAfterOrderCreation() {
             CreateOrder createOrder =
-                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 3)), null);
+                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 3)), null, 1L);
 
             when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+            when(shippingAddressRepository.findByIdAndCustomerId(1L, 1L))
+                    .thenReturn(Optional.of(shippingAddress));
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
 
@@ -249,9 +286,11 @@ class OrderServiceTest {
         @DisplayName("クーポンコードを指定した場合、割引が適用されること")
         void shouldApplyCouponDiscount() {
             CreateOrder createOrder =
-                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 2)), "SAVE500");
+                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 2)), "SAVE500", 1L);
 
             when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+            when(shippingAddressRepository.findByIdAndCustomerId(1L, 1L))
+                    .thenReturn(Optional.of(shippingAddress));
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
             when(couponService.validateAndApply("SAVE500", 1L, BigDecimal.valueOf(200.00)))
                     .thenReturn(BigDecimal.valueOf(50.00));
@@ -271,9 +310,11 @@ class OrderServiceTest {
         @DisplayName("クーポンが利用できない場合、CouponNotAllowedException をスローすること")
         void shouldThrowExceptionWhenCouponNotAllowed() {
             CreateOrder createOrder =
-                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 2)), "EXPIRED");
+                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 2)), "EXPIRED", 1L);
 
             when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+            when(shippingAddressRepository.findByIdAndCustomerId(1L, 1L))
+                    .thenReturn(Optional.of(shippingAddress));
             when(productRepository.findById(1L)).thenReturn(Optional.of(product));
             when(couponService.validateAndApply("EXPIRED", 1L, BigDecimal.valueOf(200.00)))
                     .thenThrow(
@@ -281,6 +322,21 @@ class OrderServiceTest {
 
             assertThatThrownBy(() -> orderService.create(createOrder))
                     .isInstanceOf(com.example.ecapi.exception.CouponNotAllowedException.class);
+            verify(orderRepository, never()).save(any(CustomerOrder.class));
+        }
+
+        @Test
+        @DisplayName("配送先住所が存在しない場合、ShippingAddressNotFoundException をスローすること")
+        void shouldThrowExceptionWhenShippingAddressNotFound() {
+            CreateOrder createOrder =
+                    new CreateOrder(1L, List.of(new CreateOrderItem(1L, 2)), null, 99L);
+
+            when(customerRepository.findById(1L)).thenReturn(Optional.of(customer));
+            when(shippingAddressRepository.findByIdAndCustomerId(99L, 1L))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> orderService.create(createOrder))
+                    .isInstanceOf(ShippingAddressNotFoundException.class);
             verify(orderRepository, never()).save(any(CustomerOrder.class));
         }
     }
