@@ -16,7 +16,8 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,13 +50,12 @@ public class ProductService {
                 .toList();
     }
 
-    public List<ProductResult> searchProducts(String name, String description, BigDecimal price) {
+    public Page<ProductResult> searchProducts(
+            String name, String description, BigDecimal price, Pageable pageable) {
         Specification<Product> spec =
                 ProductSpecification.byCriteria(name, description, price)
                         .and(ProductSpecification.notDeleted());
-        return productRepository.findAll(spec, Sort.by("name").ascending()).stream()
-                .map(this::toProductResult)
-                .toList();
+        return productRepository.findAll(spec, pageable).map(this::toProductResult);
     }
 
     @Transactional
