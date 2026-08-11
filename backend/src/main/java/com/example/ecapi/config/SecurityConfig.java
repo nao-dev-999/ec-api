@@ -42,6 +42,11 @@ public class SecurityConfig {
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
     private List<String> allowedOrigins;
 
+    // 負荷試験でレートリミッターの制約を切り離して純粋なAPI/DB性能を計測したい場合、
+    // 試験対象環境でのみ APP_RATE_LIMITING_ENABLED=false を設定する(本番では変更しないこと)。
+    @Value("${app.rate-limiting.enabled:true}")
+    private boolean rateLimitingEnabled;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
@@ -125,9 +130,11 @@ public class SecurityConfig {
         // ✅ レート制限は認証フィルターより前（認証コストをかける前に弾く）
         // RequestTracingFilter.class を参照するため、上のaddFilterBeforeより後で呼ぶ必要がある
         // （Spring Securityのフィルター順序解決は、参照先クラスが先に登録済みであることを要求する）
-        http.addFilterBefore(
-                new RateLimitingFilter(rateLimitProxyManager, messageHelper),
-                RequestTracingFilter.class);
+        if (rateLimitingEnabled) {
+            http.addFilterBefore(
+                    new RateLimitingFilter(rateLimitProxyManager, messageHelper),
+                    RequestTracingFilter.class);
+        }
         http.addFilterAfter(new RequestLoggingFilter(), RequestTracingFilter.class);
 
         return http.build();
