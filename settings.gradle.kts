@@ -1,3 +1,3 @@
 rootProject.name = "ec-api"
 
-include("core", "backend", "batch")
+include("core", "backend", "batch", "gatling")

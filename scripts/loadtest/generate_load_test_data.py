@@ -18,10 +18,13 @@ import random
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
-# 開発用シード(R__init_data.sql)と同じ bcrypt ハッシュ(平文: password123)。
+# 平文 "password123" の bcrypt(strength=12, BCryptPasswordEncoder)ハッシュ。
+# `new BCryptPasswordEncoder(12).encode("password123")` で生成し、.matches() で実際に
+# 検証済み。開発用シード(R__init_data.sql)のコメントには同じ平文とあるハッシュ値が
+# 実際には一致しない(検証の結果判明した別の既知不具合)ため、それとは異なる値を使う。
 # 生成した顧客全員が同じパスワードでログインできるようにし、負荷試験シナリオ側の
 # 認証情報管理を単純化する。
-PASSWORD_HASH = "$2a$12$G/dnQti1mJvpiRQTH9SX7eLZf3kWGMQOwyiOIR7.Dp8ZncKTK2lsK"
+PASSWORD_HASH = "$2a$12$mOAKqoGd3QdlgTlnNkp99uhvyNDkVuQ4m1dVOpIcBWWa01pK4aHCm"
 
 JST = timezone(timedelta(hours=9))
 
