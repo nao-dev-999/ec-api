@@ -56,6 +56,8 @@ python3 scripts/loadtest/generate_load_test_data.py \
 PGHOST=<RDSエンドポイント> PGPORT=5432 PGDATABASE=ec_db PGUSER=<user> PGPASSWORD=<password> \
   ./scripts/loadtest/load_into_db.sh scripts/loadtest/out
 ```
+PGHOST=localhost PGPORT=5432 PGDATABASE=ec_db PGUSER=postgres PGPASSWORD=postgres \
+./scripts/loadtest/load_into_db.sh scripts/loadtest/out
 
 投入後、投入済み最大IDまでシーケンスを再同期し、`ANALYZE`まで自動実行する(統計情報が古いままだと
 負荷試験のクエリプランが実運用と乖離するため必須)。

@@ -3,6 +3,7 @@ plugins {
     id("io.spring.dependency-management") version "1.1.7" apply false
     id("com.diffplug.spotless") version "8.4.0"
     id("org.sonarqube") version "7.3.1.8318"
+    id("io.gatling.gradle") version "3.15.1.2" apply false
 }
 
 allprojects {
