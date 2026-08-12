@@ -94,6 +94,21 @@ BatchApplication.main() に戻り System.exit(SpringApplication.exit(context))
 
 JobParametersの形はJob毎に異なってよい（`DailySalesJobParametersProvider`はtargetDateFrom/targetDateToを組み立てるが、他のJobが全く別のパラメータ形状を必要としても`BatchRunner`側の変更は不要）。
 
+## クーポン期限失効バッチ（couponExpirationJob）
+
+日次売上集計ジョブネット（3Job）とは独立した単発Job。`coupon.valid_to`を過ぎても`active=true`のまま残っているクーポンを日次で一括`active=false`に更新する（`job.couponexpiration`パッケージ、`CouponExpirationJobConfig`・`CouponExpirationJobParametersProvider`）。
+
+クーポン利用時の判定（`CouponService#findApplicableCoupon`）は都度`validTo`と`active`をその場で見ているため、このJobが動かなくても期限切れクーポンが誤って適用されることはない。このJobは管理画面の「有効クーポン一覧」等、`active`フラグのみを条件にする画面・処理のためにフラグを実体へ同期させる。
+
+対象日は他3Jobの「前日」ではなく「当日」（`--targetDate`未指定時はJST当日）。対象日の開始時刻を`asOf`とし、`valid_to < asOf`の行のみを失効させることで、同一対象日内での再実行は常に同じ結果になる。クーポン件数は商品・注文と比べて小規模なため、パーティショニングやStatelessSessionは使わず単純なchunk指向Stepで構成する。
+
+```bash
+SPRING_PROFILES_ACTIVE=local SPRING_DATASOURCE_PASSWORD=postgres \
+  ./gradlew :batch:bootRun --args='--job=couponExpirationJob --targetDate=2026-08-12'
+```
+
+現時点ではEventBridge Scheduler等への日次起動設定（インフラ側の配線）は未対応で、手動実行のみ。
+
 ## ローカルでの実行
 
 `backend/docker-compose.yml`のPostgresを共用する。コマンドはすべて**リポジトリルート**（`ec-api/`。Gradleマルチモジュールのルート）から実行する。
