@@ -15,6 +15,8 @@ import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +36,9 @@ public class ProductService {
         return productRepository.findAll().stream().map(this::toProductResult).toList();
     }
 
+    // 在庫はOrderService経由でも更新されるため最新性を保証できない。
+    // TTL(CacheConfig参照、現在60秒)による自然失効で許容範囲の古さに収める。
+    @Cacheable(value = "products", key = "#id")
     public ProductResult findById(Long id) {
         return productRepository
                 .findById(id)
@@ -71,6 +76,7 @@ public class ProductService {
      * @throws ProductNotFoundException 指定されたIDの商品が見つからない場合
      * @throws OptimisticLockException 楽観ロックの競合が発生した場合
      */
+    @CacheEvict(value = "products", key = "#updateProduct.id()")
     @Transactional
     public ProductResult update(UpdateProduct updateProduct) {
         Product product =
@@ -92,6 +98,7 @@ public class ProductService {
      * @throws ProductNotFoundException 指定されたIDの商品が見つからない場合
      * @throws ProductInUseException 商品が注文で参照されているため削除できない場合
      */
+    @CacheEvict(value = "products", key = "#id")
     @Transactional
     public void delete(Long id) {
         if (!productRepository.existsById(id)) {

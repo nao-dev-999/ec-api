@@ -14,16 +14,22 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 @Configuration
 public class RateLimitingConfig {
 
-    // ✅ Spring Data Redis の RedisConnectionFactory から host/port を取得し、
-    //    Bucket4j専用のRedisClientを別途生成する（library間で接続を共有しない）
+    // ✅ Spring Data Redis の RedisConnectionFactory から host/port/password/TLS設定を取得し、
+    //    Bucket4j専用のRedisClientを別途生成する（library間で接続を共有しない）。
+    //    host/portだけをRedisURI.create(host, port)で組み立てるとpassword/SSLが
+    //    引き継がれず、AUTH・TLSを要求する環境（ECS等）で接続に失敗するため、
+    //    RedisStandaloneConfiguration側の設定を明示的に反映する。
     @Bean(destroyMethod = "shutdown")
     public RedisClient rateLimitRedisClient(RedisConnectionFactory connectionFactory) {
         LettuceConnectionFactory lettuceFactory = (LettuceConnectionFactory) connectionFactory;
-        RedisURI uri =
-                RedisURI.create(
-                        lettuceFactory.getStandaloneConfiguration().getHostName(),
-                        lettuceFactory.getStandaloneConfiguration().getPort());
-        return RedisClient.create(uri);
+        var standaloneConfig = lettuceFactory.getStandaloneConfiguration();
+        RedisURI.Builder uriBuilder =
+                RedisURI.builder()
+                        .withHost(standaloneConfig.getHostName())
+                        .withPort(standaloneConfig.getPort())
+                        .withSsl(lettuceFactory.getClientConfiguration().isUseSsl());
+        standaloneConfig.getPassword().toOptional().ifPresent(uriBuilder::withPassword);
+        return RedisClient.create(uriBuilder.build());
     }
 
     @Bean(destroyMethod = "close")

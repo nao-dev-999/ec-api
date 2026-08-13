@@ -24,9 +24,17 @@ spring:
     locations: classpath:db/migration
     baseline-on-migrate: true
 
-  redis:
-    host: localhost
-    port: 6379
+  # 実際にバインドされるのはこの spring.data.redis 配下(spring.redis.*はBoot3で廃止済み)。
+  # ローカル/CIの素のRedisコンテナはAUTH・TLS未設定のため、password空・ssl無効をデフォルトにする。
+  # ECSデプロイ先ではTerraform側でSPRING_DATA_REDIS_PASSWORD(Secrets Manager経由)・
+  # SPRING_DATA_REDIS_SSL_ENABLED=trueを設定する(ecs/main.tf参照)。
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: ${SPRING_DATA_REDIS_PASSWORD:}
+      ssl:
+        enabled: ${SPRING_DATA_REDIS_SSL_ENABLED:false}
   session:
     store-type: redis
     timeout: 1800s
@@ -34,6 +42,15 @@ spring:
   messages:
     basename: messages
     encoding: UTF-8
+
+# Swagger UI / OpenAPI定義の公開有無。
+# ローカル開発ではデフォルトで有効。ECSにデプロイされる環境ではTerraform側で
+# APP_SWAGGER_ENABLED=false を設定し、API仕様が外部から閲覧できないようにする。
+springdoc:
+  api-docs:
+    enabled: ${APP_SWAGGER_ENABLED:true}
+  swagger-ui:
+    enabled: ${APP_SWAGGER_ENABLED:true}
 
 server:
   port: 8080

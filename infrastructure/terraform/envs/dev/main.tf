@@ -88,6 +88,8 @@ module "ecs" {
   batch_image_url          = module.ecr.batch_repository_url
   batch_image_tag          = "latest"
   batch_private_subnet_ids = module.vpc.private_subnet_ids
+
+  swagger_enabled = var.swagger_enabled
 }
 
 # ALB -> ECSタスクへのアウトバウンドをアプリポート(8080)のみに限定する。
@@ -129,6 +131,8 @@ module "codepipeline" {
 
   batch_repository_url         = module.ecr.batch_repository_url
   batch_task_definition_family = module.ecs.batch_task_definition_family
+
+  manual_approval_enabled = var.manual_approval_enabled
 }
 
 # AWS Config（設定ミス・非準拠状態の検知と通知）

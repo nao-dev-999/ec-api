@@ -49,3 +49,17 @@ variable "budget_notification_emails" {
   type        = list(string)
   default     = []
 }
+
+# Swagger UI
+variable "swagger_enabled" {
+  description = "Swagger UI(/swagger-ui, /v3/api-docs)をこの環境で公開するか"
+  type        = bool
+  default     = false
+}
+
+# CodePipeline
+variable "manual_approval_enabled" {
+  description = "CodePipelineのDeploy(バッチはタスク定義反映)前に手動承認ステージを挟むか"
+  type        = bool
+  default     = false
+}

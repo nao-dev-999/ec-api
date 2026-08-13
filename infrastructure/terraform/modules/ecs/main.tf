@@ -102,16 +102,49 @@ resource "aws_elasticache_subnet_group" "this" {
   }
 }
 
-resource "aws_elasticache_cluster" "this" {
-  cluster_id           = "${var.project}-${var.env}-redis"
-  engine               = "redis"
-  node_type            = "cache.t3.micro"
-  num_cache_nodes      = 1
-  parameter_group_name = "default.redis7"
-  engine_version       = "7.1"
-  port                 = 6379
-  subnet_group_name    = aws_elasticache_subnet_group.this.name
-  security_group_ids   = [aws_security_group.redis.id]
+
+# ElastiCache Redis(AUTH)用トークン。DBパスワードと異なりRDSのmanage_master_user_password
+# のようなAWS管理の仕組みがElastiCacheには無いため、Secrets Managerで自前管理する。
+resource "random_password" "redis_auth_token" {
+  length  = 32
+  # ElastiCacheのauth_tokenは "/", "\"", "@", 空白を含められないため、
+  # 記号を使わず英数字のみにして制約を確実に満たす。
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "redis_auth_token" {
+  name = "${var.project}-${var.env}-redis-auth-token"
+
+  tags = {
+    Name    = "${var.project}-${var.env}-redis-auth-token"
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "redis_auth_token" {
+  secret_id     = aws_secretsmanager_secret.redis_auth_token.id
+  secret_string = random_password.redis_auth_token.result
+}
+
+# 転送時・保管時暗号化とAUTHを有効化するため、aws_elasticache_cluster(暗号化非対応)ではなく
+# aws_elasticache_replication_group(ノード数1、フェイルオーバーなし)を使う。
+resource "aws_elasticache_replication_group" "this" {
+  replication_group_id       = "${var.project}-${var.env}-redis"
+  description                = "Redis for ${var.project}-${var.env}(Spring Session / rate limiting)"
+  engine                     = "redis"
+  engine_version             = "7.1"
+  node_type                  = "cache.t3.micro"
+  num_cache_clusters         = 1
+  automatic_failover_enabled = false
+  parameter_group_name       = "default.redis7"
+  port                       = 6379
+  subnet_group_name          = aws_elasticache_subnet_group.this.name
+  security_group_ids         = [aws_security_group.redis.id]
+
+  at_rest_encryption_enabled = true
+  transit_encryption_enabled = true
+  auth_token                 = random_password.redis_auth_token.result
 
   tags = {
     Name    = "${var.project}-${var.env}-redis"
@@ -265,10 +298,13 @@ resource "aws_ecs_task_definition" "app" {
       environment = [
         { name = "SPRING_PROFILES_ACTIVE", value = var.env },
         { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${var.db_host}:5432/${var.db_name}" },
-        { name = "SPRING_DATA_REDIS_HOST", value = aws_elasticache_cluster.this.cache_nodes[0].address },
+        { name = "SPRING_DATA_REDIS_HOST", value = aws_elasticache_replication_group.this.primary_endpoint_address },
         { name = "SPRING_DATA_REDIS_PORT", value = "6379" },
+        { name = "SPRING_DATA_REDIS_SSL_ENABLED", value = "true" },
         # Flywayはアプリ起動時には無効化（別タスクで実行）
         { name = "SPRING_FLYWAY_ENABLED", value = "false" },
+        # Swagger UI/OpenAPI定義の公開有無(OpenApiConfig/application.yml参照)。
+        { name = "APP_SWAGGER_ENABLED", value = tostring(var.swagger_enabled) },
       ]
 
       secrets = [
@@ -279,6 +315,10 @@ resource "aws_ecs_task_definition" "app" {
         {
           name      = "SPRING_DATASOURCE_PASSWORD"
           valueFrom = "${var.db_password_secret_arn}:password::"
+        },
+        {
+          name      = "SPRING_DATA_REDIS_PASSWORD"
+          valueFrom = aws_secretsmanager_secret.redis_auth_token.arn
         }
       ]
 

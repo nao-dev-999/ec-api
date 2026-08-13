@@ -31,12 +31,16 @@ output "task_role_arn" {
 }
 
 output "redis_host" {
-  value = aws_elasticache_cluster.this.cache_nodes[0].address
+  value = aws_elasticache_replication_group.this.primary_endpoint_address
 }
 
 output "redis_cluster_id" {
   description = "CloudWatchメトリクスのCacheClusterIdディメンションに使うクラスタID"
-  value       = aws_elasticache_cluster.this.cluster_id
+  value       = tolist(aws_elasticache_replication_group.this.member_clusters)[0]
+}
+
+output "redis_auth_token_secret_arn" {
+  value = aws_secretsmanager_secret.redis_auth_token.arn
 }
 
 output "db_debug_task_definition_family" {

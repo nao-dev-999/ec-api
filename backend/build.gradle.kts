@@ -101,3 +101,25 @@ tasks.jacocoTestReport {
         files(sourceDirectories.files + coreSourceSets["main"].allJava.srcDirs),
     )
 }
+
+// カバレッジが大きく落ち込んだ場合にビルドを失敗させる下限値。
+// 現状の実測値は把握していないため、既存テストが確実に満たせる保守的な値から開始し、
+// 実測を確認しながら段階的に引き上げること。
+tasks.jacocoTestCoverageVerification {
+    dependsOn(tasks.jacocoTestReport)
+    classDirectories.setFrom(tasks.jacocoTestReport.get().classDirectories)
+    sourceDirectories.setFrom(tasks.jacocoTestReport.get().sourceDirectories)
+    violationRules {
+        rule {
+            limit {
+                counter = "INSTRUCTION"
+                value = "COVEREDRATIO"
+                minimum = "0.50".toBigDecimal()
+            }
+        }
+    }
+}
+
+tasks.jacocoTestReport {
+    finalizedBy(tasks.jacocoTestCoverageVerification)
+}
