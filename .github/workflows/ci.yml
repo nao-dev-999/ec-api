@@ -4,14 +4,42 @@ name: CI
 on:
   push:
     branches: [ main ]
-    paths: [ 'backend/**', 'core/**', 'batch/**' ]
   pull_request:
     branches: [ main ]
-    paths: [ 'backend/**', 'core/**', 'batch/**' ]
   workflow_dispatch:
 
 jobs:
+  backend-changed:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.filter.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            changed:
+              - 'backend/**'
+              - 'core/**'
+              - 'batch/**'
+
+  frontend-changed:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.filter.outputs.changed }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            changed:
+              - 'frontend/**'
+
   test:
+    needs: backend-changed
+    if: needs.backend-changed.outputs.changed == 'true'
     runs-on: ubuntu-latest
 
     services:
@@ -100,3 +128,65 @@ jobs:
 
       - name: Build batch Docker image
         run: docker build -f batch/Dockerfile -t ec-api-batch:ci .
+
+  frontend:
+    needs: frontend-changed
+    if: needs.frontend-changed.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Check formatting
+        working-directory: frontend
+        run: npm run format:check
+
+      - name: Run tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  dependency-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner (filesystem)
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: CRITICAL,HIGH
+          format: sarif
+          output: trivy-results.sarif
+          # 依存関係の脆弱性はSecurity タブへ集約し可視化する。
+          # CIを常に失敗させないよう exit-code は 0 のままにする(ブロッキングにしたい場合は要変更)。
+          exit-code: '0'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-results.sarif
