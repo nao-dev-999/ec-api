@@ -3,6 +3,7 @@ package com.ecapi.order.service;
 import com.ecapi.order.entity.Order;
 import com.ecapi.order.entity.OrderItem;
 import com.ecapi.order.repository.OrderRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -14,26 +15,22 @@ import java.sql.Statement;
 import java.util.List;
 
 /**
- * ===========================================================
- * SonarQube / GitHub Copilot 比較デモ用サンプル
- * ===========================================================
- * このファイルには意図的に3種類の問題を仕込んであります。
- * 実際にSonarQubeとCopilotの両方にレビューさせて、
- * どちらが何を検出するかを比較するためのデモ用コードです。
+ * =========================================================== SonarQube / GitHub Copilot 比較デモ用サンプル
+ * =========================================================== このファイルには意図的に3種類の問題を仕込んであります。
+ * 実際にSonarQubeとCopilotの両方にレビューさせて、 どちらが何を検出するかを比較するためのデモ用コードです。
  *
- * [問題A] ルールベースで機械的に検出しやすい問題（SonarQube向き）
- * [問題B] セキュリティの定番アンチパターン（SonarQube向き）
- * [問題C] 意図理解が必要な業務ロジックの矛盾（Copilot向き）
- * ===========================================================
+ * <p>本番の {@code com.example.ecapi} 配下とは独立したパッケージであり、Spring の
+ * コンポーネントスキャン対象にもならない（デモ・学習目的専用。本番コードにマージしないこと）。
+ *
+ * <p>[問題A] ルールベースで機械的に検出しやすい問題（SonarQube向き） [問題B] セキュリティの定番アンチパターン（SonarQube向き） [問題C]
+ * 意図理解が必要な業務ロジックの矛盾（Copilot向き） ===========================================================
  */
 @Service
 public class OrderService {
 
-    @Autowired
-    private OrderRepository orderRepository;
+    @Autowired private OrderRepository orderRepository;
 
-    @Autowired
-    private JdbcTemplate jdbcTemplate;
+    @Autowired private JdbcTemplate jdbcTemplate;
 
     // ---------------------------------------------------------
     // [問題A-1] 未使用フィールド（Code Smell）
@@ -58,8 +55,8 @@ public class OrderService {
     // ---------------------------------------------------------
     public int countPendingOrders(Connection connection) throws Exception {
         Statement statement = connection.createStatement();
-        ResultSet resultSet = statement.executeQuery(
-                "SELECT COUNT(*) FROM orders WHERE status = 'PENDING'");
+        ResultSet resultSet =
+                statement.executeQuery("SELECT COUNT(*) FROM orders WHERE status = 'PENDING'");
         resultSet.next();
         return resultSet.getInt(1);
         // statement.close() / resultSet.close() が呼ばれていない
@@ -104,7 +101,8 @@ public class OrderService {
     // 文法的には正しく、SonarQubeのルールには一切引っかからないが、
     // 意図と実装がズレているため計算結果が誤りになる。
     // ---------------------------------------------------------
-    public BigDecimal calculateFinalPrice(BigDecimal subtotal, BigDecimal discountRate, BigDecimal taxRate) {
+    public BigDecimal calculateFinalPrice(
+            BigDecimal subtotal, BigDecimal discountRate, BigDecimal taxRate) {
         // 本来あるべき順序: 小計 → 割引適用 → 税金計算
         // 実際の実装: 小計 → 税金計算 → 割引適用（順序が逆）
         BigDecimal priceWithTax = subtotal.add(subtotal.multiply(taxRate));
@@ -145,7 +143,10 @@ public class OrderService {
         for (OrderItem item : order.getItems()) {
             BigDecimal discount = applyItemDiscount(item); // 実際は「割引後単価」が返る
             // ここでは「割引額」だと誤解したまま、単価から再度引いてしまっている
-            BigDecimal itemTotal = item.getUnitPrice().subtract(discount).multiply(BigDecimal.valueOf(item.getQuantity()));
+            BigDecimal itemTotal =
+                    item.getUnitPrice()
+                            .subtract(discount)
+                            .multiply(BigDecimal.valueOf(item.getQuantity()));
             total = total.add(itemTotal);
         }
         return total;

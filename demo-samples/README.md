@@ -1,12 +1,26 @@
 # SonarQube vs GitHub Copilot 比較デモ
 
-`OrderService.java` には、意図的に3種類・計7個の問題を仕込んであります。
+`backend/src/main/java/com/ecapi/order/service/OrderService.java` には、
+意図的に3種類・計7個の問題を仕込んであります。
 SonarQubeとGitHub Copilot（PRレビュー機能）の両方にこのコードをかけて、
 検出結果を比較するためのデモ用ファイルです。
 
+## ファイル構成
+
+- `backend/src/main/java/com/ecapi/order/service/OrderService.java` … 問題を仕込んだ本体
+- `backend/src/main/java/com/ecapi/order/entity/Order.java`, `OrderItem.java` … コンパイルを通すための最小スタブエンティティ
+- `backend/src/main/java/com/ecapi/order/repository/OrderRepository.java` … 同上の最小スタブリポジトリ
+
+CI（`.github/workflows/ci.yml`）は `backend/**` `core/**` `batch/**` の変更でのみ
+起動し、SonarQubeスキャンもそのCIの中で実行されるため、デモ用コードは
+`backend/` 配下（実際にコンパイル・解析されるソースセット）に配置しています。
+パッケージは本番の `com.example.ecapi.*` とは別系統の `com.ecapi.order.*` にしてあり、
+Spring Bootのコンポーネントスキャン対象外のため、本番アプリの起動やテストには
+一切影響しません。
+
 ## 使い方
 
-1. `feature/demo-comparison` のようなブランチを切り、このファイルを配置してPRを作成
+1. このディレクトリを含むブランチでPRを作成（例: `feature/sonarqube-copilot-demo`）
 2. SonarCloud（nao-dev-999）で解析させ、Issue一覧を確認
 3. 同じPRにGitHub Copilotのコードレビューを走らせ、コメントを確認
 4. 検出できた項目・できなかった項目を突き合わせる
@@ -36,3 +50,7 @@ SonarQubeとGitHub Copilot（PRレビュー機能）の両方にこのコード�
 - このコードは **デモ・学習目的専用** です。本番コードにマージしないでください
 - SQLインジェクションのサンプル（`searchOrdersByCustomerName`）は
   実際にDBに接続するとリスクがあるため、解析のみに使用し実行はしないでください
+- このデモコードにはテストがなくカバレッジ0%のため、SonarのQuality Gate
+  （新規コードのカバレッジ基準）で赤判定・CIジョブ失敗になる可能性があります。
+  デモの主目的はSonar/Copilotの検出結果比較であり、Quality Gateを通すこと自体は
+  目的ではないため、想定内の挙動です
