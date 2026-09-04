@@ -1,9 +1,8 @@
 package com.ecapi.order.entity;
 
+import java.math.BigDecimal;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.math.BigDecimal;
 
 /**
  * SonarQube / Copilot 比較デモ用の最小スタブエンティティ。 本番の {@code com.example.ecapi.entity} 配下とは独立しており、Spring

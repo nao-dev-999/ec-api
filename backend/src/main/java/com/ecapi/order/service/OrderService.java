@@ -3,16 +3,14 @@ package com.ecapi.order.service;
 import com.ecapi.order.entity.Order;
 import com.ecapi.order.entity.OrderItem;
 import com.ecapi.order.repository.OrderRepository;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.stereotype.Service;
-
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
 import java.util.List;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Service;
 
 /**
  * =========================================================== SonarQube / GitHub Copilot 比較デモ用サンプル

@@ -1,7 +1,6 @@
 package com.ecapi.order.repository;
 
 import com.ecapi.order.entity.Order;
-
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
