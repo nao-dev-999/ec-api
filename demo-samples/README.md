@@ -1,9 +1,13 @@
 # SonarQube vs GitHub Copilot 比較デモ
 
 `backend/src/main/java/com/ecapi/order/service/OrderService.java` には、
-意図的に3種類・計7個の問題を仕込んであります。
+意図的に3種類・計7個の問題を仕込んでいました。
 SonarQubeとGitHub Copilot（PRレビュー機能）の両方にこのコードをかけて、
 検出結果を比較するためのデモ用ファイルです。
+
+> **追記**: 発表用の検出結果比較（下記の対応表）は当初の仕込み内容の記録として残しつつ、
+> このPRではQuality Gateをパスさせるため、仕込んであった7個の問題はすべて修正し、
+> `OrderServiceTest` でカバレッジも確保しています。
 
 ## ファイル構成
 
@@ -48,9 +52,8 @@ Spring Bootのコンポーネントスキャン対象外のため、本番アプ
 ## 注意
 
 - このコードは **デモ・学習目的専用** です。本番コードにマージしないでください
-- SQLインジェクションのサンプル（`searchOrdersByCustomerName`）は
-  実際にDBに接続するとリスクがあるため、解析のみに使用し実行はしないでください
-- このデモコードにはテストがなくカバレッジ0%のため、SonarのQuality Gate
-  （新規コードのカバレッジ基準）で赤判定・CIジョブ失敗になる可能性があります。
-  デモの主目的はSonar/Copilotの検出結果比較であり、Quality Gateを通すこと自体は
-  目的ではないため、想定内の挙動です
+- SQLインジェクションのサンプル（`searchOrdersByCustomerName`）は元々プレースホルダなしの
+  文字列結合でしたが、現在は `?` バインドの安全な実装に修正済みです
+- 上記の問題一覧はデモ実施時点（修正前）の仕込み内容の記録です。現在のコードは
+  `OrderServiceTest`（`backend/src/test/java/com/ecapi/order/service/`）でカバーされており、
+  Quality Gateをパスする状態になっています
