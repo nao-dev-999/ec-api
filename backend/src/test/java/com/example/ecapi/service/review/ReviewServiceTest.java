@@ -287,24 +287,26 @@ class ReviewServiceTest {
         @Test
         @DisplayName("商品のレビュー一覧を取得できること")
         void shouldReturnReviews() {
+            PageRequest pageable = PageRequest.of(0, 20);
             when(productRepository.findById(PRODUCT_ID)).thenReturn(Optional.of(product));
-            when(reviewRepository.findAllByProductIdOrderByCreatedAtDesc(PRODUCT_ID))
-                    .thenReturn(List.of(review));
+            when(reviewRepository.findAllByProductId(PRODUCT_ID, pageable))
+                    .thenReturn(new PageImpl<>(List.of(review), pageable, 1));
             when(customerRepository.findAllById(List.of(CUSTOMER_ID)))
                     .thenReturn(List.of(customer));
 
-            List<ReviewResult> result = reviewService.listByProduct(PRODUCT_ID);
+            var result = reviewService.listByProduct(PRODUCT_ID, pageable);
 
-            assertThat(result).hasSize(1);
-            assertThat(result.get(0).customerName()).isEqualTo("山田");
+            assertThat(result.getContent()).hasSize(1);
+            assertThat(result.getContent().get(0).customerName()).isEqualTo("山田");
         }
 
         @Test
         @DisplayName("存在しない商品の場合、ProductNotFoundExceptionをスローすること")
         void shouldThrowExceptionWhenProductNotFound() {
+            PageRequest pageable = PageRequest.of(0, 20);
             when(productRepository.findById(99L)).thenReturn(Optional.empty());
 
-            assertThatThrownBy(() -> reviewService.listByProduct(99L))
+            assertThatThrownBy(() -> reviewService.listByProduct(99L, pageable))
                     .isInstanceOf(ProductNotFoundException.class);
         }
     }

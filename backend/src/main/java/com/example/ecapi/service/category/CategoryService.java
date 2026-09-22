@@ -15,6 +15,8 @@ import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,7 @@ public class CategoryService {
     private final CategoryRepository categoryRepository;
     private final ProductRepository productRepository;
 
+    @Cacheable("categories")
     public List<CategoryResult> findAll() {
         return categoryRepository.findAll().stream().map(this::toCategoryResult).toList();
     }
@@ -38,6 +41,7 @@ public class CategoryService {
                 .orElseThrow(() -> new CategoryNotFoundException(id));
     }
 
+    @CacheEvict(value = "categories", allEntries = true)
     @Transactional
     public CategoryResult create(CreateCategory dto) {
         if (categoryRepository.existsByName(dto.name())) {
@@ -50,6 +54,7 @@ public class CategoryService {
         return toCategoryResult(saved);
     }
 
+    @CacheEvict(value = "categories", allEntries = true)
     @Transactional
     public CategoryResult update(UpdateCategory dto) {
         Category category =
@@ -66,6 +71,7 @@ public class CategoryService {
         return toCategoryResult(saved);
     }
 
+    @CacheEvict(value = "categories", allEntries = true)
     @Transactional
     public void delete(Long id) {
         if (!categoryRepository.existsById(id)) {

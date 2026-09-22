@@ -26,6 +26,12 @@ variable "db_password_secret_arn" {
   description = "RDS managed Secrets Manager ARN"
 }
 
+variable "swagger_enabled" {
+  type        = bool
+  default     = false
+  description = "Swagger UI(/swagger-ui, /v3/api-docs)をこの環境で公開するか。安全側のデフォルトとして無効。"
+}
+
 variable "task_cpu" {
   type    = string
   default = "512"

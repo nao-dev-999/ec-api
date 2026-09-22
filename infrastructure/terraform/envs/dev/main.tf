@@ -24,6 +24,12 @@ module "rds" {
   vpc_id             = module.vpc.vpc_id
   subnet_ids         = module.vpc.private_subnet_ids
   ecs_sg_id          = module.ecs.ecs_sg_id
+
+  # ecs_sg_id経由でmodule.ecsの特定リソースには暗黙に依存しているが、
+  # Internet Gateway等module.vpc配下の他リソースとは依存関係が無く、
+  # destroy時に並行して壊されうる(ENIが残っているとIGWのデタッチに失敗して長時間リトライする)。
+  # そのため明示的にVPCモジュール全体を先に残す(destroy時は先に壊す)よう依存させる。
+  depends_on = [module.vpc]
 }
 
 # ALB
@@ -38,6 +44,12 @@ module "alb" {
   health_check_path = "/actuator/health"
 
   enable_deletion_protection = false # devでは頻繁に作り直すためfalse。本番環境ではtrueにすること
+
+  # ALBはsubnet_ids経由でVPCモジュールの一部リソース(サブネット)には暗黙に依存するが、
+  # Internet Gatewayとは依存関係が無い。destroy時にALB(のENI)がまだ残っている間に
+  # IGWのデタッチが試みられ、DependencyViolationのリトライで長時間詰まることがあるため、
+  # VPCモジュール全体より確実に先に破棄されるよう明示的に依存させる。
+  depends_on = [module.vpc]
 }
 
 # WAF（ALBの手前でIPアドレス単位のレートベース制限）
@@ -88,6 +100,13 @@ module "ecs" {
   batch_image_url          = module.ecr.batch_repository_url
   batch_image_tag          = "latest"
   batch_private_subnet_ids = module.vpc.private_subnet_ids
+
+  swagger_enabled = var.swagger_enabled
+
+  # ElastiCache/Fargateタスクのように、VPC内にENIを持つリソースはvpc_id/subnet_ids経由の
+  # 暗黙の依存だけではInternet Gatewayとの順序が保証されない(module.alb/module.rdsと同じ理由)。
+  # destroy時のIGWデタッチ詰まりを防ぐため明示的に依存させる。
+  depends_on = [module.vpc]
 }
 
 # ALB -> ECSタスクへのアウトバウンドをアプリポート(8080)のみに限定する。
@@ -129,6 +148,8 @@ module "codepipeline" {
 
   batch_repository_url         = module.ecr.batch_repository_url
   batch_task_definition_family = module.ecs.batch_task_definition_family
+
+  manual_approval_enabled = var.manual_approval_enabled
 }
 
 # AWS Config（設定ミス・非準拠状態の検知と通知）

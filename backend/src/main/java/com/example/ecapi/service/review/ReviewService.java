@@ -17,7 +17,6 @@ import com.example.ecapi.service.review.dto.CreateReview;
 import com.example.ecapi.service.review.dto.ReviewResult;
 import com.example.ecapi.service.review.dto.ReviewSummaryResult;
 import com.example.ecapi.service.review.dto.UpdateReview;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -39,13 +38,13 @@ public class ReviewService {
     private final CustomerRepository customerRepository;
     private final CustomerOrderDetailRepository customerOrderDetailRepository;
 
-    /** 商品詳細画面向け: 指定商品のレビュー一覧（新しい順） */
-    public List<ReviewResult> listByProduct(Long productId) {
+    /** 商品詳細画面向け: 指定商品のレビュー一覧（新しい順、ページング） */
+    public Page<ReviewResult> listByProduct(Long productId, Pageable pageable) {
         Product product =
                 productRepository
                         .findById(productId)
                         .orElseThrow(() -> new ProductNotFoundException(productId));
-        List<Review> reviews = reviewRepository.findAllByProductIdOrderByCreatedAtDesc(productId);
+        Page<Review> reviews = reviewRepository.findAllByProductId(productId, pageable);
 
         Map<Long, Customer> customersById =
                 customerRepository
@@ -54,9 +53,8 @@ public class ReviewService {
                         .stream()
                         .collect(Collectors.toMap(Customer::getId, Function.identity()));
 
-        return reviews.stream()
-                .map(review -> toResult(review, product, customersById.get(review.getCustomerId())))
-                .toList();
+        return reviews.map(
+                review -> toResult(review, product, customersById.get(review.getCustomerId())));
     }
 
     /** 商品詳細画面向け: 平均評価・件数 */

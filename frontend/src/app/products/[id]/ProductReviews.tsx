@@ -64,8 +64,12 @@ function formatDate(value: string) {
   return new Date(value).toLocaleDateString("ja-JP");
 }
 
+const PAGE_SIZE = 10;
+
 export default function ProductReviews({ productId }: { productId: number }) {
   const [reviews, setReviews] = useState<Review[] | null>(null);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
   const [summary, setSummary] = useState<ReviewSummary | null>(null);
   const [myCustomerId, setMyCustomerId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -77,15 +81,16 @@ export default function ProductReviews({ productId }: { productId: number }) {
   const [editingId, setEditingId] = useState<number | null>(null);
 
   const load = useCallback(() => {
-    getProductReviews(productId)
+    getProductReviews(productId, page, PAGE_SIZE)
       .then((data) => {
-        setReviews(data.reviews);
+        setReviews(data.reviews.content);
+        setTotalPages(Math.max(1, data.reviews.totalPages));
         setSummary(data.summary);
       })
       .catch((err) =>
         setError(getErrorMessage(err, "レビューの取得に失敗しました")),
       );
-  }, [productId]);
+  }, [productId, page]);
 
   useEffect(() => {
     load();
@@ -212,6 +217,36 @@ export default function ProductReviews({ productId }: { productId: number }) {
           </li>
         ))}
       </ul>
+
+      {totalPages > 1 && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 12,
+            marginTop: 8,
+            marginBottom: 16,
+          }}
+        >
+          <button
+            type="button"
+            disabled={page <= 0}
+            onClick={() => setPage((p) => p - 1)}
+          >
+            前へ
+          </button>
+          <span style={{ alignSelf: "center", color: "var(--muted)" }}>
+            {page + 1} / {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page >= totalPages - 1}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            次へ
+          </button>
+        </div>
+      )}
 
       {!myReview || editingId !== null ? (
         <div className="form-card" style={{ marginTop: 24, maxWidth: "none" }}>

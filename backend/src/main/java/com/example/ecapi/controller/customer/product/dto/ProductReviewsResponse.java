@@ -1,5 +1,6 @@
 package com.example.ecapi.controller.customer.product.dto;
 
-import java.util.List;
+import com.example.ecapi.controller.common.dto.PageResponse;
 
-public record ProductReviewsResponse(List<ReviewResponse> reviews, ReviewSummaryResponse summary) {}
+public record ProductReviewsResponse(
+        PageResponse<ReviewResponse> reviews, ReviewSummaryResponse summary) {}

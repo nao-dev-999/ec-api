@@ -1,12 +1,9 @@
 package com.example.ecapi.repository;
 
 import com.example.ecapi.entity.Product;
-import java.math.BigDecimal;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
 /**
  * 商品リポジトリ
@@ -16,18 +13,6 @@ import org.springframework.data.repository.query.Param;
 public interface ProductRepository
         extends JpaRepository<Product, Long>, JpaSpecificationExecutor<Product> {
 
-    // 商品名のあいまい検索（大文字小文字無視）
-    List<Product> findByNameContainingIgnoreCaseAndDeletedFalse(String keyword);
-
     // 低在庫アラート向け: 在庫が閾値以下の商品を在庫の少ない順に取得
     List<Product> findByDeletedFalseAndStockLessThanEqualOrderByStockAsc(int threshold);
-
-    // 価格範囲検索（JPQL）
-    @Query(
-            """
-        SELECT p FROM Product p
-        WHERE p.price BETWEEN :min AND :max AND p.deleted = false
-        ORDER BY p.price
-        """)
-    List<Product> findByPriceRange(@Param("min") BigDecimal min, @Param("max") BigDecimal max);
 }

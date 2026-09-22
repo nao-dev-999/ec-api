@@ -8,6 +8,7 @@ import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.platform.commons.support.AnnotationSupport;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -33,6 +34,19 @@ public class TestDataExtension implements BeforeEachCallback, AfterEachCallback 
 
     @Override
     public void beforeEach(ExtensionContext context) {
+        // Testcontainers上のRedisはSpringコンテキストと一緒にテスト間で使い回されるため、
+        // Spring Cache(CacheConfig参照)がテスト間でキャッシュを共有してしまう。
+        // DBはTestDataでテストごとにリセットされる一方、キャッシュは自動では消えないため、
+        // 各テスト開始前に明示的に全キャッシュをクリアして分離する。
+        ApplicationContext springContext = SpringExtension.getApplicationContext(context);
+        springContext
+                .getBeanProvider(CacheManager.class)
+                .ifAvailable(
+                        cacheManager ->
+                                cacheManager
+                                        .getCacheNames()
+                                        .forEach(name -> cacheManager.getCache(name).clear()));
+
         AnnotationSupport.findAnnotation(context.getRequiredTestMethod(), TestData.class)
                 .ifPresent(annotation -> applyTestData(context, annotation));
     }

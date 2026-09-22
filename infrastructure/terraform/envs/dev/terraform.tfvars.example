@@ -29,3 +29,9 @@ alarm_notification_emails = ["you@example.com"]
 # AWS Budgets
 monthly_budget_usd         = "50"
 budget_notification_emails = ["you@example.com"]
+
+# Swagger UI（デフォルトは非公開。動作確認等で一時的に公開したい場合のみtrueにする）
+swagger_enabled = false
+
+# CodePipeline（本番相当環境ではtrueにしてDeploy前に手動承認を挟むことを推奨）
+manual_approval_enabled = false

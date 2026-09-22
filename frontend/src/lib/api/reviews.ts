@@ -22,8 +22,16 @@ export type ReviewSummary = {
   reviewCount: number;
 };
 
+export type ReviewPage = {
+  content: Review[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+};
+
 export type ProductReviews = {
-  reviews: Review[];
+  reviews: ReviewPage;
   summary: ReviewSummary;
 };
 
@@ -39,9 +47,13 @@ export type UpdateReviewRequest = {
   version: number;
 };
 
-export function getProductReviews(productId: number): Promise<ProductReviews> {
+export function getProductReviews(
+  productId: number,
+  page = 0,
+  size = 20,
+): Promise<ProductReviews> {
   return apiFetch<ProductReviews>(
-    `/api/customer/products/${productId}/reviews`,
+    `/api/customer/products/${productId}/reviews?page=${page}&size=${size}`,
   );
 }
 

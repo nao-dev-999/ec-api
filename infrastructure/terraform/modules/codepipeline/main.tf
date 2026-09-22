@@ -340,6 +340,27 @@ resource "aws_codepipeline" "this" {
     }
   }
 
+  # ── Stage 2.5: Approval（var.manual_approval_enabled時のみ、Deploy前に手動承認を挟む）
+  dynamic "stage" {
+    for_each = var.manual_approval_enabled ? [1] : []
+
+    content {
+      name = "Approval"
+
+      action {
+        name     = "ManualApproval"
+        category = "Approval"
+        owner    = "AWS"
+        provider = "Manual"
+        version  = "1"
+
+        configuration = {
+          CustomData = "ECSへのデプロイ前に手動承認が必要です。"
+        }
+      }
+    }
+  }
+
   # ── Stage 3: Deploy (ECS Rolling Update) ──────────────────────────────
   stage {
     name = "Deploy"
@@ -484,6 +505,28 @@ resource "aws_codepipeline" "batch" {
 
       configuration = {
         ProjectName = aws_codebuild_project.batch_build.name
+      }
+    }
+  }
+
+  # var.manual_approval_enabled時のみ、新しいタスク定義リビジョンが以降のバッチ実行から
+  # 使われる前に手動承認を挟む。
+  dynamic "stage" {
+    for_each = var.manual_approval_enabled ? [1] : []
+
+    content {
+      name = "Approval"
+
+      action {
+        name     = "ManualApproval"
+        category = "Approval"
+        owner    = "AWS"
+        provider = "Manual"
+        version  = "1"
+
+        configuration = {
+          CustomData = "新しいバッチタスク定義の反映前に手動承認が必要です。"
+        }
       }
     }
   }

@@ -65,3 +65,9 @@ variable "batch_task_definition_family" {
   description = "Batch ECS task definition family name"
   type        = string
 }
+
+variable "manual_approval_enabled" {
+  description = "Buildステージの後、Deploy(またはバッチのタスク定義登録)前に手動承認ステージを挟むか。タグpushだけで即座に本番へ反映されるのを防ぐためのゲート。本番相当環境ではtrueを推奨。"
+  type        = bool
+  default     = false
+}

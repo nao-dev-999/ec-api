@@ -59,7 +59,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(
                         auth ->
                                 auth
-                                        // Swagger UI を認証不要に追加
+                                        // Swagger UIを認証不要に追加。
+                                        // 公開有無自体はapplication.ymlのspringdoc.*.enabled
+                                        // (APP_SWAGGER_ENABLED)で制御しており、無効な環境では
+                                        // このパスは404になるためここでの許可は無害。
                                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**")
                                         .permitAll()
                                         // ALB/ECSのヘルスチェック
