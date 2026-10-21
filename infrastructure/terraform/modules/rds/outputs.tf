@@ -9,6 +9,9 @@ output "db_instance_id" {
 output "rds_endpoint" {
   description = "The connection endpoint for the RDS instance"
   value       = aws_db_instance.this.address
+
+  # スリープ解除時、DBが起動しきる前にECSタスクが起動しないよう、起動完了を待たせる
+  depends_on = [aws_rds_instance_state.this]
 }
 
 output "rds_port" {

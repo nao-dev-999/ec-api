@@ -10,8 +10,9 @@ locals {
 # S3 Bucket (パイプラインアーティファクト保存用)
 # ---------------------------------------------------------------------------
 resource "aws_s3_bucket" "artifacts" {
-  bucket        = "${var.project}-${var.env}-pipeline-artifacts"
-  force_destroy = true
+  bucket = "${var.project}-${var.env}-pipeline-artifacts"
+  # 本番環境では誤ったterraform destroy/applyでアーティファクトを失わないよう、force_destroyを無効化する
+  force_destroy = var.env == "prod" ? false : true
 
   tags = {
     Project = var.project
@@ -164,14 +165,14 @@ resource "aws_iam_role_policy" "codebuild" {
         Resource = ["${aws_s3_bucket.artifacts.arn}", "${aws_s3_bucket.artifacts.arn}/*"]
       },
       {
-        Effect   = "Allow"
-        Action   = ["ecr:GetAuthorizationToken", "ecr:BatchCheckLayerAvailability", "ecr:GetDownloadUrlForLayer",
+        Effect = "Allow"
+        Action = ["ecr:GetAuthorizationToken", "ecr:BatchCheckLayerAvailability", "ecr:GetDownloadUrlForLayer",
           "ecr:BatchGetImage", "ecr:InitiateLayerUpload", "ecr:UploadLayerPart",
-          "ecr:CompleteLayerUpload", "ecr:PutImage"]
+        "ecr:CompleteLayerUpload", "ecr:PutImage"]
         Resource = "*"
       },
       {
-        Effect   = "Allow"
+        Effect = "Allow"
         Action = [
           "ecs:RunTask",
           "ecs:DescribeTasks",
@@ -313,7 +314,7 @@ resource "aws_codepipeline" "this" {
 
       configuration = {
         ConnectionArn        = aws_codestarconnections_connection.github.arn
-        FullRepositoryId     = var.github_repository   # "owner/repo"
+        FullRepositoryId     = var.github_repository # "owner/repo"
         BranchName           = var.github_branch
         OutputArtifactFormat = "CODE_ZIP"
         DetectChanges        = "false"

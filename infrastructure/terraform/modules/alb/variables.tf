@@ -11,23 +11,29 @@ variable "vpc_id" {
 }
 
 variable "public_subnet_ids" {
-  type        = list(string)
+  type = list(string)
 }
 
 variable "target_port" {
-  type        = number
-  default     = 8080
+  type    = number
+  default = 8080
 }
 
 variable "health_check_path" {
-  type        = string
-  default     = "/actuator/health"
+  type    = string
+  default = "/actuator/health"
 }
 
 variable "maintenance_mode_enabled" {
   type        = bool
   default     = false
   description = "true にすると、ALBリスナーが全リクエストを固定レスポンス(503)で返す。大規模な計画停止など、アプリ自体を起動しておけない場合に使う（アプリ内のMaintenanceFilterはアプリが起動している前提のため代替できない）。"
+}
+
+variable "enable_alb" {
+  type        = bool
+  default     = true
+  description = "falseにするとALB本体・リスナーを削除する(ターゲットグループ・SG・証明書・ログバケットは無料のため残し、ECSサービスの参照先を変えずに済ませる。検証環境のスリープ用)"
 }
 
 variable "enable_deletion_protection" {

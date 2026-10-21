@@ -6,31 +6,33 @@ variable "env" {
   type = string
 }
 
+variable "enabled" {
+  type        = bool
+  default     = true
+  description = "falseにするとWebACLを削除する(検証環境のスリープ用)。ALBを削除する場合はfalseにすること"
+}
+
 variable "alb_arn" {
   type        = string
-  description = "レートベースルールを適用する ALB の ARN"
+  description = "WebACLを関連付けるALBのARN。enabled = false の場合はnullでよい"
 }
 
 variable "general_rate_limit" {
-  type        = number
-  default     = 2000
-  description = "IPアドレス単位のリクエスト上限（5分間のローリングウィンドウ、AWS WAFv2の最小値は100）。全エンドポイント向けの粗い足切り。細かい制限はアプリ側のFilterで行う。"
+  type    = number
+  default = 2000
 }
 
 variable "auth_rate_limit" {
-  type        = number
-  default     = 300
-  description = "ログイン・サインアップ系エンドポイント（/auth/login, /auth/signup を含むパス）向けのIP単位リクエスト上限（5分間）。ブルートフォース・スパムアカウント作成対策。"
+  type    = number
+  default = 300
 }
 
 variable "waf_log_retention_days" {
-  type        = number
-  default     = 30
-  description = "WAFログを保存するS3バケットのオブジェクト保持日数。コスト削減のため、経過後は自動削除する。"
+  type    = number
+  default = 30
 }
 
 variable "managed_rules_count_mode" {
-  type        = bool
-  default     = false
-  description = "true にすると、AWSマネージドルールグループ(Common/KnownBadInputs/SQLi/IPReputation)を検知のみ(カウント)で動作させ、実際のブロックは行わない。新規追加直後は誤検知(false positive)がないかWAFログ/CloudWatchで監視するため、一時的にtrueにすることを推奨。"
+  type    = bool
+  default = false
 }

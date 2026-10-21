@@ -3,18 +3,27 @@ project     = "ec-api-test"
 env         = "dev"
 aws_region  = "ap-northeast-1"
 
+# スリープモード（使わない間、destroyせずに時間課金リソースだけを止めてコストを抑える）
+# true: NAT Gateway・ALB・WAF・Redisを削除し、ECSタスクを0、RDSを停止する
+# false: 元の構成に戻す（起動には10〜15分ほどかかる）
+sleep_mode = false
+
 # ネットワーク設定
 vpc_cidr             = "10.0.0.0/16"
 public_subnet_cidrs  = ["10.0.1.0/24", "10.0.2.0/24"]
 private_subnet_cidrs = ["10.0.11.0/24", "10.0.12.0/24"]
 availability_zones   = ["ap-northeast-1a", "ap-northeast-1c"]
+nat_gateway_count    = 1 # 1（全AZ共有）または length(availability_zones)（AZごとに1台）
 
 # RDS設定
-rds_engine          = "postgres"
-rds_engine_version  = "18.4"
-rds_instance_class  = "db.t3.micro"
-rds_database_name   = "awstest"
-rds_master_username = "awstest"
+rds_engine              = "postgres"
+rds_engine_version      = "18.4"
+rds_instance_class      = "db.t3.micro"
+rds_database_name       = "awstest"
+rds_master_username     = "awstest"
+rds_multi_az            = false # devはfalse、本番ではtrueを推奨
+rds_skip_final_snapshot = true  # devはtrue、本番ではfalseを推奨
+rds_deletion_protection = false # devはfalse、本番ではtrueを推奨
 
 # CodePipeline / GitHub
 github_repository       = "your-org/ec-api"

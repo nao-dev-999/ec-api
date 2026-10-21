@@ -1,8 +1,72 @@
-# AWS WAFv2 WebACL: ALBの手前でIPアドレス単位のレートベース制限、および
-# AWSマネージドルールによるSQLi/XSS等の既知の攻撃パターン検知を行う。
-# ここでの制限は全体を守るための粗いしきい値。
-# エンドポイント単位・ユーザー単位の細かい制限はアプリ側のRateLimitingFilter（Bucket4j+Redis）が担当する。
+# ここでの制限は全体を守るための粗いしきい値。エンドポイント単位・ユーザー単位の
+# 細かい制限はアプリ側のRateLimitingFilter（Bucket4j+Redis）が担当する。
+
+resource "aws_s3_bucket" "waf_logs" {
+  bucket = "aws-waf-logs-${var.project}-${var.env}"
+
+  tags = {
+    Name = "aws-waf-logs-${var.project}-${var.env}"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "waf_logs" {
+  bucket = aws_s3_bucket.waf_logs.id
+
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "waf_logs" {
+  bucket = aws_s3_bucket.waf_logs.id
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_versioning" "waf_logs" {
+  bucket = aws_s3_bucket.waf_logs.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "waf_logs" {
+  bucket = aws_s3_bucket.waf_logs.id
+
+  rule {
+    id     = "expire-waf-logs"
+    status = "Enabled"
+
+    filter {}
+
+    expiration {
+      days = var.waf_log_retention_days
+    }
+
+    # versioning有効化に伴い、旧バージョンも同様に整理する
+    noncurrent_version_expiration {
+      noncurrent_days = var.waf_log_retention_days
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
+  }
+}
+
+locals {
+  # WebACLを削除している間もアラーム・ダッシュボードを維持できるよう、メトリクス名は固定値で公開する
+  web_acl_metric_name = "${var.project}-${var.env}-waf"
+}
+
+# enabled = false の間はWebACL・ALBとの関連付け・ログ設定を削除する(ログバケットは残す)
 resource "aws_wafv2_web_acl" "this" {
+  count = var.enabled ? 1 : 0
+
   name        = "${var.project}-${var.env}-waf"
   description = "Rate limiting and managed rules for ${var.project}-${var.env} ALB"
   scope       = "REGIONAL"
@@ -11,10 +75,6 @@ resource "aws_wafv2_web_acl" "this" {
     allow {}
   }
 
-  # --- AWSマネージドルールグループ(優先度1〜4): シグネチャベースの既知攻撃パターン検知 ---
-  # レートベース制限より先に評価し、既知の攻撃は即座にブロックする。
-
-  # 汎用的な脆弱性対策(XSS, ローカル/リモートファイルインクルード, 一般的な悪意あるボット等)
   rule {
     name     = "aws-managed-common-rule-set"
     priority = 1
@@ -53,7 +113,6 @@ resource "aws_wafv2_web_acl" "this" {
     }
   }
 
-  # 既知の悪意あるリクエストパターン(公開済みの攻撃ツールのシグネチャ等)
   rule {
     name     = "aws-managed-known-bad-inputs"
     priority = 2
@@ -83,7 +142,6 @@ resource "aws_wafv2_web_acl" "this" {
     }
   }
 
-  # SQLインジェクション対策(PostgreSQL + JPAを利用しているため特に重要)
   rule {
     name     = "aws-managed-sqli-rule-set"
     priority = 3
@@ -113,7 +171,6 @@ resource "aws_wafv2_web_acl" "this" {
     }
   }
 
-  # 既知の悪意あるIPアドレス(ボットネット、スキャナ等)のレピュテーションリストによるブロック
   rule {
     name     = "aws-managed-ip-reputation"
     priority = 4
@@ -143,9 +200,6 @@ resource "aws_wafv2_web_acl" "this" {
     }
   }
 
-  # --- カスタムルール(優先度5〜6): レートベース制限 ---
-
-  # ログイン・サインアップ系: ブルートフォース/スパムアカウント作成対策として、より低いしきい値
   rule {
     name     = "auth-rate-limit"
     priority = 5
@@ -199,7 +253,6 @@ resource "aws_wafv2_web_acl" "this" {
     }
   }
 
-  # 全体: 一般的な過負荷・ボットアクセス対策としての粗い足切り
   rule {
     name     = "general-rate-limit"
     priority = 6
@@ -224,7 +277,7 @@ resource "aws_wafv2_web_acl" "this" {
 
   visibility_config {
     cloudwatch_metrics_enabled = true
-    metric_name                = "${var.project}-${var.env}-waf"
+    metric_name                = local.web_acl_metric_name
     sampled_requests_enabled   = true
   }
 
@@ -234,82 +287,20 @@ resource "aws_wafv2_web_acl" "this" {
 }
 
 resource "aws_wafv2_web_acl_association" "alb" {
+  count = var.enabled ? 1 : 0
+
   resource_arn = var.alb_arn
-  web_acl_arn  = aws_wafv2_web_acl.this.arn
+  web_acl_arn  = aws_wafv2_web_acl.this[0].arn
 }
 
-# --- WAFログ配信用S3バケット ---
-# CloudWatchメトリクス・サンプルリクエストだけでは過去の全リクエストを検索・分析できないため、
-# フルログをS3に直接配信する（Kinesis Firehoseは使わない）。
-# バケット名は AWS WAF の制約により "aws-waf-logs-" プレフィックスが必須。
-resource "aws_s3_bucket" "waf_logs" {
-  bucket = "aws-waf-logs-${var.project}-${var.env}"
-
-  tags = {
-    Name = "aws-waf-logs-${var.project}-${var.env}"
-  }
-}
-
-# パブリックアクセスは一切許可しない（ログには送信元IP等の情報が含まれるため）
-resource "aws_s3_bucket_public_access_block" "waf_logs" {
-  bucket = aws_s3_bucket.waf_logs.id
-
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
-}
-
-resource "aws_s3_bucket_server_side_encryption_configuration" "waf_logs" {
-  bucket = aws_s3_bucket.waf_logs.id
-  rule {
-    apply_server_side_encryption_by_default {
-      sse_algorithm = "AES256"
-    }
-  }
-}
-
-resource "aws_s3_bucket_versioning" "waf_logs" {
-  bucket = aws_s3_bucket.waf_logs.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
-# コスト削減のため、一定期間経過後にオブジェクトを自動削除する
-resource "aws_s3_bucket_lifecycle_configuration" "waf_logs" {
-  bucket = aws_s3_bucket.waf_logs.id
-
-  rule {
-    id     = "expire-waf-logs"
-    status = "Enabled"
-
-    filter {}
-
-    expiration {
-      days = var.waf_log_retention_days
-    }
-
-    # versioning有効化に伴い、旧バージョンも同様に整理する
-    noncurrent_version_expiration {
-      noncurrent_days = var.waf_log_retention_days
-    }
-
-    abort_incomplete_multipart_upload {
-      days_after_initiation = 7
-    }
-  }
-}
-
-# WebACLのログをS3バケットへ直接配信する設定。
-# S3を宛先にした場合、PutLoggingConfiguration実行時にAWS WAF側が
-# バケットポリシー（書き込み許可）を自動作成するため、こちらでの追加設定は不要。
 resource "aws_wafv2_web_acl_logging_configuration" "this" {
-  resource_arn            = aws_wafv2_web_acl.this.arn
+  count = var.enabled ? 1 : 0
+
+  resource_arn            = aws_wafv2_web_acl.this[0].arn
   log_destination_configs = [aws_s3_bucket.waf_logs.arn]
 
   # JWT認証のAuthorizationヘッダー、およびRedisセッションのCookieヘッダーは
-  # 機密情報を含むため、ログから除外する。
+  # 機微情報を含むため、ログから除外する。
   redacted_fields {
     single_header {
       name = "authorization"
@@ -321,4 +312,19 @@ resource "aws_wafv2_web_acl_logging_configuration" "this" {
       name = "cookie"
     }
   }
+}
+
+moved {
+  from = aws_wafv2_web_acl.this
+  to   = aws_wafv2_web_acl.this[0]
+}
+
+moved {
+  from = aws_wafv2_web_acl_association.alb
+  to   = aws_wafv2_web_acl_association.alb[0]
+}
+
+moved {
+  from = aws_wafv2_web_acl_logging_configuration.this
+  to   = aws_wafv2_web_acl_logging_configuration.this[0]
 }

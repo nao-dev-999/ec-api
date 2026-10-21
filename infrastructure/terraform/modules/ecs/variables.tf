@@ -22,7 +22,7 @@ variable "flyway_image_tag" {
 variable "db_host" { type = string }
 variable "db_name" { type = string }
 variable "db_password_secret_arn" {
-  type      = string
+  type        = string
   description = "RDS managed Secrets Manager ARN"
 }
 
@@ -82,4 +82,36 @@ variable "batch_schedule_expression" {
   description = "日次集計バッチの起動cron式（デフォルト: JST 02:00 = UTC 17:00）"
   type        = string
   default     = "cron(0 17 * * ? *)"
+}
+
+variable "batch_schedule_enabled" {
+  type        = bool
+  default     = true
+  description = "falseにすると日次バッチのスケジュールを無効化する(スリープ中はNAT・Redisが無く必ず失敗するため)"
+}
+
+variable "health_check_grace_period_seconds" {
+  type    = number
+  default = 120
+}
+
+variable "enable_redis" {
+  type        = bool
+  default     = true
+  description = "falseにするとElastiCache Redisレプリケーショングループを削除する(SG・サブネットグループ・AUTHトークンは残す。スリープ用)"
+}
+
+variable "redis_node_type" {
+  type    = string
+  default = "cache.t3.micro"
+}
+
+variable "redis_num_cache_clusters" {
+  type    = number
+  default = 1
+}
+
+variable "redis_notification_topic_arn" {
+  type    = string
+  default = null
 }

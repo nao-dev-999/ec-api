@@ -8,22 +8,31 @@ module "vpc" {
   public_subnet_cidrs  = var.public_subnet_cidrs
   private_subnet_cidrs = var.private_subnet_cidrs
   availability_zones   = var.availability_zones
+  nat_gateway_count    = var.nat_gateway_count
+  enable_nat_gateway   = !var.sleep_mode
 }
 
 # RDS Module (db.t4g.nano)
 module "rds" {
-  source = "../../modules/rds" # 既に変更済み
-  project            = var.project
-  env                = var.env
-  identifier         = "${var.project}-${var.env}-rds"
-  engine             = var.rds_engine
-  engine_version     = var.rds_engine_version
-  instance_class     = var.rds_instance_class
-  database_name      = var.rds_database_name
-  master_username    = var.rds_master_username
-  vpc_id             = module.vpc.vpc_id
-  subnet_ids         = module.vpc.private_subnet_ids
-  ecs_sg_id          = module.ecs.ecs_sg_id
+  source          = "../../modules/rds" # 既に変更済み
+  project         = var.project
+  env             = var.env
+  aws_region      = var.aws_region
+  identifier      = "${var.project}-${var.env}-rds"
+  engine          = var.rds_engine
+  engine_version  = var.rds_engine_version
+  instance_class  = var.rds_instance_class
+  database_name   = var.rds_database_name
+  master_username = var.rds_master_username
+  vpc_id          = module.vpc.vpc_id
+  subnet_ids      = module.vpc.private_subnet_ids
+  ecs_sg_id       = module.ecs.ecs_sg_id
+
+  multi_az            = var.rds_multi_az
+  skip_final_snapshot = var.rds_skip_final_snapshot
+  deletion_protection = var.rds_deletion_protection
+  instance_state      = var.sleep_mode ? "stopped" : "available"
+  alarm_sns_topic_arn = module.alarms.sns_topic_arn
 
   # ecs_sg_id経由でmodule.ecsの特定リソースには暗黙に依存しているが、
   # Internet Gateway等module.vpc配下の他リソースとは依存関係が無く、
@@ -43,6 +52,7 @@ module "alb" {
   target_port       = 8080
   health_check_path = "/actuator/health"
 
+  enable_alb                 = !var.sleep_mode
   enable_deletion_protection = false # devでは頻繁に作り直すためfalse。本番環境ではtrueにすること
 
   # ALBはsubnet_ids経由でVPCモジュールの一部リソース(サブネット)には暗黙に依存するが、
@@ -58,12 +68,13 @@ module "waf" {
 
   project = var.project
   env     = var.env
+  enabled = !var.sleep_mode
   alb_arn = module.alb.alb_arn
 }
 
 # ECR
 module "ecr" {
-  source = "../../modules/ecr"
+  source  = "../../modules/ecr"
   project = var.project
   env     = var.env
 }
@@ -91,15 +102,19 @@ module "ecs" {
   db_name                = var.rds_database_name
   db_password_secret_arn = module.rds.rds_secret_arn
 
-  task_cpu      = "512"
-  task_memory   = "1024"
-  desired_count = 2
-  min_capacity  = 2
-  max_capacity  = 4
+  task_cpu    = "512"
+  task_memory = "1024"
+  # desired_countはlifecycleでignoreされているため、スケール範囲(min/max)を0にしてタスクを止める
+  desired_count = var.sleep_mode ? 0 : 2
+  min_capacity  = var.sleep_mode ? 0 : 2
+  max_capacity  = var.sleep_mode ? 0 : 4
 
   batch_image_url          = module.ecr.batch_repository_url
   batch_image_tag          = "latest"
   batch_private_subnet_ids = module.vpc.private_subnet_ids
+
+  batch_schedule_enabled = !var.sleep_mode
+  enable_redis           = !var.sleep_mode
 
   swagger_enabled = var.swagger_enabled
 
@@ -131,8 +146,8 @@ module "codepipeline" {
   env        = var.env
   aws_region = var.aws_region
 
-  github_repository       = var.github_repository
-  github_branch           = var.github_branch
+  github_repository = var.github_repository
+  github_branch     = var.github_branch
 
   app_repository_url    = module.ecr.app_repository_url
   flyway_repository_url = module.ecr.flyway_repository_url
@@ -171,6 +186,7 @@ module "alarms" {
   env     = var.env
 
   aws_region = var.aws_region
+  sleep_mode = var.sleep_mode
 
   ecs_cluster_name   = module.ecs.cluster_name
   ecs_service_name   = module.ecs.service_name
@@ -179,7 +195,7 @@ module "alarms" {
   alb_arn_suffix              = module.alb.alb_arn_suffix
   alb_target_group_arn_suffix = module.alb.target_group_arn_suffix
   rds_instance_id             = module.rds.db_instance_id
-  redis_cluster_id            = module.ecs.redis_cluster_id
+  redis_cluster_ids           = module.ecs.redis_cluster_ids
 
   waf_web_acl_metric_name            = module.waf.web_acl_metric_name
   waf_auth_rate_limit_metric_name    = module.waf.auth_rate_limit_metric_name

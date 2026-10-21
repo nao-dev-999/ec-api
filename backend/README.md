@@ -76,6 +76,42 @@ terraform apply -target=module.rds
 ### ステップ3: 残り（ALB, ECS, CodePipeline）をすべて作成
 terraform apply
 
+### dev環境のスリープモード（コスト削減）
+
+使わない間は `destroy` せずに、`sleep_mode` を切り替えて時間課金のリソースだけを止められる。
+
+```bash
+cd infrastructure/terraform/envs/dev
+
+# 寝かせる（NAT Gateway・ALB・WAF・Redisを削除し、ECSタスクを0、RDSを停止）
+terraform apply -var="sleep_mode=true"
+
+# 起こす（10〜15分ほどで元の構成に戻る）
+terraform apply -var="sleep_mode=false"
+```
+
+`terraform.tfvars` に `sleep_mode = true` と書いておく運用でも構わない。
+
+| リソース | スリープ中 |
+|---|---|
+| NAT Gateway / EIP | 削除（プライベートサブネットはVPC内通信のみ） |
+| ALB / リスナー | 削除（ターゲットグループ・SG・証明書は残す） |
+| WAF WebACL | 削除（ログバケットは残す） |
+| ElastiCache Redis | 削除（中身のデータは消える） |
+| ECSサービス | 残す（オートスケールのmin/maxを0にしてタスク数0） |
+| RDS | 停止（データは残る。ストレージ料金のみ） |
+| 日次バッチのスケジュール | 無効化 |
+| RDS自動起動の検知・再停止 | 作成（スリープ中のみ） |
+| VPC・ECR・IAM・CodePipeline・S3・アラーム等 | そのまま |
+
+注意点
+
+- RDSはAWSの仕様で、停止から7日経つと自動で起動する。スリープ中はこの自動起動（RDS-EVENT-0154）をEventBridgeで検知し、SSM Automationで起動完了を待ってから自動で停止し直す（起動〜停止の間の十数分だけ課金される）。
+- スリープ中はRDSが停止しているため、RDSの設定変更（インスタンスクラス等）は適用できない。起こしてから変更すること。
+- ALBは作り直しのたびにDNS名が変わる（EC2コンソールのロードバランサー画面で確認すること）。
+- スリープ中にCodePipelineが動いた場合、デプロイは失敗する。
+- 起こした後にアプリがRedisへ接続できない場合は、CodePipelineを再実行するか `aws ecs update-service --force-new-deployment` で再デプロイすること。
+
 ### CloudWatchアラーム（module.alarms）
 
 `terraform.tfvars` の `alarm_notification_emails` にメールアドレスを設定しておくと、apply後にSNSトピック（`{project}-{env}-alarms`）へ以下のアラームが通知される（購読には各アドレスでの確認メール承認が必要）。
@@ -90,6 +126,7 @@ terraform apply
 | alb-target-5xx | ALB配下のアプリが返す5xx | 5件以上/5分 |
 | rds-cpu-high | RDSのCPU使用率 | 90%以上（15分） |
 | rds-connections-high | RDSのDatabaseConnections | 80以上（10分、`rds_database_connections_threshold`で調整可） |
+| rds-storage-low | RDSの空きストレージ | 2GiB未満 |
 | redis-cpu-high | ElastiCache RedisのEngineCPUUtilization | 90%以上（15分） |
 | redis-evictions | ElastiCache Redisのメモリ逼迫によるEvictions | 1件以上/5分 |
 | redis-freeable-memory-low | ElastiCache Redisの空きメモリ | 約50MB未満（15分、cache.t3.micro想定） |

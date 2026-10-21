@@ -65,6 +65,8 @@ resource "aws_cloudwatch_metric_alarm" "app_error" {
 # Container Insights（ecsモジュールでcluster設定済み）が出すRunningTaskCountを使用
 # ---------------------------------------------------------------------------
 resource "aws_cloudwatch_metric_alarm" "service_running_count_zero" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-ecs-running-count-zero"
   alarm_description = "ECSサービスの起動中タスク数が0になった"
 
@@ -157,6 +159,8 @@ resource "aws_cloudwatch_metric_alarm" "memory_high" {
 # 「起動数0」より先に、デプロイ失敗やヘルスチェックNGを早期検知する
 # ---------------------------------------------------------------------------
 resource "aws_cloudwatch_metric_alarm" "alb_unhealthy_host" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-alb-unhealthy-host"
   alarm_description = "ALBターゲットグループにヘルスチェック失敗のタスクが存在する"
 
@@ -188,6 +192,8 @@ resource "aws_cloudwatch_metric_alarm" "alb_unhealthy_host" {
 # GlobalExceptionHandlerのERRORログでは拾えない経路（フィルタ層等）の失敗も検知できる
 # ---------------------------------------------------------------------------
 resource "aws_cloudwatch_metric_alarm" "alb_target_5xx" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-alb-target-5xx"
   alarm_description = "ALB配下のアプリが返す5xxレスポンスが急増している"
 
@@ -245,6 +251,32 @@ resource "aws_cloudwatch_metric_alarm" "rds_cpu_high" {
 # ---------------------------------------------------------------------------
 # RDS: コネクション数の逼迫を検知（接続枯渇はアプリ全体に波及するため）
 # ---------------------------------------------------------------------------
+resource "aws_cloudwatch_metric_alarm" "rds_free_storage_low" {
+  alarm_name        = "${var.project}-${var.env}-rds-storage-low"
+  alarm_description = "RDS空きストレージが2GiBを下回った"
+
+  namespace   = "AWS/RDS"
+  metric_name = "FreeStorageSpace"
+  dimensions = {
+    DBInstanceIdentifier = var.rds_instance_id
+  }
+
+  statistic           = "Average"
+  period              = 300
+  evaluation_periods  = 1
+  threshold           = 2147483648 # 2GiB
+  comparison_operator = "LessThanThreshold"
+  treat_missing_data  = "notBreaching"
+
+  alarm_actions = [aws_sns_topic.alarms.arn]
+  ok_actions    = [aws_sns_topic.alarms.arn]
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
 resource "aws_cloudwatch_metric_alarm" "rds_connections_high" {
   alarm_name        = "${var.project}-${var.env}-rds-connections-high"
   alarm_description = "RDSインスタンスのDatabaseConnectionsが閾値を超えた"
@@ -277,13 +309,15 @@ resource "aws_cloudwatch_metric_alarm" "rds_connections_high" {
 # AWS推奨のEngineCPUUtilization（Redisエンジン自体の使用率）を使用する
 # ---------------------------------------------------------------------------
 resource "aws_cloudwatch_metric_alarm" "redis_cpu_high" {
-  alarm_name        = "${var.project}-${var.env}-redis-cpu-high"
-  alarm_description = "ElastiCache RedisのEngineCPUUtilizationが90%以上"
+  for_each = toset(var.redis_cluster_ids)
+
+  alarm_name        = "${var.project}-${var.env}-redis-cpu-high-${each.value}"
+  alarm_description = "ElastiCache Redis（${each.value}）のEngineCPUUtilizationが90%以上"
 
   namespace   = "AWS/ElastiCache"
   metric_name = "EngineCPUUtilization"
   dimensions = {
-    CacheClusterId = var.redis_cluster_id
+    CacheClusterId = each.value
   }
 
   statistic           = "Average"
@@ -306,13 +340,15 @@ resource "aws_cloudwatch_metric_alarm" "redis_cpu_high" {
 # ElastiCache Redis: Evictions発生を検知（メモリ逼迫によるセッションデータ強制削除）
 # ---------------------------------------------------------------------------
 resource "aws_cloudwatch_metric_alarm" "redis_evictions" {
-  alarm_name        = "${var.project}-${var.env}-redis-evictions"
-  alarm_description = "ElastiCache Redisでメモリ逼迫によるEvictionsが発生している"
+  for_each = toset(var.redis_cluster_ids)
+
+  alarm_name        = "${var.project}-${var.env}-redis-evictions-${each.value}"
+  alarm_description = "ElastiCache Redis（${each.value}）でメモリ逼迫によるEvictionsが発生している"
 
   namespace   = "AWS/ElastiCache"
   metric_name = "Evictions"
   dimensions = {
-    CacheClusterId = var.redis_cluster_id
+    CacheClusterId = each.value
   }
 
   statistic           = "Sum"
@@ -402,6 +438,8 @@ resource "aws_cloudwatch_metric_alarm" "waf_auth_rate_limit_triggered" {
 # ALB: アプリの応答時間(TargetResponseTime)の悪化を検知
 # ---------------------------------------------------------------------------
 resource "aws_cloudwatch_metric_alarm" "alb_target_response_time_high" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-alb-target-response-time-high"
   alarm_description = "ALB配下のアプリの応答時間が閾値を超えている"
 
@@ -431,6 +469,8 @@ resource "aws_cloudwatch_metric_alarm" "alb_target_response_time_high" {
 # ALB: ALB自身が返す5xx（ターゲット側ではなくALB/WAF側の異常。WAF fail closed発生時等もここに現れる）
 # ---------------------------------------------------------------------------
 resource "aws_cloudwatch_metric_alarm" "alb_elb_5xx" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-alb-elb-5xx"
   alarm_description = "ALB自身が返す5xxレスポンス(HTTPCode_ELB_5XX_Count)が急増している"
 
@@ -461,6 +501,8 @@ resource "aws_cloudwatch_metric_alarm" "alb_elb_5xx" {
 # 通常のエラー(5xx等)より深刻。ALBのキャパシティ限界を示すため、閾値は低めに設定する
 # ---------------------------------------------------------------------------
 resource "aws_cloudwatch_metric_alarm" "alb_rejected_connections" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-alb-rejected-connections"
   alarm_description = "ALBが最大接続数に達し、接続を拒否している(RejectedConnectionCount)"
 
@@ -490,7 +532,8 @@ resource "aws_cloudwatch_metric_alarm" "alb_rejected_connections" {
 # CloudWatchダッシュボード（上記アラームの元メトリクスを1画面に集約）
 # ---------------------------------------------------------------------------
 locals {
-  dashboard_widgets = [
+  # スリープ中はALB自体が無くLoadBalancerディメンションを組み立てられないため、ALBのウィジェット(null)を除外する
+  dashboard_widgets = [for w in [
     {
       type   = "metric"
       x      = 0
@@ -524,7 +567,7 @@ locals {
         ]
       }
     },
-    {
+    var.sleep_mode ? null : {
       type   = "metric"
       x      = 0
       y      = 6
@@ -572,11 +615,11 @@ locals {
         view   = "timeSeries"
         region = var.aws_region
         period = 300
-        metrics = [
-          ["AWS/ElastiCache", "EngineCPUUtilization", "CacheClusterId", var.redis_cluster_id, { label = "EngineCPU" }],
-          ["AWS/ElastiCache", "Evictions", "CacheClusterId", var.redis_cluster_id, { label = "Evictions", stat = "Sum", yAxis = "right" }],
-          ["AWS/ElastiCache", "FreeableMemory", "CacheClusterId", var.redis_cluster_id, { label = "FreeableMemory", yAxis = "right" }],
-        ]
+        metrics = concat(
+          [for id in var.redis_cluster_ids : ["AWS/ElastiCache", "EngineCPUUtilization", "CacheClusterId", id, { label = "CPU (${id})" }]],
+          [for id in var.redis_cluster_ids : ["AWS/ElastiCache", "Evictions", "CacheClusterId", id, { label = "Evictions (${id})", stat = "Sum", yAxis = "right" }]],
+          [for id in var.redis_cluster_ids : ["AWS/ElastiCache", "FreeableMemory", "CacheClusterId", id, { label = "FreeableMemory (${id})", yAxis = "right" }]],
+        )
       }
     },
     {
@@ -616,7 +659,7 @@ locals {
         ]
       }
     },
-  ]
+  ] : w if w != null]
 }
 
 resource "aws_cloudwatch_dashboard" "ops" {
@@ -625,13 +668,15 @@ resource "aws_cloudwatch_dashboard" "ops" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "redis_freeable_memory_low" {
-  alarm_name        = "${var.project}-${var.env}-redis-freeable-memory-low"
-  alarm_description = "ElastiCache Redisの空きメモリが逼迫している"
+  for_each = toset(var.redis_cluster_ids)
+
+  alarm_name        = "${var.project}-${var.env}-redis-freeable-memory-low-${each.value}"
+  alarm_description = "ElastiCache Redis（${each.value}）の空きメモリが逼迫している"
 
   namespace   = "AWS/ElastiCache"
   metric_name = "FreeableMemory"
   dimensions = {
-    CacheClusterId = var.redis_cluster_id
+    CacheClusterId = each.value
   }
 
   statistic           = "Average"
@@ -648,4 +693,34 @@ resource "aws_cloudwatch_metric_alarm" "redis_freeable_memory_low" {
     Project = var.project
     Env     = var.env
   }
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.alb_unhealthy_host
+  to   = aws_cloudwatch_metric_alarm.alb_unhealthy_host[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.alb_target_5xx
+  to   = aws_cloudwatch_metric_alarm.alb_target_5xx[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.alb_elb_5xx
+  to   = aws_cloudwatch_metric_alarm.alb_elb_5xx[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.alb_target_response_time_high
+  to   = aws_cloudwatch_metric_alarm.alb_target_response_time_high[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.alb_rejected_connections
+  to   = aws_cloudwatch_metric_alarm.alb_rejected_connections[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.service_running_count_zero
+  to   = aws_cloudwatch_metric_alarm.service_running_count_zero[0]
 }

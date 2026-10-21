@@ -24,8 +24,15 @@ variable "app_log_group_name" {
   type        = string
 }
 
+variable "sleep_mode" {
+  type        = bool
+  default     = false
+  description = "trueの間は、停止しているALB・ECSサービス向けで誤報になるアラームとダッシュボードのウィジェットを作らない"
+}
+
 variable "alb_arn_suffix" {
-  type = string
+  type        = string
+  description = "ALBのarn_suffix。sleep_mode = true の場合はnullでよい"
 }
 
 variable "alb_target_group_arn_suffix" {
@@ -36,8 +43,9 @@ variable "rds_instance_id" {
   type = string
 }
 
-variable "redis_cluster_id" {
-  type = string
+variable "redis_cluster_ids" {
+  description = "CloudWatchメトリクスのCacheClusterIdディメンションに使うクラスタID一覧(ecsモジュールのredis_cluster_ids出力)"
+  type        = list(string)
 }
 
 variable "rds_database_connections_threshold" {

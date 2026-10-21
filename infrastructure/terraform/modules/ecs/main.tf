@@ -105,8 +105,10 @@ resource "aws_elasticache_subnet_group" "this" {
 
 # ElastiCache Redis(AUTH)用トークン。DBパスワードと異なりRDSのmanage_master_user_password
 # のようなAWS管理の仕組みがElastiCacheには無いため、Secrets Managerで自前管理する。
+# enable_redis = false でレプリケーショングループを削除している間も、再作成時に同じ値を
+# 使い続けられるようトークン自体(SG・サブネットグループと同様に無料のリソース)は残す。
 resource "random_password" "redis_auth_token" {
-  length  = 32
+  length = 32
   # ElastiCacheのauth_tokenは "/", "\"", "@", 空白を含められないため、
   # 記号を使わず英数字のみにして制約を確実に満たす。
   special = false
@@ -127,16 +129,28 @@ resource "aws_secretsmanager_secret_version" "redis_auth_token" {
   secret_string = random_password.redis_auth_token.result
 }
 
+locals {
+  redis_replication_group_id = "${var.project}-${var.env}-redis"
+  # enable_redis = false の間はタスク定義に入れる値が無いため、名前解決できないダミーのホスト名を入れておく
+  redis_host = var.enable_redis ? aws_elasticache_replication_group.this[0].primary_endpoint_address : "redis-disabled.invalid"
+}
+
 # 転送時・保管時暗号化とAUTHを有効化するため、aws_elasticache_cluster(暗号化非対応)ではなく
-# aws_elasticache_replication_group(ノード数1、フェイルオーバーなし)を使う。
+# aws_elasticache_replication_group を使う。
+# enable_redis = false の間はレプリケーショングループを削除する(SG・サブネットグループ・AUTHトークンは残す)。
+# Redisにはセッション等の一時データしか置かない前提のため、データは引き継がない。
 resource "aws_elasticache_replication_group" "this" {
-  replication_group_id       = "${var.project}-${var.env}-redis"
+  count = var.enable_redis ? 1 : 0
+
+  replication_group_id       = local.redis_replication_group_id
   description                = "Redis for ${var.project}-${var.env}(Spring Session / rate limiting)"
   engine                     = "redis"
   engine_version             = "7.1"
-  node_type                  = "cache.t3.micro"
-  num_cache_clusters         = 1
-  automatic_failover_enabled = false
+  node_type                  = var.redis_node_type
+  num_cache_clusters         = var.redis_num_cache_clusters
+  automatic_failover_enabled = var.redis_num_cache_clusters > 1
+  multi_az_enabled           = var.redis_num_cache_clusters > 1
+  notification_topic_arn     = var.redis_notification_topic_arn
   parameter_group_name       = "default.redis7"
   port                       = 6379
   subnet_group_name          = aws_elasticache_subnet_group.this.name
@@ -151,6 +165,11 @@ resource "aws_elasticache_replication_group" "this" {
     Project = var.project
     Env     = var.env
   }
+}
+
+moved {
+  from = aws_elasticache_replication_group.this
+  to   = aws_elasticache_replication_group.this[0]
 }
 
 # ---------------------------------------------------------------------------
@@ -298,7 +317,7 @@ resource "aws_ecs_task_definition" "app" {
       environment = [
         { name = "SPRING_PROFILES_ACTIVE", value = var.env },
         { name = "SPRING_DATASOURCE_URL", value = "jdbc:postgresql://${var.db_host}:5432/${var.db_name}" },
-        { name = "SPRING_DATA_REDIS_HOST", value = aws_elasticache_replication_group.this.primary_endpoint_address },
+        { name = "SPRING_DATA_REDIS_HOST", value = local.redis_host },
         { name = "SPRING_DATA_REDIS_PORT", value = "6379" },
         { name = "SPRING_DATA_REDIS_SSL_ENABLED", value = "true" },
         # Flywayはアプリ起動時には無効化（別タスクで実行）
@@ -361,7 +380,7 @@ resource "aws_ecs_task_definition" "flyway" {
 
   container_definitions = jsonencode([
     {
-      name      = "flyway"
+      name = "flyway"
       # Flyway公式CLIイメージ（マイグレーションSQLを同梱してビルド）を使用
       image     = "${var.flyway_image_url}:${var.flyway_image_tag}"
       essential = true
@@ -702,6 +721,9 @@ resource "aws_scheduler_schedule" "batch_daily" {
     mode = "OFF"
   }
 
+  # スリープ中はNAT・Redisが無くバッチが必ず失敗するため、スケジュールごと止める
+  state = var.batch_schedule_enabled ? "ENABLED" : "DISABLED"
+
   schedule_expression          = var.batch_schedule_expression
   schedule_expression_timezone = "UTC"
 
@@ -797,7 +819,7 @@ resource "aws_ecs_service" "app" {
   }
 
   # アプリ起動が完了する前にALBヘルスチェック失敗でタスクが強制終了されないよう、起動猶予期間を設ける
-  health_check_grace_period_seconds = 120
+  health_check_grace_period_seconds = var.health_check_grace_period_seconds
 
   # タスクをAZ間で常に均等配置（1AZ1タスク）に保つ
   availability_zone_rebalancing = "ENABLED"

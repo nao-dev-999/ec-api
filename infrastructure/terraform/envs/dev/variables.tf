@@ -2,11 +2,23 @@ variable "project" {}
 variable "env" {}
 variable "aws_region" {}
 
+# スリープモード(コスト削減)
+variable "sleep_mode" {
+  type        = bool
+  default     = false
+  description = "trueにすると時間課金のリソース(NAT Gateway・ALB・WAF・Redis等)を削除・停止してコストを抑える(destroyせずに済む)。falseで元に戻る"
+}
+
 # VPC
 variable "vpc_cidr" {}
 variable "public_subnet_cidrs" { type = list(string) }
 variable "private_subnet_cidrs" { type = list(string) }
 variable "availability_zones" { type = list(string) }
+variable "nat_gateway_count" {
+  type        = number
+  default     = 1
+  description = "NAT Gatewayの数。1（全AZ共有）または length(availability_zones)（AZごとに1台）を指定する"
+}
 
 # RDS
 variable "rds_engine" { default = "postgres" }
@@ -14,6 +26,18 @@ variable "rds_engine_version" { default = "16" }
 variable "rds_instance_class" { default = "db.t4g.micro" }
 variable "rds_database_name" {}
 variable "rds_master_username" {}
+variable "rds_multi_az" {
+  type    = bool
+  default = false
+}
+variable "rds_skip_final_snapshot" {
+  type    = bool
+  default = true
+}
+variable "rds_deletion_protection" {
+  type    = bool
+  default = false
+}
 
 # GitHub / CodePipeline
 variable "github_repository" {
