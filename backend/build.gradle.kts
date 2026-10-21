@@ -17,11 +17,11 @@ dependencies {
     implementation("org.springframework.session:spring-session-data-redis")
 
     // ─── Bucket4j (レート制限、Redisでインスタンス間の制限値を共有) ─────
-    implementation("com.bucket4j:bucket4j_jdk11-core:8.14.0")
-    implementation("com.bucket4j:bucket4j_jdk11-lettuce:8.14.0")
+    implementation("com.bucket4j:bucket4j_jdk11-core:8.15.0")
+    implementation("com.bucket4j:bucket4j_jdk11-lettuce:8.15.0")
 
-    implementation("org.mapstruct:mapstruct:1.5.5.Final")
-    annotationProcessor("org.mapstruct:mapstruct-processor:1.5.5.Final")
+    implementation("org.mapstruct:mapstruct:1.6.3")
+    annotationProcessor("org.mapstruct:mapstruct-processor:1.6.3")
     annotationProcessor("org.projectlombok:lombok-mapstruct-binding:0.2.0")
     // ─── PostgreSQL Driver ──────────────────────
     runtimeOnly("org.postgresql:postgresql")
@@ -31,7 +31,7 @@ dependencies {
     implementation("org.flywaydb:flyway-database-postgresql")
 
     // ─── Logstash (JSON 構造化ログ) ─────────────
-    implementation("net.logstash.logback:logstash-logback-encoder:8.0")
+    implementation("net.logstash.logback:logstash-logback-encoder:9.0")
 
     // ─── Lombok ────────────────────────────────
     compileOnly("org.projectlombok:lombok")
@@ -50,10 +50,10 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql")
 
     // ─── データ駆動テスト（testsupport.data）: Excel形式パーサーが使用 ─────
-    testImplementation("org.apache.poi:poi:5.4.0")
-    testImplementation("org.apache.poi:poi-ooxml:5.4.0")
+    testImplementation("org.apache.poi:poi:5.5.1")
+    testImplementation("org.apache.poi:poi-ooxml:5.5.1")
 
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.8")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
 }
 
 tasks.withType<Test> {
