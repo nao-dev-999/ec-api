@@ -102,7 +102,7 @@ jobs:
         run: ./gradlew :backend:jacocoTestReport
 
       - name: Cache SonarQube packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.sonar/cache
           key: ${{ runner.os }}-sonar
