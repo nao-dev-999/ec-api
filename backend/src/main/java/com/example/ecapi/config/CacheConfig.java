@@ -21,11 +21,9 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
  * 読み取り頻度が高いレスポンスをRedisにキャッシュする設定。
  *
  * <p>在庫のように別サービス（{@code OrderService}）経由で頻繁に更新される値は、
- * {@code @CacheEvict}だけでは追従できない（注文確定時の在庫減算がキャッシュを
- * 無効化しないため）。そのため商品キャッシュ（products）はTTLを短く抑え、
- * 古い在庫数を表示し続ける期間を最大60秒に限定している。
- * カテゴリ（categories）は更新頻度が低くCategoryService経由でのみ変更されるため、
- * 長めのTTL + 更新時の明示的なCacheEvictで整合性を保っている。
+ * {@code @CacheEvict}だけでは追従できない（注文確定時の在庫減算がキャッシュを 無効化しないため）。そのため商品キャッシュ（products）はTTLを短く抑え、
+ * 古い在庫数を表示し続ける期間を最大60秒に限定している。 カテゴリ（categories）は更新頻度が低くCategoryService経由でのみ変更されるため、 長めのTTL +
+ * 更新時の明示的なCacheEvictで整合性を保っている。
  */
 @Configuration
 @EnableCaching
