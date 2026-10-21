@@ -72,7 +72,7 @@ subprojects {
     configure<com.diffplug.gradle.spotless.SpotlessExtension> {
         java {
             // Google Java Format でコード整形
-            googleJavaFormat("1.28.0").aosp()
+            googleJavaFormat("1.36.1").aosp()
             // import を自動削除
             removeUnusedImports()
             // 末尾空白を削除
