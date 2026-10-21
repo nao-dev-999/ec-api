@@ -122,7 +122,11 @@ resource "aws_s3_bucket_policy" "access_logs" {
   })
 }
 
+# enable_alb = false の間はALB本体・リスナーだけを削除する。
+# ターゲットグループ・SG・証明書・ログバケットは無料のため残し、ECSサービスの参照先を変えずに済ませる。
 resource "aws_lb" "this" {
+  count = var.enable_alb ? 1 : 0
+
   name               = "${var.project}-${var.env}-alb"
   internal           = false
   load_balancer_type = "application"
@@ -222,7 +226,9 @@ resource "aws_lb_target_group" "this" {
 }
 
 resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.this.arn
+  count = var.enable_alb ? 1 : 0
+
+  load_balancer_arn = aws_lb.this[0].arn
   port              = 80
   protocol          = "HTTP"
 
@@ -244,7 +250,9 @@ resource "aws_lb_listener" "http" {
 }
 
 resource "aws_lb_listener" "https" {
-  load_balancer_arn = aws_lb.this.arn
+  count = var.enable_alb ? 1 : 0
+
+  load_balancer_arn = aws_lb.this[0].arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
@@ -265,4 +273,19 @@ resource "aws_lb_listener" "https" {
       }
     }
   }
+}
+
+moved {
+  from = aws_lb.this
+  to   = aws_lb.this[0]
+}
+
+moved {
+  from = aws_lb_listener.http
+  to   = aws_lb_listener.http[0]
+}
+
+moved {
+  from = aws_lb_listener.https
+  to   = aws_lb_listener.https[0]
 }
