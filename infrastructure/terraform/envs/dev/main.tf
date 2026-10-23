@@ -80,6 +80,19 @@ module "ecr" {
 }
 
 # ECS (Fargate + ElastiCache Redis)
+# aws_lb_listenerの作成APIが成功を返した直後でも、ELB側でターゲットグループとの関連付けが
+# 内部的に伝播し切るまで数十秒かかることがあり(AWS側の結果整合性)、depends_onによる
+# Terraform実行順序の保証だけではaws_ecs_service.appの
+# 「target group does not have an associated load balancer」を防げない場合がある。
+# そのため、リスナー作成後に明示的な待機を挟む。
+resource "time_sleep" "wait_for_alb_listener" {
+  count = var.sleep_mode ? 0 : 1
+
+  create_duration = "30s"
+
+  depends_on = [module.alb]
+}
+
 module "ecs" {
   source = "../../modules/ecs"
 
@@ -126,7 +139,9 @@ module "ecs" {
   # ターゲットグループ(常に作成される)しか参照せず、リスナー(aws_lb_listener、enable_alb=falseの間は
   # count=0)には暗黙の依存が無いため、ECSサービスがリスナーのLB紐付け完了を待たずに作成され、
   # 「target group does not have an associated load balancer」エラーになることがある。
-  depends_on = [module.vpc, module.alb]
+  # それでもAWS側の結果整合性により発生する場合があるため、time_sleep.wait_for_alb_listenerで
+  # さらに明示的な待機を挟む。
+  depends_on = [module.vpc, module.alb, time_sleep.wait_for_alb_listener]
 }
 
 # ALB -> ECSタスクへのアウトバウンドをアプリポート(8080)のみに限定する。
