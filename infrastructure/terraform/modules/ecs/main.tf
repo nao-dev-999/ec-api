@@ -542,10 +542,10 @@ resource "aws_iam_role_policy" "sfn_batch_orchestrator" {
       },
       {
         # RunTask.sync統合がECS Task State ChangeイベントをEventBridge経由で受け取るために必要な、
-        # AWS管理ルール（StepFunctionsGetEventForECSTaskRule）固定のパーミッション
+        # AWS管理ルール（StepFunctionsGetEventsForECSTaskRule）固定のパーミッション
         Effect   = "Allow"
         Action   = ["events:PutTargets", "events:PutRule", "events:DescribeRule"]
-        Resource = "arn:aws:events:${var.aws_region}:${data.aws_caller_identity.current.account_id}:rule/StepFunctionsGetEventForECSTaskRule"
+        Resource = "arn:aws:events:${var.aws_region}:${data.aws_caller_identity.current.account_id}:rule/StepFunctionsGetEventsForECSTaskRule"
       },
       {
         Effect = "Allow"

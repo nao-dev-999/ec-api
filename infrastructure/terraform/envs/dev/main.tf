@@ -121,7 +121,12 @@ module "ecs" {
   # ElastiCache/Fargateタスクのように、VPC内にENIを持つリソースはvpc_id/subnet_ids経由の
   # 暗黙の依存だけではInternet Gatewayとの順序が保証されない(module.alb/module.rdsと同じ理由)。
   # destroy時のIGWデタッチ詰まりを防ぐため明示的に依存させる。
-  depends_on = [module.vpc]
+  #
+  # module.alb も同様の理由で明示的に依存させる。aws_ecs_service.appはtarget_group_arn経由で
+  # ターゲットグループ(常に作成される)しか参照せず、リスナー(aws_lb_listener、enable_alb=falseの間は
+  # count=0)には暗黙の依存が無いため、ECSサービスがリスナーのLB紐付け完了を待たずに作成され、
+  # 「target group does not have an associated load balancer」エラーになることがある。
+  depends_on = [module.vpc, module.alb]
 }
 
 # ALB -> ECSタスクへのアウトバウンドをアプリポート(8080)のみに限定する。
