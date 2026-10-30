@@ -1,5 +1,4 @@
 data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
 
 # ---------------------------------------------------------------------------
 # ALBアクセスログ保存用S3バケット
@@ -76,7 +75,13 @@ resource "aws_s3_bucket_lifecycle_configuration" "access_logs" {
   }
 }
 
-# 全リージョン共通で使えるELBログ配信サービスプリンシパル方式（リージョンごとのELBアカウントID一覧が不要）
+# ALBのアクセスログはリージョンごとのELBサービスアカウントが書き込む
+# （delivery.logs.amazonaws.com はNLB/VPC Flow Logs用でALBには使えない）
+data "aws_elb_service_account" "current" {}
+
+# 2022年8月以前からあるリージョン(ap-northeast-1等)はELBサービスアカウント、
+# それ以降のリージョンは logdelivery.elasticloadbalancing.amazonaws.com が書き込むため両方を許可する。
+# ALBの配信は aws:SourceArn / x-amz-acl を付与しないため、それらの条件は付けない。
 resource "aws_s3_bucket_policy" "access_logs" {
   bucket = aws_s3_bucket.access_logs.id
 
@@ -84,39 +89,18 @@ resource "aws_s3_bucket_policy" "access_logs" {
     Version = "2012-10-17"
     Statement = [
       {
-        Sid       = "AWSLogDeliveryWrite"
+        Sid       = "ELBAccountWrite"
         Effect    = "Allow"
-        Principal = { Service = "delivery.logs.amazonaws.com" }
+        Principal = { AWS = data.aws_elb_service_account.current.arn }
         Action    = "s3:PutObject"
         Resource  = "${aws_s3_bucket.access_logs.arn}/${var.project}-${var.env}-alb/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
-        Condition = {
-          StringEquals = {
-            "s3:x-amz-acl"      = "bucket-owner-full-control"
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-          }
-          # このアカウント/リージョン内のELB(ALB/NLB)からの配信のみ許可する。
-          # 特定のALBのARN(aws_lb.this.arn)に絞ると、そのALBがこのバケットポリシーに
-          # depends_onで依存している関係上、循環参照になってしまうため、
-          # サービス種別+アカウント+リージョンのワイルドカードで絞り込む。
-          ArnLike = {
-            "aws:SourceArn" = "arn:aws:elasticloadbalancing:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"
-          }
-        }
       },
       {
-        Sid       = "AWSLogDeliveryAclCheck"
+        Sid       = "ELBLogDeliveryWrite"
         Effect    = "Allow"
-        Principal = { Service = "delivery.logs.amazonaws.com" }
-        Action    = "s3:GetBucketAcl"
-        Resource  = aws_s3_bucket.access_logs.arn
-        Condition = {
-          StringEquals = {
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-          }
-          ArnLike = {
-            "aws:SourceArn" = "arn:aws:elasticloadbalancing:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"
-          }
-        }
+        Principal = { Service = "logdelivery.elasticloadbalancing.amazonaws.com" }
+        Action    = "s3:PutObject"
+        Resource  = "${aws_s3_bucket.access_logs.arn}/${var.project}-${var.env}-alb/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
       }
     ]
   })

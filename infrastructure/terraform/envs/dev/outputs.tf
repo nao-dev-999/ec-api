@@ -38,10 +38,10 @@ output "batch_pipeline_name" {
   value = module.codepipeline.batch_pipeline_name
 }
 
-output "config_sns_topic_arn" {
-  description = "AWS Config通知用SNSトピックARN"
-  value       = module.config.sns_topic_arn
-}
+#output "config_sns_topic_arn" {
+#  description = "AWS Config通知用SNSトピックARN"
+#  value       = module.config.sns_topic_arn
+#}
 
 output "waf_web_acl_arn" {
   description = "ALBにアソシエートしたWAF WebACLのARN"
@@ -58,10 +58,10 @@ output "ops_dashboard_name" {
   value       = module.alarms.dashboard_name
 }
 
-output "cloudtrail_arn" {
-  value = module.security_audit.cloudtrail_arn
-}
+#output "cloudtrail_arn" {
+#  value = module.security_audit.cloudtrail_arn
+#}
 
-output "guardduty_detector_id" {
-  value = module.security_audit.guardduty_detector_id
-}
+#output "guardduty_detector_id" {
+#  value = module.security_audit.guardduty_detector_id
+#}

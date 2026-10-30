@@ -174,14 +174,14 @@ module "codepipeline" {
 
 # AWS Config（設定ミス・非準拠状態の検知と通知）
 # 他モジュールのデプロイフローに影響を与えないよう独立して追加
-module "config" {
-  source = "../../modules/config"
-
-  project = var.project
-  env     = var.env
-
-  notification_emails = var.config_notification_emails
-}
+#module "config" {
+#  source = "../../modules/config"
+#
+#  project = var.project
+#  env     = var.env
+#
+#  notification_emails = var.config_notification_emails
+#}
 
 # CloudWatch Alarms（アプリのERRORログ / ECS起動数0 / CPU使用率90%以上 / ALB応答遅延・ELB 5xx / WAFブロック多発 → SNS通知）
 module "alarms" {
@@ -211,14 +211,14 @@ module "alarms" {
 
 # セキュリティ監査基盤（CloudTrail: APIアクティビティ証跡 / GuardDuty: 脅威検知）
 # 高深刻度のGuardDuty検出はAWS Configと同じ通知チャンネル（module.config）に集約する
-module "security_audit" {
-  source = "../../modules/security-audit"
-
-  project = var.project
-  env     = var.env
-
-  sns_topic_arn = module.config.sns_topic_arn
-}
+#module "security_audit" {
+#  source = "../../modules/security-audit"
+#
+#  project = var.project
+#  env     = var.env
+#
+#  sns_topic_arn = module.config.sns_topic_arn
+#}
 
 # コスト監視（想定外課金の検知）
 module "budget" {
