@@ -50,8 +50,8 @@ dependencies {
     testImplementation("org.testcontainers:testcontainers-postgresql")
 
     // ─── データ駆動テスト（testsupport.data）: Excel形式パーサーが使用 ─────
-    testImplementation("org.apache.poi:poi:5.5.1")
-    testImplementation("org.apache.poi:poi-ooxml:5.5.1")
+    testImplementation("org.apache.poi:poi:6.0.0")
+    testImplementation("org.apache.poi:poi-ooxml:6.0.0")
 
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
 }
