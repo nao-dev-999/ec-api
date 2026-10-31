@@ -13,14 +13,18 @@ import org.springframework.security.web.access.AccessDeniedHandler;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Spring Security のフィルターで弾かれた 401 / 403 を {@link ErrorResponse} 形式で返す。
+ * フィルター層で返すエラーレスポンスを {@link ErrorResponse} 形式で書き込む。
  *
- * <p>フィルターで発生した例外は DispatcherServlet に届かないため {@code @RestControllerAdvice} では処理できない。{@code
- * SecurityConfig} の {@code exceptionHandling()} にこのクラスを登録し、{@code GlobalExceptionHandler}
- * と同じレスポンス形式にそろえる。
+ * <p>フィルターで返すエラーは DispatcherServlet に届かないため {@code @RestControllerAdvice} では処理できない。このクラスで {@code
+ * GlobalExceptionHandler} と同じレスポンス形式にそろえる。
+ *
+ * <ul>
+ *   <li>Spring Security の 401 / 403: {@code SecurityConfig} の {@code exceptionHandling()} に登録する
+ *   <li>レート制限の 429 など独自フィルターのエラー: {@link #write(HttpServletResponse, ErrorCode)} を呼ぶ
+ * </ul>
  */
 @RequiredArgsConstructor
-public class SecurityErrorResponseWriter implements AuthenticationEntryPoint, AccessDeniedHandler {
+public class FilterErrorResponseWriter implements AuthenticationEntryPoint, AccessDeniedHandler {
 
     private final MessageHelper messageHelper;
     private final JsonMapper jsonMapper;
@@ -45,7 +49,8 @@ public class SecurityErrorResponseWriter implements AuthenticationEntryPoint, Ac
         write(response, ErrorCode.FORBIDDEN);
     }
 
-    private void write(HttpServletResponse response, ErrorCode code) throws IOException {
+    /** {@code code} のステータスとメッセージで {@link ErrorResponse} を書き込む */
+    public void write(HttpServletResponse response, ErrorCode code) throws IOException {
         var body = ErrorResponse.of(code, messageHelper.get(code.getMessageKey()), null);
         response.setStatus(code.getStatus().value());
         response.setCharacterEncoding("UTF-8");

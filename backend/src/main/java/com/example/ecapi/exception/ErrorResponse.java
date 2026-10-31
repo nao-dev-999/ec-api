@@ -19,8 +19,7 @@ public record ErrorResponse(
     /**
      * {@link ErrorCode} からエラーレスポンスを組み立てる。
      *
-     * <p>{@code GlobalExceptionHandler} と {@code SecurityErrorResponseWriter}
-     * の両方がこれを使い、レスポンス形式をそろえる。
+     * <p>{@code GlobalExceptionHandler} と {@code FilterErrorResponseWriter} の両方がこれを使い、レスポンス形式をそろえる。
      */
     public static ErrorResponse of(ErrorCode code, String message, Map<String, String> details) {
         return new ErrorResponse(

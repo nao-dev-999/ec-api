@@ -1,6 +1,7 @@
 package com.example.ecapi.service.product;
 
 import com.example.ecapi.entity.Product;
+import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.exception.ProductInUseException;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.repository.ProductRepository;
@@ -8,7 +9,6 @@ import com.example.ecapi.repository.ProductSpecification;
 import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
 import com.example.ecapi.service.product.dto.UpdateProduct;
-import jakarta.persistence.OptimisticLockException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -74,7 +74,7 @@ public class ProductService {
      * 楽観ロックを適用するため、{@code updateProduct} には現在の {@code version} を含める必要があります。
      *
      * @throws ProductNotFoundException 指定されたIDの商品が見つからない場合
-     * @throws OptimisticLockException 楽観ロックの競合が発生した場合
+     * @throws OptimisticLockConflictException リクエストの version が現在値と異なる場合（他の更新が先に入った）
      */
     @CacheEvict(value = "products", key = "#updateProduct.id()")
     @Transactional
@@ -83,13 +83,13 @@ public class ProductService {
                 productRepository
                         .findById(updateProduct.id())
                         .orElseThrow(() -> new ProductNotFoundException(updateProduct.id()));
+        OptimisticLockConflictException.throwIfStale(product, updateProduct.version());
         if (updateProduct.name() != null) product.setName(updateProduct.name());
         if (updateProduct.description() != null)
             product.setDescription(updateProduct.description());
         if (updateProduct.price() != null) product.setPrice(updateProduct.price());
         if (updateProduct.stock() != null) product.setStock(updateProduct.stock());
         if (updateProduct.imageUrl() != null) product.setImageUrl(updateProduct.imageUrl());
-        product.setVersion(updateProduct.version());
         log.info("Product updated productId={}", updateProduct.id());
         return toProductResult(productRepository.save(product));
     }

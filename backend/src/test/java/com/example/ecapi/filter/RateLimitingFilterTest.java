@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.ecapi.exception.FilterErrorResponseWriter;
 import com.example.ecapi.helper.MessageHelper;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
 import io.github.bucket4j.redis.lettuce.Bucket4jLettuce;
@@ -23,6 +24,7 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+import tools.jackson.databind.json.JsonMapper;
 
 @Testcontainers
 class RateLimitingFilterTest {
@@ -45,7 +47,10 @@ class RateLimitingFilterTest {
         MessageHelper messageHelper = mock(MessageHelper.class);
         when(messageHelper.get(anyString())).thenReturn("リクエスト数の上限を超えました");
 
-        filter = new RateLimitingFilter(proxyManager, messageHelper);
+        filter =
+                new RateLimitingFilter(
+                        proxyManager,
+                        new FilterErrorResponseWriter(messageHelper, JsonMapper.builder().build()));
     }
 
     @AfterEach
@@ -73,6 +78,9 @@ class RateLimitingFilterTest {
         filter.doFilter(exceedingRequest, exceedingResponse, chain);
 
         assertThat(exceedingResponse.getStatus()).isEqualTo(429);
+        assertThat(exceedingResponse.getContentAsString())
+                .contains("\"code\":\"TOO_MANY_REQUESTS\"")
+                .contains("\"message\":\"リクエスト数の上限を超えました\"");
         assertThat(chainInvocations.get()).isEqualTo(10);
     }
 

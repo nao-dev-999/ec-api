@@ -5,6 +5,7 @@ import com.example.ecapi.entity.Customer;
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.entity.Review;
 import com.example.ecapi.exception.CustomerNotFoundException;
+import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.exception.ReviewAlreadyExistsException;
 import com.example.ecapi.exception.ReviewNotAllowedException;
@@ -132,6 +133,7 @@ public class ReviewService {
                 reviewRepository
                         .findByIdAndCustomerId(dto.reviewId(), dto.customerId())
                         .orElseThrow(() -> new ReviewNotFoundException(dto.reviewId()));
+        OptimisticLockConflictException.throwIfStale(review, dto.version());
         Product product =
                 productRepository
                         .findById(review.getProductId())
@@ -143,7 +145,6 @@ public class ReviewService {
 
         review.setRating(dto.rating());
         review.setComment(dto.comment());
-        review.setVersion(dto.version());
         Review saved = reviewRepository.save(review);
         log.info("Review updated reviewId={} customerId={}", dto.reviewId(), dto.customerId());
         return toResult(saved, product, customer);

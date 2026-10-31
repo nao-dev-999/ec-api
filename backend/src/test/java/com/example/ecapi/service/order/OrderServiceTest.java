@@ -13,6 +13,7 @@ import com.example.ecapi.entity.CustomerOrder;
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.entity.ShippingAddress;
 import com.example.ecapi.exception.InsufficientStockException;
+import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.exception.OrderCannotBeCancelledException;
 import com.example.ecapi.exception.OrderNotFoundException;
 import com.example.ecapi.exception.ProductNotFoundException;
@@ -76,7 +77,7 @@ class OrderServiceTest {
         product.setName("Test Product");
         product.setPrice(BigDecimal.valueOf(100.00));
         product.setStock(10);
-        product.setVersion(1);
+        ReflectionTestUtils.setField(product, "version", 1);
 
         shippingAddress = new ShippingAddress();
         shippingAddress.setId(1L);
@@ -103,7 +104,7 @@ class OrderServiceTest {
         customerOrder.setShippingPhoneNumber("090-1111-2222");
         ReflectionTestUtils.setField(customerOrder, "createdAt", Instant.now());
         ReflectionTestUtils.setField(customerOrder, "updatedAt", Instant.now());
-        customerOrder.setVersion(1);
+        ReflectionTestUtils.setField(customerOrder, "version", 1);
 
         orderResult =
                 new OrderResult(
@@ -351,7 +352,7 @@ class OrderServiceTest {
             when(orderRepository.findById(1L)).thenReturn(Optional.of(customerOrder));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
 
-            OrderResult result = orderService.updateStatus(1L, OrderStatus.CONFIRMED, 0);
+            OrderResult result = orderService.updateStatus(1L, OrderStatus.CONFIRMED, 1);
 
             assertThat(result).isNotNull();
             verify(orderRepository).save(customerOrder);
@@ -365,6 +366,17 @@ class OrderServiceTest {
             assertThatThrownBy(() -> orderService.updateStatus(99L, OrderStatus.CONFIRMED, 0))
                     .isInstanceOf(OrderNotFoundException.class);
         }
+
+        @Test
+        @DisplayName("リクエストの version が現在値と異なる場合、OptimisticLockConflictException をスローし更新しないこと")
+        void updateStatus_whenVersionIsStale_shouldThrowAndNotSave() {
+            when(orderRepository.findById(1L)).thenReturn(Optional.of(customerOrder));
+
+            assertThatThrownBy(() -> orderService.updateStatus(1L, OrderStatus.CONFIRMED, 0))
+                    .isInstanceOf(OptimisticLockConflictException.class);
+            assertThat(customerOrder.getStatus()).isNotEqualTo(OrderStatus.CONFIRMED);
+            verify(orderRepository, never()).save(any(CustomerOrder.class));
+        }
     }
 
     @Nested
@@ -377,7 +389,7 @@ class OrderServiceTest {
             when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
 
-            OrderResult result = orderService.cancel(1L, 0);
+            OrderResult result = orderService.cancel(1L, 1);
 
             assertThat(result.status()).isEqualTo(OrderStatus.CANCELLED);
             verify(orderRepository).save(customerOrder);
@@ -390,7 +402,7 @@ class OrderServiceTest {
             when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
 
-            orderService.cancel(1L, 0);
+            orderService.cancel(1L, 1);
 
             verify(couponService).releaseUsage("SAVE500");
         }
@@ -401,7 +413,7 @@ class OrderServiceTest {
             when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
             when(orderRepository.save(any(CustomerOrder.class))).thenReturn(customerOrder);
 
-            orderService.cancel(1L, 0);
+            orderService.cancel(1L, 1);
 
             verify(couponService, never()).releaseUsage(any());
         }
@@ -416,12 +428,26 @@ class OrderServiceTest {
         }
 
         @Test
+        @DisplayName(
+                "リクエストの version が現在値と異なる場合、在庫・クーポンを戻さずに OptimisticLockConflictException をスローすること")
+        void cancel_whenVersionIsStale_shouldThrowWithoutSideEffects() {
+            customerOrder.setCouponCode("SAVE500");
+            when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
+
+            assertThatThrownBy(() -> orderService.cancel(1L, 0))
+                    .isInstanceOf(OptimisticLockConflictException.class);
+            assertThat(customerOrder.getStatus()).isNotEqualTo(OrderStatus.CANCELLED);
+            verify(couponService, never()).releaseUsage(any());
+            verify(orderRepository, never()).save(any(CustomerOrder.class));
+        }
+
+        @Test
         @DisplayName("配達完了済みの注文はキャンセルできないこと")
         void shouldThrowExceptionWhenOrderAlreadyDelivered() {
             customerOrder.setStatus(OrderStatus.DELIVERED);
             when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
 
-            assertThatThrownBy(() -> orderService.cancel(1L, 0))
+            assertThatThrownBy(() -> orderService.cancel(1L, 1))
                     .isInstanceOf(OrderCannotBeCancelledException.class);
             verify(orderRepository, never()).save(any(CustomerOrder.class));
         }
@@ -432,7 +458,7 @@ class OrderServiceTest {
             customerOrder.setStatus(OrderStatus.CANCELLED);
             when(orderRepository.findByIdWithItems(1L)).thenReturn(Optional.of(customerOrder));
 
-            assertThatThrownBy(() -> orderService.cancel(1L, 0))
+            assertThatThrownBy(() -> orderService.cancel(1L, 1))
                     .isInstanceOf(OrderCannotBeCancelledException.class);
             verify(orderRepository, never()).save(any(CustomerOrder.class));
         }

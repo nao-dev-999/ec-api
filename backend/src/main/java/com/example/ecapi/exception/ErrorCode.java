@@ -37,6 +37,9 @@ public enum ErrorCode {
     // 403 Forbidden
     FORBIDDEN("error.forbidden", HttpStatus.FORBIDDEN),
 
+    // 429 Too Many Requests（RateLimitingFilter 用）
+    TOO_MANY_REQUESTS("error.tooManyRequests", HttpStatus.TOO_MANY_REQUESTS),
+
     // 400 Bad Request
     VALIDATION_ERROR("error.validation", HttpStatus.BAD_REQUEST),
     BAD_REQUEST("error.badRequest", HttpStatus.BAD_REQUEST),

@@ -15,4 +15,5 @@
 - [ ] 読み取りメソッドに `@Transactional(readOnly = true)` が付いている
 - [ ] 新しいビジネス例外が `ErrorCode` のステータスに対応する中間抽象クラス（`BadRequestException` / `ResourceNotFoundException` / `ConflictException`）を継承している（`RuntimeException`・`BusinessException` 直継承は禁止）
 - [ ] 例外メッセージが `messages.properties` 経由（`ErrorCode` に定数とメッセージキーを追加済み）
+- [ ] 更新処理でクライアントの `version` を `OptimisticLockConflictException.throwIfStale()` で比較している（`setVersion()` は効かない）
 - [ ] 楽観ロックなど Spring が変換する例外は、変換後の型（例: `ObjectOptimisticLockingFailureException`）でテストしている

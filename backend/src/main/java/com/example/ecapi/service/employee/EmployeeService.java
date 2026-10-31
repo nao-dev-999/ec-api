@@ -3,6 +3,7 @@ package com.example.ecapi.service.employee;
 import com.example.ecapi.entity.Employee;
 import com.example.ecapi.exception.EmployeeEmailDuplicateException;
 import com.example.ecapi.exception.EmployeeNotFoundException;
+import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.repository.EmployeeRepository;
 import com.example.ecapi.service.employee.dto.CreateEmployee;
 import com.example.ecapi.service.employee.dto.EmployeeResult;
@@ -66,8 +67,8 @@ public class EmployeeService {
                 employeeRepository
                         .findById(updateEmployeeRole.id())
                         .orElseThrow(() -> new EmployeeNotFoundException(updateEmployeeRole.id()));
+        OptimisticLockConflictException.throwIfStale(employee, updateEmployeeRole.version());
         employee.setRole(updateEmployeeRole.role());
-        employee.setVersion(updateEmployeeRole.version());
         log.info(
                 "Employee role updated employeeId={} role={}",
                 updateEmployeeRole.id(),

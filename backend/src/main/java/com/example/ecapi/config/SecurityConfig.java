@@ -1,6 +1,6 @@
 package com.example.ecapi.config;
 
-import com.example.ecapi.exception.SecurityErrorResponseWriter;
+import com.example.ecapi.exception.FilterErrorResponseWriter;
 import com.example.ecapi.filter.RateLimitingFilter;
 import com.example.ecapi.filter.RequestLoggingFilter;
 import com.example.ecapi.filter.RequestTracingFilter;
@@ -50,8 +50,7 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
-        var securityErrorResponseWriter =
-                new SecurityErrorResponseWriter(messageHelper, jsonMapper);
+        var errorResponseWriter = new FilterErrorResponseWriter(messageHelper, jsonMapper);
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // CSRF対策はCookie(same-site=Lax、application.yml)と許可オリジンを絞ったCORSで代替。
                 // クロスサイトのフォーム送信ではセッションCookieが付与されず、
@@ -101,8 +100,8 @@ public class SecurityConfig {
                                         .denyAll())
                 .exceptionHandling(
                         ex ->
-                                ex.authenticationEntryPoint(securityErrorResponseWriter)
-                                        .accessDeniedHandler(securityErrorResponseWriter));
+                                ex.authenticationEntryPoint(errorResponseWriter)
+                                        .accessDeniedHandler(errorResponseWriter));
 
         http.addFilterBefore(new RequestTracingFilter(), SecurityContextHolderFilter.class);
         // ✅ レート制限は認証フィルターより前（認証コストをかける前に弾く）
@@ -110,7 +109,7 @@ public class SecurityConfig {
         // （Spring Securityのフィルター順序解決は、参照先クラスが先に登録済みであることを要求する）
         if (rateLimitingEnabled) {
             http.addFilterBefore(
-                    new RateLimitingFilter(rateLimitProxyManager, messageHelper),
+                    new RateLimitingFilter(rateLimitProxyManager, errorResponseWriter),
                     RequestTracingFilter.class);
         }
         http.addFilterAfter(new RequestLoggingFilter(), RequestTracingFilter.class);

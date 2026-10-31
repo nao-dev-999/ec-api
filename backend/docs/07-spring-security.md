@@ -52,7 +52,7 @@ requestMatchers("/api/admin/**") の戻り値がこの AuthorizedUrl オブジ�
 5. **例外ハンドリング**（`ExceptionTranslationFilter` が後続Filterの例外を捕捉して委譲）
    - `authenticationEntryPoint`: 未認証アクセス時（401 Unauthorized）に `ErrorResponse` 形式（`code: UNAUTHORIZED`）の JSON を返却
    - `accessDeniedHandler`: 認可エラー時（403 Forbidden）に `ErrorResponse` 形式（`code: FORBIDDEN`）の JSON を返却
-   - どちらも `SecurityErrorResponseWriter` が担当する（詳細は [6.4 Spring Security の 401 / 403](06-exception-handling.md#64-spring-security-の-401--403)）
+   - どちらも `FilterErrorResponseWriter` が担当する（詳細は [6.4 フィルター層のエラー](06-exception-handling.md#64-フィルター層のエラー401--403--429)）
 6. **カスタムフィルタ追加**（`addFilterBefore` / `addFilterAfter` によるチェーン内の前後挿入）
    - `RequestTracingFilter` を `SecurityContextHolderFilter` の前に挿入
    - `RequestLoggingFilter` を `RequestTracingFilter` の後に挿入

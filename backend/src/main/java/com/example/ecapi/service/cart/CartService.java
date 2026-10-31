@@ -3,6 +3,7 @@ package com.example.ecapi.service.cart;
 import com.example.ecapi.entity.CartItem;
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.CartItemNotFoundException;
+import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.repository.CartItemRepository;
 import com.example.ecapi.repository.ProductRepository;
@@ -83,13 +84,13 @@ public class CartService {
                 cartItemRepository
                         .findByCustomerIdAndProductId(customerId, dto.productId())
                         .orElseThrow(() -> new CartItemNotFoundException(dto.productId()));
+        OptimisticLockConflictException.throwIfStale(item, dto.version());
         Product product =
                 productRepository
                         .findById(dto.productId())
                         .orElseThrow(() -> new ProductNotFoundException(dto.productId()));
 
         item.setQuantity(dto.quantity());
-        item.setVersion(dto.version());
         CartItem saved = cartItemRepository.save(item);
         log.info(
                 "CartItem quantity updated customerId={} productId={} quantity={}",

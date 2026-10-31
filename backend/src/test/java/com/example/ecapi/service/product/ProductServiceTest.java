@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.ecapi.entity.Product;
+import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.exception.ProductInUseException;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.repository.ProductRepository;
@@ -55,7 +57,7 @@ class ProductServiceTest {
         product.setStock(10);
         ReflectionTestUtils.setField(product, "createdAt", Instant.now());
         ReflectionTestUtils.setField(product, "updatedAt", Instant.now());
-        product.setVersion(1);
+        ReflectionTestUtils.setField(product, "version", 1);
 
         productResult =
                 new ProductResult(
@@ -229,6 +231,27 @@ class ProductServiceTest {
 
             assertThatThrownBy(() -> productService.update(updateProduct))
                     .isInstanceOf(ProductNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("リクエストの version が現在値と異なる場合、OptimisticLockConflictException をスローし更新しないこと")
+        void update_whenVersionIsStale_shouldThrowAndNotSave() {
+            UpdateProduct updateProduct =
+                    new UpdateProduct(
+                            1L,
+                            "Updated Product",
+                            "Updated Desc",
+                            BigDecimal.valueOf(120.00),
+                            15,
+                            null,
+                            0);
+
+            when(productRepository.findById(1L)).thenReturn(Optional.of(product));
+
+            assertThatThrownBy(() -> productService.update(updateProduct))
+                    .isInstanceOf(OptimisticLockConflictException.class);
+            assertThat(product.getName()).isNotEqualTo("Updated Product");
+            verify(productRepository, never()).save(any(Product.class));
         }
     }
 

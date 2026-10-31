@@ -16,7 +16,7 @@ public abstract class BaseEntity {
 
     @Version
     @Column(nullable = false)
-    private Long version;
+    private int version;
 
     @CreatedDate
     @Column(nullable = false, updatable = false)
@@ -34,8 +34,8 @@ public abstract class BaseEntity {
     @Column(nullable = false)
     private Long updatedBy;
 
-    // getter のみ（setter は公開しない。JPA Auditing が自動セットする）
-    public Long getVersion() { return version; }
+    // getter のみ（setter は公開しない。監査カラムは JPA Auditing、version は Hibernate が自動更新する）
+    public int getVersion() { return version; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
     public Long getCreatedBy() { return createdBy; }
@@ -189,39 +189,54 @@ WHERE id = 1 AND version = 1;  -- 競合時は 0件更新 → OptimisticLockExce
 
 ### 楽観ロックを「効かせる」操作
 
-クライアントから受け取った `version` をエンティティにセットする。これにより取得時と更新時の間に他ユーザが更新していた場合に `409 Conflict` を返せる。
+クライアントから受け取った `version` と、DB から読み込んだエンティティの `version` を**サービス層で明示的に比較する**。
+一致しなければ `OptimisticLockConflictException`（409 Conflict）をスローする。
 
 ```java
 // Service
-public ProductResult updateProduct(Long id, UpdateProduct command) {
-    var product = productRepository.findByIdAndDeletedFalse(id)
-        .orElseThrow(() -> new ProductNotFoundException(...));
+@Transactional
+public ProductResult update(UpdateProduct command) {
+    var product = productRepository.findById(command.id())
+        .orElseThrow(() -> new ProductNotFoundException(command.id()));
+    // ← 読み込み直後・変更前に比較する
+    OptimisticLockConflictException.throwIfStale(product, command.version());
 
-    product.setVersion(command.version()); // ← クライアントのversionをセット
     product.setName(command.name());
     product.setPrice(command.price());
-
-    return mapper.toProductResult(product); // flush時にバージョンチェックが走る
+    return mapper.toProductResult(productRepository.save(product));
 }
 ```
 
 ```java
 // Service DTO
 public record UpdateProduct(
-    Long version,   // クライアントから受け取る
+    Long id,
     String name,
-    Integer price
+    Integer price,
+    int version   // クライアントから受け取る（取得時の version）
 ) {}
 ```
 
+チェックは2段構えになる。
+
+| 競合のタイミング | 検出するもの |
+|---|---|
+| 画面で取得してから更新リクエストが届くまで（数秒〜数分） | `throwIfStale()` の明示比較 |
+| サービスで読み込んでからコミットするまで（ミリ秒） | Hibernate の `WHERE version = ?`（`ObjectOptimisticLockingFailureException` → `GlobalExceptionHandler` で 409） |
+
+> **⚠️ `setVersion()` でクライアントの version を渡しても楽観ロックは効かない。**
+> Hibernate は管理状態のエンティティの `@Version` を書き換えても、`WHERE version = ?` には**読み込み時の version** を使う。
+> そのため古い version を渡しても例外にならず、他者の更新を黙って上書きする（ロストアップデート）。
+> これを防ぐため `BaseEntity` は version の setter を持たない。
+
 ### 楽観ロックを「効かせない」操作
 
-`setVersion()` を呼ばなければ Hibernate は現在の version をそのまま使うため、常に最新状態に上書きされる。管理者による強制上書きや、バッチによる一括更新がこれにあたる。
+`throwIfStale()` を呼ばなければ、画面取得時点との比較は行わず最新状態に上書きする（読み込み〜コミット間の競合は Hibernate が引き続き検出する）。管理者による強制上書きや、バッチによる一括更新がこれにあたる。
 
 ```java
 // 楽観ロックなし（管理者の強制上書き）
 product.setName(command.name());
-// setVersion() を呼ばない → 競合チェックなしで更新
+// throwIfStale() を呼ばない → 画面取得時点との競合チェックなしで更新
 ```
 
 ### 削除（DELETE）操作における楽観ロック

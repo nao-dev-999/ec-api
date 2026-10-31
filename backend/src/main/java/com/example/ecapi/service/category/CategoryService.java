@@ -4,6 +4,7 @@ import com.example.ecapi.entity.Category;
 import com.example.ecapi.entity.Product;
 import com.example.ecapi.exception.CategoryNameDuplicateException;
 import com.example.ecapi.exception.CategoryNotFoundException;
+import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.repository.CategoryRepository;
 import com.example.ecapi.repository.ProductRepository;
@@ -61,11 +62,11 @@ public class CategoryService {
                 categoryRepository
                         .findById(dto.id())
                         .orElseThrow(() -> new CategoryNotFoundException(dto.id()));
+        OptimisticLockConflictException.throwIfStale(category, dto.version());
         if (categoryRepository.existsByNameAndIdNot(dto.name(), dto.id())) {
             throw new CategoryNameDuplicateException(dto.name());
         }
         category.setName(dto.name());
-        category.setVersion(dto.version());
         Category saved = categoryRepository.save(category);
         log.info("Category updated categoryId={}", dto.id());
         return toCategoryResult(saved);

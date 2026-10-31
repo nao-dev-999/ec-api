@@ -1,6 +1,7 @@
 package com.example.ecapi.filter;
 
-import com.example.ecapi.helper.MessageHelper;
+import com.example.ecapi.exception.ErrorCode;
+import com.example.ecapi.exception.FilterErrorResponseWriter;
 import com.example.ecapi.service.auth.LoginUserDetails;
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.Bucket;
@@ -25,11 +26,12 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class RateLimitingFilter extends OncePerRequestFilter {
 
     private final ProxyManager<byte[]> proxyManager;
-    private final MessageHelper messageHelper;
+    private final FilterErrorResponseWriter errorResponseWriter;
 
-    public RateLimitingFilter(ProxyManager<byte[]> proxyManager, MessageHelper messageHelper) {
+    public RateLimitingFilter(
+            ProxyManager<byte[]> proxyManager, FilterErrorResponseWriter errorResponseWriter) {
         this.proxyManager = proxyManager;
-        this.messageHelper = messageHelper;
+        this.errorResponseWriter = errorResponseWriter;
     }
 
     @Override
@@ -45,14 +47,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
                         .build(key.getBytes(StandardCharsets.UTF_8), tier::configuration);
 
         if (!bucket.tryConsume(1)) {
-            response.setStatus(429);
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter()
-                    .write(
-                            """
-                            {"status":429,"error":"Too Many Requests","message":"%s"}
-                            """
-                                    .formatted(messageHelper.get("error.tooManyRequests")));
+            errorResponseWriter.write(response, ErrorCode.TOO_MANY_REQUESTS);
             return;
         }
         chain.doFilter(request, response);

@@ -19,6 +19,7 @@ BusinessException (abstract)               ← 全ビジネス例外の親。Err
   │     └── OrderNotFoundException ...
   └── ConflictException (abstract)         ← 409 固定
         ├── InsufficientStockException
+        ├── OptimisticLockConflictException  ← クライアントの version が古い場合
         └── CategoryNameDuplicateException ...
 ```
 
@@ -211,25 +212,35 @@ Spring MVC は**最上位の例外型で先にハンドラーを照合し、一�
 
 Controller テストで楽観ロックを検証するときも、実際に届く `ObjectOptimisticLockingFailureException` をモックからスローする。
 
+クライアントが送ってきた `version` との比較は、サービス層で `OptimisticLockConflictException.throwIfStale(entity, version)` を使って明示的に行う（`ConflictException` 階層なので `handleBusiness` が 409 を返す）。
+`setVersion()` では効かない理由は [4.6 楽観ロック](04-entity-design.md#46-楽観ロック) を参照。
+
 ---
 
-## 6.4 Spring Security の 401 / 403
+## 6.4 フィルター層のエラー（401 / 403 / 429）
 
-フィルターで弾かれた未認証アクセス（401）・権限不足（403）は DispatcherServlet に届かないため、`@RestControllerAdvice` では処理できない。
-`SecurityConfig` の `exceptionHandling()` に `SecurityErrorResponseWriter` を登録する。
+フィルターで返すエラーは DispatcherServlet に届かないため、`@RestControllerAdvice` では処理できない。
+`FilterErrorResponseWriter` が `ErrorResponse.of(...)` を `JsonMapper` でシリアライズして書き込み、`GlobalExceptionHandler` と同じ形式（`timestamp`・`code` を含む）にそろえる。
+
+| エラー | 発生元 | ErrorCode | 書き込み方 |
+|---|---|---|---|
+| 401 未認証 | Spring Security | `UNAUTHORIZED` | `exceptionHandling().authenticationEntryPoint(...)` に登録 |
+| 403 権限不足 | Spring Security | `FORBIDDEN` | `exceptionHandling().accessDeniedHandler(...)` に登録 |
+| 429 レート制限超過 | `RateLimitingFilter` | `TOO_MANY_REQUESTS` | `errorResponseWriter.write(response, ErrorCode.TOO_MANY_REQUESTS)` |
 
 ```java
 // config/SecurityConfig.java（抜粋）
-var securityErrorResponseWriter = new SecurityErrorResponseWriter(messageHelper, jsonMapper);
+var errorResponseWriter = new FilterErrorResponseWriter(messageHelper, jsonMapper);
 http.exceptionHandling(
         ex ->
-                ex.authenticationEntryPoint(securityErrorResponseWriter)
-                        .accessDeniedHandler(securityErrorResponseWriter));
+                ex.authenticationEntryPoint(errorResponseWriter)
+                        .accessDeniedHandler(errorResponseWriter));
+http.addFilterBefore(
+        new RateLimitingFilter(rateLimitProxyManager, errorResponseWriter),
+        RequestTracingFilter.class);
 ```
 
-`SecurityErrorResponseWriter` は `AuthenticationEntryPoint` と `AccessDeniedHandler` を実装し、
-`ErrorResponse.of(ErrorCode.UNAUTHORIZED / FORBIDDEN, ...)` を `JsonMapper` でシリアライズして返す。
-これにより 401/403 も `GlobalExceptionHandler` と同じ形式（`timestamp`・`code` を含む）になる。
+独自フィルターでエラーを返す場合も、`ErrorCode` を追加して `FilterErrorResponseWriter.write()` を使う。
 
 ログイン API 内で `AuthenticationManager` が投げる `AuthenticationException` はコントローラーから送出されるため、`GlobalExceptionHandler.handleAuthentication` が処理する。
 
@@ -241,6 +252,6 @@ http.exceptionHandling(
 - **HTTP ステータスは `ErrorCode` に定義し、中間抽象クラスで検査する。** 具象クラスにも `GlobalExceptionHandler` にもステータスを書かない
 - **`GlobalExceptionHandler` に `BusinessException` のサブクラス個別のハンドラーを追加しない。** 新しい例外クラスを追加しても `handleBusiness` が自動的に処理する
 - **フレームワーク由来の例外は階層に含めず、`GlobalExceptionHandler` の個別ハンドラーで `ErrorCode` に変換する。** Spring が例外を変換する場合（楽観ロックなど）は変換後の型を対象にする
-- **Spring Security の 401/403 は `SecurityErrorResponseWriter` で返す。** `SecurityConfig` に JSON を手書きしない
+- **フィルター層のエラー（401/403/429 など）は `FilterErrorResponseWriter` で返す。** フィルターや `SecurityConfig` に JSON を手書きしない
 - **500 は詳細を隠してログに残す。** `handleGeneral` では `ex.getMessage()` をレスポンスに含めない
 - **例外メッセージは `messages.properties` で管理する。** 例外には `ErrorCode`（メッセージキー）と引数だけを持たせ、文言の解決は `GlobalExceptionHandler` が `MessageHelper` で行う。サービス層でメッセージ文字列を組み立てない

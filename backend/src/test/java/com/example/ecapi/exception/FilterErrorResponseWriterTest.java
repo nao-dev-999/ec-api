@@ -18,16 +18,16 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
-class SecurityErrorResponseWriterTest {
+class FilterErrorResponseWriterTest {
 
     @Mock private MessageHelper messageHelper;
 
     private final JsonMapper jsonMapper = JsonMapper.builder().build();
-    private SecurityErrorResponseWriter writer;
+    private FilterErrorResponseWriter writer;
 
     @BeforeEach
     void setUp() {
-        writer = new SecurityErrorResponseWriter(messageHelper, jsonMapper);
+        writer = new FilterErrorResponseWriter(messageHelper, jsonMapper);
     }
 
     @Test
@@ -66,5 +66,20 @@ class SecurityErrorResponseWriterTest {
         assertThat(body.get("code").asString()).isEqualTo("FORBIDDEN");
         assertThat(body.get("message").asString()).isEqualTo("アクセス権限がありません");
         assertThat(body.hasNonNull("timestamp")).isTrue();
+    }
+
+    @Test
+    @DisplayName("任意の ErrorCode で ErrorResponse 形式のレスポンスを書き込めること")
+    void write_withTooManyRequests_shouldWrite429ErrorResponse() throws Exception {
+        given(messageHelper.get("error.tooManyRequests")).willReturn("リクエスト数の上限を超えました");
+        var response = new MockHttpServletResponse();
+
+        writer.write(response, ErrorCode.TOO_MANY_REQUESTS);
+
+        assertThat(response.getStatus()).isEqualTo(429);
+        JsonNode body = jsonMapper.readTree(response.getContentAsString());
+        assertThat(body.get("error").asString()).isEqualTo("Too Many Requests");
+        assertThat(body.get("code").asString()).isEqualTo("TOO_MANY_REQUESTS");
+        assertThat(body.get("message").asString()).isEqualTo("リクエスト数の上限を超えました");
     }
 }
