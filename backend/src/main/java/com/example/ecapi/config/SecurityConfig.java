@@ -1,5 +1,6 @@
 package com.example.ecapi.config;
 
+import com.example.ecapi.exception.SecurityErrorResponseWriter;
 import com.example.ecapi.filter.RateLimitingFilter;
 import com.example.ecapi.filter.RequestLoggingFilter;
 import com.example.ecapi.filter.RequestTracingFilter;
@@ -7,7 +8,6 @@ import com.example.ecapi.helper.MessageHelper;
 import com.example.ecapi.service.auth.CustomerUserDetailsService;
 import com.example.ecapi.service.auth.UserDetailsServiceImpl;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
-import jakarta.servlet.http.HttpServletResponse;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,16 +28,17 @@ import org.springframework.security.web.context.SecurityContextHolderFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private static final String CONTENT_TYPE_JSON = "application/json;charset=UTF-8";
     private static final String ROLE_CUSTOMER = "CUSTOMER";
 
     private final MessageHelper messageHelper;
     private final ProxyManager<byte[]> rateLimitProxyManager;
+    private final JsonMapper jsonMapper;
 
     @Value("${app.cors.allowed-origins:http://localhost:3000}")
     private List<String> allowedOrigins;
@@ -49,6 +50,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) {
+        var securityErrorResponseWriter =
+                new SecurityErrorResponseWriter(messageHelper, jsonMapper);
         http.cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 // CSRF対策はCookie(same-site=Lax、application.yml)と許可オリジンを絞ったCORSで代替。
                 // クロスサイトのフォーム送信ではセッションCookieが付与されず、
@@ -98,36 +101,8 @@ public class SecurityConfig {
                                         .denyAll())
                 .exceptionHandling(
                         ex ->
-                                ex.authenticationEntryPoint(
-                                                (request, response, authException) -> {
-                                                    response.setStatus(
-                                                            HttpServletResponse.SC_UNAUTHORIZED);
-                                                    response.setContentType(CONTENT_TYPE_JSON);
-                                                    response.getWriter()
-                                                            .write(
-                                                                    """
-                {"status":401,"error":"Unauthorized","message":"%s"}
-                """
-                                                                            .formatted(
-                                                                                    messageHelper
-                                                                                            .get(
-                                                                                                    "error.unauthorized")));
-                                                })
-                                        .accessDeniedHandler(
-                                                (request, response, accessDeniedException) -> {
-                                                    response.setStatus(
-                                                            HttpServletResponse.SC_FORBIDDEN);
-                                                    response.setContentType(CONTENT_TYPE_JSON);
-                                                    response.getWriter()
-                                                            .write(
-                                                                    """
-                {"status":403,"error":"Forbidden","message":"%s"}
-                """
-                                                                            .formatted(
-                                                                                    messageHelper
-                                                                                            .get(
-                                                                                                    "error.forbidden")));
-                                                }));
+                                ex.authenticationEntryPoint(securityErrorResponseWriter)
+                                        .accessDeniedHandler(securityErrorResponseWriter));
 
         http.addFilterBefore(new RequestTracingFilter(), SecurityContextHolderFilter.class);
         // ✅ レート制限は認証フィルターより前（認証コストをかける前に弾く）

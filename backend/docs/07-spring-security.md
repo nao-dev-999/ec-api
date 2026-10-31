@@ -29,7 +29,7 @@ requestMatchers("/api/admin/**") の戻り値がこの AuthorizedUrl オブジ�
 
 - `SecurityFilterChain` は「どのリクエストに適用するか（`matches()`）」と「適用する `Filter` のリスト（`getFilters()`）」を保持するだけのコンテナで、それ自体は `Filter` ではない。
 - 実際の認証・認可・CORS・CSRF・例外処理は、そのリストに含まれる個々の `Filter` 実装（`CorsFilter`, `CsrfFilter`, `SecurityContextHolderFilter`, `AuthorizationFilter`, `ExceptionTranslationFilter` など）が担っている。
-- `HttpSecurity` はこれらの `Filter` を生成・正しい順序で組み立てるビルダークラス。`.cors()`, `.csrf()`, `.sessionManagement()`, `.authorizeHttpRequests()`, `.exceptionHandling()` などの設定メソッドはそれぞれ対応する `Filter` を追加し、最後に `.build()` を呼ぶことで `SecurityFilterChain` の実装クラス（`DefaultSecurityFilterChain`）を生成する（`SecurityConfig.java:108`）。
+- `HttpSecurity` はこれらの `Filter` を生成・正しい順序で組み立てるビルダークラス。`.cors()`, `.csrf()`, `.sessionManagement()`, `.authorizeHttpRequests()`, `.exceptionHandling()` などの設定メソッドはそれぞれ対応する `Filter` を追加し、最後に `.build()` を呼ぶことで `SecurityFilterChain` の実装クラス（`DefaultSecurityFilterChain`）を生成する（`SecurityConfig.java:118`）。
 - 開発者は `HttpSecurity` に対して、実現したい認証認可・セッション管理・CSRF・CORSの設定を行う。
 - 例外ハンドリング（401/403）も `ExceptionTranslationFilter` というチェーン内のFilterが担当するため、`.exceptionHandling()` で `HttpSecurity` に設定する。
 - `addFilterBefore` / `addFilterAfter` で、チェーン内の特定Filterの前後に独自Filterを挿入することもできる。
@@ -50,8 +50,9 @@ requestMatchers("/api/admin/**") の戻り値がこの AuthorizedUrl オブジ�
    - `/api/admin/**` → `ADMIN` または `PRODUCT_MANAGER` ロール必須
    - それ以外の全リクエスト → `denyAll()`（明示的に許可されていないパスは全拒否）
 5. **例外ハンドリング**（`ExceptionTranslationFilter` が後続Filterの例外を捕捉して委譲）
-   - `authenticationEntryPoint`: 未認証アクセス時（401 Unauthorized）に `messageHelper` から i18n メッセージを取得し JSON で返却
-   - `accessDeniedHandler`: 認可エラー時（403 Forbidden）に同様に JSON で返却
+   - `authenticationEntryPoint`: 未認証アクセス時（401 Unauthorized）に `ErrorResponse` 形式（`code: UNAUTHORIZED`）の JSON を返却
+   - `accessDeniedHandler`: 認可エラー時（403 Forbidden）に `ErrorResponse` 形式（`code: FORBIDDEN`）の JSON を返却
+   - どちらも `SecurityErrorResponseWriter` が担当する（詳細は [6.4 Spring Security の 401 / 403](06-exception-handling.md#64-spring-security-の-401--403)）
 6. **カスタムフィルタ追加**（`addFilterBefore` / `addFilterAfter` によるチェーン内の前後挿入）
    - `RequestTracingFilter` を `SecurityContextHolderFilter` の前に挿入
    - `RequestLoggingFilter` を `RequestTracingFilter` の後に挿入
@@ -92,7 +93,7 @@ private CorsConfigurationSource corsConfigurationSource() {
   - `allowedHeaders`: `"*"` で全ヘッダー許可
   - `allowCredentials(true)`: Cookie等の資格情報付きリクエストを許可（フロントとセッションCookieをやり取りするため必須）
 - **`UrlBasedCorsConfigurationSource`**: `CorsConfigurationSource` の実装クラス。URLパターン（`AntPathMatcher`）ごとに異なる `CorsConfiguration` を登録可能。`registerCorsConfiguration("/**", configuration)` で全パスに同一設定を適用している。
-- この `corsConfigurationSource()` は `.cors(cors -> cors.configurationSource(corsConfigurationSource()))`（SecurityConfig.java:45）で `HttpSecurity` に渡され、`SecurityFilterChain` 内の `CorsFilter` に設定される。
+- この `corsConfigurationSource()` は `.cors(cors -> cors.configurationSource(corsConfigurationSource()))`（SecurityConfig.java:55）で `HttpSecurity` に渡され、`SecurityFilterChain` 内の `CorsFilter` に設定される。
 
 補足:
 - `allowCredentials(true)` を使う場合、`allowedOrigins` に `"*"` は指定できない（仕様上禁止）。本プロジェクトでは具体的なオリジンリストを渡しているため問題ない。

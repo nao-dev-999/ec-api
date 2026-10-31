@@ -32,6 +32,10 @@ public enum ErrorCode {
 
     // 401 Unauthorized
     AUTHENTICATION_FAILED("error.authentication", HttpStatus.UNAUTHORIZED),
+    UNAUTHORIZED("error.unauthorized", HttpStatus.UNAUTHORIZED),
+
+    // 403 Forbidden
+    FORBIDDEN("error.forbidden", HttpStatus.FORBIDDEN),
 
     // 400 Bad Request
     VALIDATION_ERROR("error.validation", HttpStatus.BAD_REQUEST),

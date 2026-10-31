@@ -1,11 +1,11 @@
 package com.example.ecapi.exception;
 
 import com.example.ecapi.helper.MessageHelper;
-import java.time.Instant;
 import java.util.Map;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.AuthenticationException;
@@ -35,15 +35,25 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * JPA の楽観ロック例外 → 409 Conflict
+     * 楽観ロックの競合 → 409 Conflict
      *
-     * <p>jakarta.persistence.OptimisticLockException は JPA フレームワークがスローするため BusinessException
-     * 階層の外にある。ここでメッセージを付与して 409 として返す。
+     * <p>楽観ロック例外はフレームワークがスローするため BusinessException 階層の外にある。
+     *
+     * <ul>
+     *   <li>{@link OptimisticLockingFailureException}: {@code @Transactional}
+     *       のコミット時やリポジトリ呼び出し時に、Spring が JPA/Hibernate の例外を変換したもの（{@code
+     *       ObjectOptimisticLockingFailureException}）。実運用ではほぼこちらが届く
+     *   <li>{@link jakarta.persistence.OptimisticLockException}: Spring の例外変換を通らずに届いた JPA 例外
+     * </ul>
+     *
+     * <p>前者は {@code Exception} ハンドラーより先に一致させる必要があるため、明示的に列挙する（Spring は最上位の例外型で先に照合し、 cause はたどらない）。
      */
-    @ExceptionHandler(jakarta.persistence.OptimisticLockException.class)
-    public ResponseEntity<ErrorResponse> handleOptimisticLock(
-            jakarta.persistence.OptimisticLockException ex) {
-        log.warn("OptimisticLockException: {}", ex.getMessage());
+    @ExceptionHandler({
+        OptimisticLockingFailureException.class,
+        jakarta.persistence.OptimisticLockException.class
+    })
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(Exception ex) {
+        log.warn("{}: {}", ex.getClass().getSimpleName(), ex.getMessage());
         return buildError(
                 ErrorCode.OPTIMISTIC_LOCK_CONFLICT,
                 messageHelper.get(ErrorCode.OPTIMISTIC_LOCK_CONFLICT.getMessageKey()));
@@ -66,7 +76,13 @@ public class GlobalExceptionHandler {
                 details);
     }
 
-    /** ログイン時の認証失敗（メールアドレス・パスワード不一致等）→ 401 Unauthorized */
+    /**
+     * ログイン時の認証失敗（メールアドレス・パスワード不一致等）→ 401 Unauthorized
+     *
+     * <p>コントローラー内で {@code AuthenticationManager}
+     * を呼んだときにスローされるものだけがここに来る。未認証アクセス・権限不足（フィルターで弾かれるもの）は {@code SecurityConfig} の {@code
+     * exceptionHandling()} で処理する。
+     */
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthentication(AuthenticationException ex) {
         log.warn("AuthenticationException: {}", ex.getMessage());
@@ -107,14 +123,7 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ErrorResponse> buildError(
             ErrorCode code, String message, Map<String, String> details) {
-        var body =
-                new ErrorResponse(
-                        Instant.now(),
-                        code.getStatus().value(),
-                        code.getStatus().getReasonPhrase(),
-                        code.name(),
-                        message,
-                        details);
-        return ResponseEntity.status(code.getStatus()).body(body);
+        return ResponseEntity.status(code.getStatus())
+                .body(ErrorResponse.of(code, message, details));
     }
 }

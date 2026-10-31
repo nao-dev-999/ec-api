@@ -33,6 +33,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import tools.jackson.databind.json.JsonMapper;
@@ -284,6 +285,36 @@ class AdminProductControllerTest {
                                     .contentType(MediaType.APPLICATION_JSON)
                                     .content(jsonMapper.writeValueAsString(request)))
                     .andExpect(status().isConflict());
+        }
+
+        @Test
+        @DisplayName("トランザクションのコミット時に楽観ロックの競合が発生した場合（Springが例外を変換）、500ではなく409を返すこと")
+        void update_whenSpringTranslatedOptimisticLockFailure_shouldReturnConflict()
+                throws Exception {
+            UpdateProductRequest request =
+                    new UpdateProductRequest(
+                            1L,
+                            "Updated Product",
+                            "Updated Desc",
+                            BigDecimal.valueOf(120.00),
+                            15,
+                            null,
+                            1);
+
+            // @Transactional のコミット時に JpaTransactionManager がスローする実際の型
+            doThrow(
+                            new ObjectOptimisticLockingFailureException(
+                                    "Optimistic lock failed",
+                                    new OptimisticLockException("Row was updated")))
+                    .when(productService)
+                    .update(any(UpdateProduct.class));
+
+            mockMvc.perform(
+                            put("/api/admin/products/{id}", 1L)
+                                    .contentType(MediaType.APPLICATION_JSON)
+                                    .content(jsonMapper.writeValueAsString(request)))
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.code").value("OPTIMISTIC_LOCK_CONFLICT"));
         }
 
         @Test
