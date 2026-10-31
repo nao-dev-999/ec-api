@@ -44,33 +44,46 @@ public class PaymentClientConfig {
 
 ## リトライ
 
-冪等な操作（参照系、`Idempotency-Key` 付きの作成系）のみリトライ対象とする。リトライなしでは決済の二重実行等の事故につながるため、**リトライする場合は必ず冪等性が担保された呼び出しに限定する**（[16. 冪等性](16-idempotency.md)参照）。
+冪等な操作（参照系、`Idempotency-Key` 付きの作成系）のみリトライ対象とする。5xxやタイムアウトでも外部サービス側では処理が完了している可能性があり、冪等でない呼び出しを再送すると決済の二重実行等の事故につながるため、**リトライする場合は必ず冪等性が担保された呼び出しに限定する**（[16. 冪等性](16-idempotency.md)参照）。
+
+Spring Framework 7 に組み込まれた `@Retryable`（`org.springframework.resilience.annotation`）を標準とし、Spring Retry・Resilience4j 等の外部ライブラリは追加しない。設定クラスに `@EnableResilientMethods` を付与して有効化する。
 
 ```java
-// ✅ Spring Retry を使う場合の例。リトライ対象は接続エラー・5xxのみ
+// ✅ リトライ対象は接続エラー・タイムアウト・5xxのみ
 @Retryable(
-    retryFor = { ResourceAccessException.class },
-    maxAttempts = 3,
-    backoff = @Backoff(delay = 500, multiplier = 2))
+    includes = { ResourceAccessException.class, HttpServerErrorException.class },
+    maxRetries = 3,
+    delay = 500,
+    multiplier = 2,
+    jitter = 100)
 public PaymentResult charge(ChargeRequest request) { ... }
 ```
 
-- 4xx（クライアントエラー）はリトライしない
-- バックオフは指数的に増やす（固定間隔での連続リトライは外部サービスへの負荷集中を招く）
+| 応答 | 扱い | 理由 |
+|---|---|---|
+| 接続エラー・タイムアウト・5xx | リトライする | サーバー側の一時的な不調で、時間をおけば成功する可能性がある |
+| 4xx（下記を除く） | リトライしない | リクエスト内容の問題であり、同じリクエストを再送しても結果は変わらない |
+| 401（トークン期限切れ） | トークンを再取得して1回だけ再送 | 認証ヘッダーが変わるため再送に意味がある。`@Retryable` ではなく `ClientHttpRequestInterceptor` で実装する |
+| 429 | `Retry-After` の秒数だけ待ってリトライ | レート制限による一時的な拒否のため |
 
-## サーキットブレーカー
+- バックオフは指数的に増やし、ジッターを入れる（固定間隔・一斉の再送は障害中の外部サービスへの負荷集中を招く）
+- 回数は3回程度までに抑える。数秒で回復しない継続障害には効かず、負荷を増やす側に回るため
 
-外部サービスが継続的に障害を起こしている状態で呼び出しを繰り返さないよう、Resilience4jの `CircuitBreaker` を導入する。障害時のフォールバック（例: 決済不可時は注文を `PAYMENT_PENDING` 状態で保留する等）をビジネスロジックとして明確に決めてから実装する。
+## 継続障害への備え
+
+サーキットブレーカー（Resilience4j等）は導入しない。外部サービスの継続障害に自システムが巻き込まれないよう、以下で最低限の防御を行う。
+
+- **タイムアウトを短く保つ**: 障害時に待たされる時間の上限になる（[タイムアウト](#タイムアウト)参照）
+- **リトライ回数を絞る**: 上記のとおり3回程度まで
+- **同時実行数を制限する（任意）**: Spring Framework 7 の `@ConcurrencyLimit` で外部呼び出しの並列数に上限を設け、外部サービスの遅延時に仮想スレッドが際限なく滞留するのを防ぐ
 
 ```java
-@CircuitBreaker(name = "paymentGateway", fallbackMethod = "chargeFallback")
+@ConcurrencyLimit(20)
+@Retryable(includes = { ResourceAccessException.class, HttpServerErrorException.class })
 public PaymentResult charge(ChargeRequest request) { ... }
-
-private PaymentResult chargeFallback(ChargeRequest request, Exception ex) {
-    // ✅ 例外を握りつぶさず、呼び出し元が判断できる結果を返す
-    throw new PaymentGatewayUnavailableException();
-}
 ```
+
+リトライし尽くしても失敗した場合の業務上の扱い（例: 決済不可時はエラーで注文を受け付けないのか、`PAYMENT_PENDING` 状態で保留して後から決済するのか）は、実装前にビジネスロジックとして明確に決める。例外を握りつぶさず、呼び出し元が判断できる例外（例: `PaymentGatewayUnavailableException`）を送出する。
 
 ## Webhook受信（決済代行からのコールバック等）
 
@@ -105,7 +118,8 @@ public ResponseEntity<Void> handlePaymentWebhook(
 - [ ] 外部サービスごとに個別の `RestClient` Beanを定義し、connect/readタイムアウトを設定している
 - [ ] タイムアウト値が上流（ALB等）のタイムアウトより短い
 - [ ] リトライ対象を冪等な操作に限定している
-- [ ] 継続障害時のサーキットブレーカーとフォールバック挙動を定義している
+- [ ] リトライ対象を接続エラー・タイムアウト・5xxに絞り、4xxはリトライしていない（401・429は例外の扱いに従う）
+- [ ] リトライし尽くした後の業務上の扱い（エラー／保留等）を定義している
 - [ ] Webhook受信で署名検証をしている
 - [ ] Webhook受信でイベントIDによる重複排除をしている
 - [ ] Webhookのペイロードをログにそのまま出力していない
