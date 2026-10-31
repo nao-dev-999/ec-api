@@ -176,13 +176,18 @@ GET /api/orders/1/detail  // 必要なものをまとめて返す
 | 401 Unauthorized | 未認証 |
 | 403 Forbidden | 認可エラー（認証済みだが権限なし） |
 | 404 Not Found | リソースが存在しない |
-| 409 Conflict | 楽観ロック競合・重複登録 |
-| 422 Unprocessable Entity | 形式は正しいがビジネスルール違反 |
+| 409 Conflict | 楽観ロック競合・重複登録・ビジネスルール違反 |
 | 500 Internal Server Error | サーバ内部エラー |
 
-400と422の使い分け:
-- 400: 型が違う・必須項目なし等、形式上のエラー
-- 422: 形式は正しいが「在庫がない」「キャンセル済みの注文はキャンセルできない」等のビジネスルール違反
+400と409の使い分け:
+- 400: 型が違う・必須項目なし等、形式上のエラー（リクエスト単体で誤りと判定できるもの）
+- 409: 形式は正しいが、リソースの現在の状態と矛盾するため処理できないもの
+  - 楽観ロック競合（`OPTIMISTIC_LOCK_CONFLICT`）
+  - 重複登録（`CUSTOMER_EMAIL_DUPLICATE` 等）
+  - ビジネスルール違反（「在庫がない」`INSUFFICIENT_STOCK`、「キャンセル済みの注文はキャンセルできない」`ORDER_CANNOT_BE_CANCELLED` 等）
+
+422 Unprocessable Entity は使用しない。ビジネスルール違反も 409 に統一し、クライアントはレスポンスの `code` で原因を判別する。
+例外クラスとステータスの対応は [6. 例外処理](docs/06-exception-handling.md) を参照（409 は `ConflictException` を継承する）。
 
 ---
 
