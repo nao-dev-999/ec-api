@@ -5,12 +5,12 @@ import com.example.ecapi.entity.Coupon;
 import com.example.ecapi.exception.CouponCodeDuplicateException;
 import com.example.ecapi.exception.CouponNotAllowedException;
 import com.example.ecapi.exception.CouponNotFoundException;
+import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.repository.CouponRepository;
 import com.example.ecapi.repository.CustomerOrderRepository;
 import com.example.ecapi.service.coupon.dto.CouponResult;
 import com.example.ecapi.service.coupon.dto.CreateCoupon;
 import com.example.ecapi.service.coupon.dto.UpdateCoupon;
-import jakarta.persistence.OptimisticLockException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -64,7 +64,7 @@ public class CouponService {
 
     /**
      * @throws CouponNotFoundException 指定されたIDのクーポンが見つからない場合
-     * @throws OptimisticLockException 楽観ロックの競合が発生した場合
+     * @throws OptimisticLockConflictException リクエストの version が現在値と異なる場合（他の更新が先に入った）
      */
     @Transactional
     public CouponResult update(UpdateCoupon dto) {
@@ -72,12 +72,12 @@ public class CouponService {
                 couponRepository
                         .findById(dto.id())
                         .orElseThrow(() -> new CouponNotFoundException(dto.id()));
+        OptimisticLockConflictException.throwIfStale(coupon, dto.version());
         if (dto.discountAmount() != null) coupon.setDiscountAmount(dto.discountAmount());
         coupon.setValidFrom(toInstant(dto.validFrom()));
         coupon.setValidTo(toInstant(dto.validTo()));
         coupon.setUsageLimit(dto.usageLimit());
         if (dto.active() != null) coupon.setActive(dto.active());
-        coupon.setVersion(dto.version());
         log.info("Coupon updated couponId={}", dto.id());
         return toResult(couponRepository.save(coupon));
     }

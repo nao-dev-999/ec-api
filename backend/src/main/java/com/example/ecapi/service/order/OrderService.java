@@ -9,6 +9,7 @@ import com.example.ecapi.entity.Product;
 import com.example.ecapi.entity.ShippingAddress;
 import com.example.ecapi.exception.CustomerNotFoundException;
 import com.example.ecapi.exception.InsufficientStockException;
+import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.exception.OrderCannotBeCancelledException;
 import com.example.ecapi.exception.OrderNotFoundException;
 import com.example.ecapi.exception.ProductNotFoundException;
@@ -24,7 +25,6 @@ import com.example.ecapi.service.order.dto.CreateOrder;
 import com.example.ecapi.service.order.dto.CreateOrderItem;
 import com.example.ecapi.service.order.dto.OrderResult;
 import com.example.ecapi.service.order.dto.OrderResultItem;
-import jakarta.persistence.OptimisticLockException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -174,14 +174,14 @@ public class OrderService {
 
     /**
      * @throws OrderNotFoundException 指定されたIDの注文が見つからない場合
-     * @throws OptimisticLockException 楽観ロックの競合が発生した場合
+     * @throws OptimisticLockConflictException リクエストの version が現在値と異なる場合（他の更新が先に入った）
      */
     @Transactional
     public OrderResult updateStatus(Long id, OrderStatus newStatus, int version) {
         CustomerOrder order =
                 orderRepository.findById(id).orElseThrow(() -> new OrderNotFoundException(id));
+        OptimisticLockConflictException.throwIfStale(order, version);
         order.setStatus(newStatus);
-        order.setVersion(version);
         log.info("Order status updated orderId={} status={}", id, newStatus);
         return toOrderResult(orderRepository.save(order));
     }
@@ -192,7 +192,7 @@ public class OrderService {
      *
      * @throws OrderNotFoundException 指定されたIDの注文が見つからない場合
      * @throws OrderCannotBeCancelledException 配達完了またはキャンセル済みの注文をキャンセルしようとした場合
-     * @throws OptimisticLockException 楽観ロックの競合が発生した場合
+     * @throws OptimisticLockConflictException リクエストの version が現在値と異なる場合（他の更新が先に入った）
      */
     @Transactional
     public OrderResult cancel(Long id, int version) {
@@ -200,12 +200,12 @@ public class OrderService {
                 orderRepository
                         .findByIdWithItems(id)
                         .orElseThrow(() -> new OrderNotFoundException(id));
+        OptimisticLockConflictException.throwIfStale(order, version);
         if (order.getStatus() == OrderStatus.DELIVERED
                 || order.getStatus() == OrderStatus.CANCELLED) {
             throw new OrderCannotBeCancelledException(id);
         }
         order.setStatus(OrderStatus.CANCELLED);
-        order.setVersion(version);
         log.info("Order cancelled orderId={}", id);
         order.getItems()
                 .forEach(e -> e.getProduct().setStock(e.getProduct().getStock() + e.getQuantity()));

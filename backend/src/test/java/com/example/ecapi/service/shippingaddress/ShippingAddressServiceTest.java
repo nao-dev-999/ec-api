@@ -51,7 +51,7 @@ class ShippingAddressServiceTest {
         address.setAddressLine1("1-1-1");
         address.setPhoneNumber("090-1111-2222");
         address.setDefault(true);
-        address.setVersion(0);
+        ReflectionTestUtils.setField(address, "version", 0);
         ReflectionTestUtils.setField(address, "createdAt", Instant.now());
         ReflectionTestUtils.setField(address, "updatedAt", Instant.now());
     }

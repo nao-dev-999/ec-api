@@ -6,7 +6,6 @@ import jakarta.persistence.MappedSuperclass;
 import jakarta.persistence.Version;
 import java.time.Instant;
 import lombok.Getter;
-import lombok.Setter;
 import org.springframework.data.annotation.CreatedBy;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedBy;
@@ -34,7 +33,9 @@ public abstract class BaseEntity {
     @Column(name = "updated_by")
     private Long updatedBy;
 
-    @Setter
+    // setter は持たない。Hibernate は管理状態のエンティティに設定した version を楽観ロックの判定に使わないため、
+    // setVersion() でクライアントの version を渡しても競合を検出できない。
+    // 比較はサービス層で OptimisticLockConflictException.throwIfStale() を使って行う。
     @Version
     @Column(nullable = false)
     private int version;

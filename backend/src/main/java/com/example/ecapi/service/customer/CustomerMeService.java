@@ -4,6 +4,7 @@ import com.example.ecapi.entity.Customer;
 import com.example.ecapi.exception.CustomerEmailDuplicateException;
 import com.example.ecapi.exception.CustomerNotFoundException;
 import com.example.ecapi.exception.InvalidCurrentPasswordException;
+import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.repository.CustomerRepository;
 import com.example.ecapi.service.customer.dto.CustomerResult;
 import com.example.ecapi.service.customer.dto.UpdateCustomerEmail;
@@ -45,8 +46,8 @@ public class CustomerMeService {
                 customerRepository
                         .findById(customerId)
                         .orElseThrow(() -> new CustomerNotFoundException(customerId));
+        OptimisticLockConflictException.throwIfStale(customer, dto.version());
         customer.setEmail(dto.email());
-        customer.setVersion(dto.version());
         Customer saved = customerRepository.save(customer);
         log.info("Customer email updated customerId={}", customerId);
         return toResult(saved);
@@ -58,10 +59,10 @@ public class CustomerMeService {
                 customerRepository
                         .findById(customerId)
                         .orElseThrow(() -> new CustomerNotFoundException(customerId));
+        OptimisticLockConflictException.throwIfStale(customer, dto.version());
         if (!passwordEncoder.matches(dto.currentPassword(), customer.getPassword())) {
             throw new InvalidCurrentPasswordException();
         }
-        customer.setVersion(dto.version());
         customer.setPassword(passwordEncoder.encode(dto.newPassword()));
         customerRepository.save(customer);
         log.info("Customer password updated customerId={}", customerId);

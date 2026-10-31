@@ -1,6 +1,7 @@
 package com.example.ecapi.service.shippingaddress;
 
 import com.example.ecapi.entity.ShippingAddress;
+import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.exception.ShippingAddressNotFoundException;
 import com.example.ecapi.repository.ShippingAddressRepository;
 import com.example.ecapi.service.shippingaddress.dto.CreateShippingAddress;
@@ -73,6 +74,7 @@ public class ShippingAddressService {
                 shippingAddressRepository
                         .findByIdAndCustomerId(dto.id(), dto.customerId())
                         .orElseThrow(() -> new ShippingAddressNotFoundException(dto.id()));
+        OptimisticLockConflictException.throwIfStale(address, dto.version());
 
         if (dto.recipientName() != null) address.setRecipientName(dto.recipientName());
         if (dto.postalCode() != null) address.setPostalCode(dto.postalCode());
@@ -87,7 +89,6 @@ public class ShippingAddressService {
         } else if (Boolean.FALSE.equals(dto.isDefault())) {
             address.setDefault(false);
         }
-        address.setVersion(dto.version());
         log.info("ShippingAddress updated id={} customerId={}", dto.id(), dto.customerId());
         return toResult(shippingAddressRepository.save(address));
     }

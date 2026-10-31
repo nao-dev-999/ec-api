@@ -198,11 +198,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
         if (rateLimitExceeded(key)) {
             // ✅ 遮断時は chain.doFilter() を呼ばず、ここで処理を終わらせる
-            response.setStatus(429); // 429 Too Many Requests
-            response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("""
-                    {"status":429,"error":"Too Many Requests","message":"リクエスト数の上限を超えました"}
-                    """);
+            // ✅ JSON は手書きせず FilterErrorResponseWriter で ErrorResponse 形式にそろえる
+            errorResponseWriter.write(response, ErrorCode.TOO_MANY_REQUESTS); // 429
             return;
         }
         chain.doFilter(request, response);
