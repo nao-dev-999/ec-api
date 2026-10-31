@@ -113,6 +113,17 @@ sonar {
                 "**/exception/ErrorResponse.java",
             ).joinToString(","),
         )
+        // java:S110（継承階層が深すぎる）を例外クラスに限って対象外にする。
+        // ビジネス例外は RuntimeException → Exception → Throwable → Object の上に
+        // BusinessException → 中間抽象クラス（BadRequest/ResourceNotFound/Conflict）を重ねる設計
+        // （docs/06-exception-handling.md 6.1）のため、具象例外は必ず親が6つになる。
+        // 例外以外のクラスでは引き続きルールを有効にする。
+        property("sonar.issue.ignore.multicriteria", "s110exception")
+        property("sonar.issue.ignore.multicriteria.s110exception.ruleKey", "java:S110")
+        property(
+            "sonar.issue.ignore.multicriteria.s110exception.resourceKey",
+            "**/com/example/ecapi/exception/**/*.java",
+        )
     }
 }
 
