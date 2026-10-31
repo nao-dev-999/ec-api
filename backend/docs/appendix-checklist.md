@@ -17,3 +17,8 @@
 - [ ] 例外メッセージが `messages.properties` 経由（`ErrorCode` に定数とメッセージキーを追加済み）
 - [ ] 更新処理でクライアントの `version` を `OptimisticLockConflictException.throwIfStale()` で比較している（`setVersion()` は効かない）
 - [ ] 楽観ロックなど Spring が変換する例外は、変換後の型（例: `ObjectOptimisticLockingFailureException`）でテストしている
+- [ ] 新しいエンドポイントがレスポンス構造を破壊的に変更する場合、[14. APIバージョニング](14-api-versioning.md)の方針に沿っている
+- [ ] 外部APIを呼び出す処理にタイムアウトを設定している（[15. 外部API連携](15-external-integration.md)）
+- [ ] 金銭が絡む作成系エンドポイントに `Idempotency-Key` を実装している（[16. 冪等性](16-idempotency.md)）
+- [ ] DTOの `String`・配列フィールドに `@Size(max = ...)` を付与している（[18. セキュリティ強化](18-security-hardening.md)）
+- [ ] 新しいエンドポイントに `@Operation`（summary）を付与している（[21. OpenAPIドキュメント化](21-api-documentation.md)）
