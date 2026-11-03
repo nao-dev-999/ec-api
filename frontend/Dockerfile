@@ -1,0 +1,34 @@
+# ビルドコンテキストはリポジトリルート（backend/batchのDockerfileと合わせる）
+FROM node:20-alpine AS deps
+WORKDIR /app
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci --ignore-scripts
+
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY frontend ./
+
+# NEXT_PUBLIC_*はクライアントバンドルにビルド時に埋め込まれるため、
+# 実行時の環境変数では切り替えられない(buildspec.ymlでビルド引数として渡す)
+ARG NEXT_PUBLIC_API_BASE_URL
+ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+
+RUN npm run build
+
+# 実行ステージ: next.config.tsのoutput: "standalone"が生成する最小ランタイムのみを含める
+FROM node:20-alpine AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+USER nextjs
+EXPOSE 3000
+ENTRYPOINT ["node", "server.js"]

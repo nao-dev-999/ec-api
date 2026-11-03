@@ -71,3 +71,18 @@ variable "manual_approval_enabled" {
   type        = bool
   default     = false
 }
+
+variable "frontend_repository_url" {
+  description = "ECR repository URL for the frontend image"
+  type        = string
+}
+
+variable "frontend_ecs_service_name" {
+  description = "Frontend ECS service name (ECS_Deployアクションの対象)"
+  type        = string
+}
+
+variable "backend_public_url" {
+  description = "backendのALB公開URL(https://...)。frontendのDockerビルド時にNEXT_PUBLIC_API_BASE_URLとして埋め込む(クライアントバンドルに焼き込まれるためビルド時に必要)。"
+  type        = string
+}

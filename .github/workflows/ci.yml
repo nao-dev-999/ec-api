@@ -164,6 +164,9 @@ jobs:
         working-directory: frontend
         run: npm run build
 
+      - name: Build frontend Docker image
+        run: docker build -f frontend/Dockerfile --build-arg NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 -t ec-api-frontend:ci .
+
   dependency-scan:
     runs-on: ubuntu-latest
     permissions:

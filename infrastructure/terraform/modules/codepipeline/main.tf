@@ -1,9 +1,10 @@
 # ---------------------------------------------------------------------------
-# タグトリガーの命名規則: api-${env}-vX.Y.Z / batch-${env}-vX.Y.Z
+# タグトリガーの命名規則: api-${env}-vX.Y.Z / batch-${env}-vX.Y.Z / frontend-${env}-vX.Y.Z
 # ---------------------------------------------------------------------------
 locals {
-  api_tag_pattern   = "api-${var.env}-v*"
-  batch_tag_pattern = "batch-${var.env}-v*"
+  api_tag_pattern      = "api-${var.env}-v*"
+  batch_tag_pattern    = "batch-${var.env}-v*"
+  frontend_tag_pattern = "frontend-${var.env}-v*"
 }
 
 # ---------------------------------------------------------------------------
@@ -528,6 +529,177 @@ resource "aws_codepipeline" "batch" {
         configuration = {
           CustomData = "新しいバッチタスク定義の反映前に手動承認が必要です。"
         }
+      }
+    }
+  }
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+# ---------------------------------------------------------------------------
+# CodeBuild Project - Frontend（Next.js Dockerビルド & ECR push）
+#
+# NEXT_PUBLIC_API_BASE_URLはNext.jsのビルド時にクライアントバンドルへ埋め込まれる値のため
+# (実行時のECSタスク環境変数では切り替えられない)、CodeBuildの環境変数として渡し、
+# frontend/buildspec.ymlからDockerビルド引数として渡す。
+# ---------------------------------------------------------------------------
+resource "aws_codebuild_project" "frontend_build" {
+  name          = "${var.project}-${var.env}-frontend-build"
+  description   = "Build frontend (Next.js) Docker image and push to ECR"
+  build_timeout = 20
+  service_role  = aws_iam_role.codebuild.arn
+
+  artifacts {
+    type = "CODEPIPELINE"
+  }
+
+  environment {
+    compute_type                = "BUILD_GENERAL1_SMALL"
+    image                       = "aws/codebuild/standard:7.0"
+    type                        = "LINUX_CONTAINER"
+    image_pull_credentials_type = "CODEBUILD"
+    privileged_mode             = true # Docker-in-Docker に必要
+
+    environment_variable {
+      name  = "AWS_DEFAULT_REGION"
+      value = var.aws_region
+    }
+    environment_variable {
+      name  = "ECR_REPO_URI"
+      value = var.frontend_repository_url
+    }
+    environment_variable {
+      name  = "NEXT_PUBLIC_API_BASE_URL"
+      value = var.backend_public_url
+    }
+  }
+
+  source {
+    type      = "CODEPIPELINE"
+    buildspec = "frontend/buildspec.yml"
+  }
+
+  logs_config {
+    cloudwatch_logs {
+      group_name = aws_cloudwatch_log_group.codebuild.name
+    }
+  }
+
+  tags = {
+    Project = var.project
+    Env     = var.env
+  }
+}
+
+# ---------------------------------------------------------------------------
+# CodePipeline - Frontend
+#
+# backend/batchと同様、デプロイ・ソースを分離するため独立したパイプラインとする。
+# frontendはECS Serviceを持つ(ALB経由の常駐サービス)ため、batchと異なりDeployステージを持つ
+# (backendのAPIパイプラインと同じ構成: Source → Build → (Approval) → ECS Deploy)。
+# ---------------------------------------------------------------------------
+resource "aws_codepipeline" "frontend" {
+  name          = "${var.project}-${var.env}-frontend-pipeline"
+  role_arn      = aws_iam_role.pipeline.arn
+  pipeline_type = "V2"
+
+  artifact_store {
+    location = aws_s3_bucket.artifacts.bucket
+    type     = "S3"
+  }
+
+  # タグ "frontend-${env}-vX.Y.Z" のpushでのみ起動する（ブランチへの通常pushでは起動しない）
+  trigger {
+    provider_type = "CodeStarSourceConnection"
+
+    git_configuration {
+      source_action_name = "GitHub_Source"
+
+      push {
+        tags {
+          includes = [local.frontend_tag_pattern]
+        }
+      }
+    }
+  }
+
+  stage {
+    name = "Source"
+
+    action {
+      name             = "GitHub_Source"
+      category         = "Source"
+      owner            = "AWS"
+      provider         = "CodeStarSourceConnection"
+      version          = "1"
+      output_artifacts = ["source_output"]
+
+      configuration = {
+        ConnectionArn        = aws_codestarconnections_connection.github.arn
+        FullRepositoryId     = var.github_repository
+        BranchName           = var.github_branch
+        OutputArtifactFormat = "CODE_ZIP"
+        DetectChanges        = "false"
+      }
+    }
+  }
+
+  stage {
+    name = "Build"
+
+    action {
+      name             = "CodeBuild"
+      category         = "Build"
+      owner            = "AWS"
+      provider         = "CodeBuild"
+      version          = "1"
+      input_artifacts  = ["source_output"]
+      output_artifacts = ["build_output"]
+
+      configuration = {
+        ProjectName = aws_codebuild_project.frontend_build.name
+      }
+    }
+  }
+
+  dynamic "stage" {
+    for_each = var.manual_approval_enabled ? [1] : []
+
+    content {
+      name = "Approval"
+
+      action {
+        name     = "ManualApproval"
+        category = "Approval"
+        owner    = "AWS"
+        provider = "Manual"
+        version  = "1"
+
+        configuration = {
+          CustomData = "frontendのECSへのデプロイ前に手動承認が必要です。"
+        }
+      }
+    }
+  }
+
+  stage {
+    name = "Deploy"
+
+    action {
+      name            = "ECS_Deploy"
+      category        = "Deploy"
+      owner           = "AWS"
+      provider        = "ECS"
+      version         = "1"
+      input_artifacts = ["build_output"]
+
+      configuration = {
+        ClusterName = var.ecs_cluster_name
+        ServiceName = var.frontend_ecs_service_name
+        FileName    = "imagedefinitions.json"
       }
     }
   }

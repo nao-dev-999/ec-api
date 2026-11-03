@@ -80,8 +80,12 @@ npm run generate:api-types
 
 ## CI/CD
 
-- GitHub Actions(`.github/workflows/ci.yml`): push 時に Spotless チェック・テストを実行
-- CodePipeline: GitHub → CodeBuild(Docker build → ECR push)→ ECS Run Task(Flyway でマイグレーション)→ ECS Fargate デプロイ
+- GitHub Actions(`.github/workflows/ci.yml`): push 時に Spotless チェック・テスト・frontend の lint/test/build・各 Dockerfile のビルド検証を実行
+- CodePipeline(backend): GitHub(タグ `api-${env}-vX.Y.Z` push)→ CodeBuild(Docker build → ECR push)→ ECS Run Task(Flyway でマイグレーション)→ ECS Fargate デプロイ
+- CodePipeline(batch): GitHub(タグ `batch-${env}-vX.Y.Z` push)→ CodeBuild(Docker build → ECR push → バッチタスク定義の新リビジョン登録)
+- CodePipeline(frontend): GitHub(タグ `frontend-${env}-vX.Y.Z` push)→ CodeBuild(Next.js Docker build → ECR push)→ ECS Fargate デプロイ(backend とは別の ALB・ECS サービス)
+
+backend・batch・frontend はそれぞれ独立したパイプラインで、対応するタグを push したときのみ起動する(ブランチへの通常 push では起動しない)。
 
 インフラの構築手順(Terraform)は `infrastructure/terraform` 配下、および `backend/README.md` の「terraform実行手順」を参照してください。
 

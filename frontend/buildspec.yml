@@ -1,0 +1,29 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo "=== Logging in to Amazon ECR ==="
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
+      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c1-8)
+      - IMAGE_URI="$ECR_REPO_URI:$IMAGE_TAG"
+      - echo "Image URI = $IMAGE_URI"
+
+  build:
+    commands:
+      # NEXT_PUBLIC_API_BASE_URLはCodeBuildプロジェクトの環境変数(terraform: modules/codepipeline)から渡す。
+      # バックエンドのURLをビルド時に埋め込むため、バックエンドのデプロイ後にこのビルドを実行すること。
+      - echo "=== Building Docker image ==="
+      - docker build -f frontend/Dockerfile --build-arg NEXT_PUBLIC_API_BASE_URL="$NEXT_PUBLIC_API_BASE_URL" -t $IMAGE_URI .
+
+  post_build:
+    commands:
+      - echo "=== Pushing image to ECR ==="
+      - docker push $IMAGE_URI
+      - echo "=== Generating imagedefinitions.json ==="
+      - printf '[{"name":"frontend","imageUri":"%s"}]' "$IMAGE_URI" > imagedefinitions.json
+      - cat imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json

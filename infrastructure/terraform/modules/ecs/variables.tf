@@ -6,6 +6,7 @@ variable "vpc_id" { type = string }
 variable "private_subnet_ids" { type = list(string) }
 variable "alb_sg_id" { type = string }
 variable "target_group_arn" { type = string }
+variable "frontend_alb_sg_id" { type = string }
 
 variable "app_image_url" { type = string }
 variable "app_image_tag" {
@@ -30,6 +31,11 @@ variable "swagger_enabled" {
   type        = bool
   default     = false
   description = "Swagger UI(/swagger-ui, /v3/api-docs)をこの環境で公開するか。安全側のデフォルトとして無効。"
+}
+
+variable "frontend_public_url" {
+  type        = string
+  description = "frontendのALB公開URL(https://...)。backendコンテナのCORS許可オリジン(APP_CORS_ALLOWED_ORIGINS)に設定する。"
 }
 
 variable "task_cpu" {
@@ -114,4 +120,37 @@ variable "redis_num_cache_clusters" {
 variable "redis_notification_topic_arn" {
   type    = string
   default = null
+}
+
+variable "frontend_image_url" { type = string }
+variable "frontend_image_tag" {
+  type    = string
+  default = "latest"
+}
+
+variable "frontend_target_group_arn" { type = string }
+
+variable "frontend_cpu" {
+  type    = string
+  default = "256"
+}
+
+variable "frontend_memory" {
+  type    = string
+  default = "512"
+}
+
+variable "frontend_desired_count" {
+  type    = number
+  default = 1
+}
+
+variable "frontend_min_capacity" {
+  type    = number
+  default = 1
+}
+
+variable "frontend_max_capacity" {
+  type    = number
+  default = 2
 }

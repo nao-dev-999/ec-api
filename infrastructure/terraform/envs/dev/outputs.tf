@@ -38,6 +38,20 @@ output "batch_pipeline_name" {
   value = module.codepipeline.batch_pipeline_name
 }
 
+output "alb_frontend_dns_name" {
+  description = "frontend ALB DNS名（ブラウザでアクセスするURL）"
+  value       = module.alb_frontend.alb_dns_name
+}
+
+output "ecr_frontend_repository_url" {
+  description = "frontendのECRリポジトリURL"
+  value       = module.ecr.frontend_repository_url
+}
+
+output "frontend_pipeline_name" {
+  value = module.codepipeline.frontend_pipeline_name
+}
+
 #output "config_sns_topic_arn" {
 #  description = "AWS Config通知用SNSトピックARN"
 #  value       = module.config.sns_topic_arn
