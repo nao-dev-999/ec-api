@@ -55,7 +55,13 @@ describe("ProductReviews", () => {
 
   it("shows an empty state when there are no reviews", async () => {
     vi.mocked(getProductReviews).mockResolvedValue({
-      reviews: { content: [], page: 0, size: 10, totalElements: 0, totalPages: 1 },
+      reviews: {
+        content: [],
+        page: 0,
+        size: 10,
+        totalElements: 0,
+        totalPages: 1,
+      },
       summary: { averageRating: 0, reviewCount: 0 },
     });
 

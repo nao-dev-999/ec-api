@@ -6,6 +6,12 @@ variable "env" {
   type = string
 }
 
+variable "name" {
+  type        = string
+  default     = ""
+  description = "同一project/envで複数のALBを作る場合の識別用サフィックス(例: frontend)。空文字なら既存の命名(project-env-*)を維持する(backend用ALBとの後方互換のため)。"
+}
+
 variable "vpc_id" {
   type = string
 }

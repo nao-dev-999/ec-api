@@ -140,7 +140,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          # jsdom 30.x(テストで使用)の依存undici 8.xがNode >=22.19.0を要求するため、
+          # Node 20(既にLTS終了)ではvitest実行時に失敗する。Node 22を使う。
+          node-version: '22'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -163,6 +165,9 @@ jobs:
       - name: Build
         working-directory: frontend
         run: npm run build
+
+      - name: Build frontend Docker image
+        run: docker build -f frontend/Dockerfile --build-arg NEXT_PUBLIC_API_BASE_URL=http://localhost:8080 -t ec-api-frontend:ci .
 
   dependency-scan:
     runs-on: ubuntu-latest

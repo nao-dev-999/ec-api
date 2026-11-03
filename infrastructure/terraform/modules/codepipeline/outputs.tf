@@ -9,3 +9,7 @@ output "artifacts_bucket" {
 output "batch_pipeline_name" {
   value = aws_codepipeline.batch.name
 }
+
+output "frontend_pipeline_name" {
+  value = aws_codepipeline.frontend.name
+}

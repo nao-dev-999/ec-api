@@ -1,15 +1,22 @@
 data "aws_caller_identity" "current" {}
 
+# var.name = "" の間はbackend用ALBの既存命名(project-env-*)をそのまま維持し、
+# 既存リソースの置き換え(destroy/再作成)を発生させない。
+# var.nameを指定した場合のみ、同一project/envで複数ALBを作れるよう命名を分岐する。
+locals {
+  name_prefix = var.name != "" ? "${var.project}-${var.env}-${var.name}" : "${var.project}-${var.env}"
+}
+
 # ---------------------------------------------------------------------------
 # ALBアクセスログ保存用S3バケット
 # 障害調査やWAF誤検知の裏付けにアクセスログが必要なため出力する
 # ---------------------------------------------------------------------------
 resource "aws_s3_bucket" "access_logs" {
-  bucket        = "${var.project}-${var.env}-alb-logs"
+  bucket        = "${local.name_prefix}-alb-logs"
   force_destroy = true
 
   tags = {
-    Name    = "${var.project}-${var.env}-alb-logs"
+    Name    = "${local.name_prefix}-alb-logs"
     Project = var.project
     Env     = var.env
   }
@@ -93,14 +100,14 @@ resource "aws_s3_bucket_policy" "access_logs" {
         Effect    = "Allow"
         Principal = { AWS = data.aws_elb_service_account.current.arn }
         Action    = "s3:PutObject"
-        Resource  = "${aws_s3_bucket.access_logs.arn}/${var.project}-${var.env}-alb/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+        Resource  = "${aws_s3_bucket.access_logs.arn}/${local.name_prefix}-alb/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
       },
       {
         Sid       = "ELBLogDeliveryWrite"
         Effect    = "Allow"
         Principal = { Service = "logdelivery.elasticloadbalancing.amazonaws.com" }
         Action    = "s3:PutObject"
-        Resource  = "${aws_s3_bucket.access_logs.arn}/${var.project}-${var.env}-alb/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
+        Resource  = "${aws_s3_bucket.access_logs.arn}/${local.name_prefix}-alb/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
       }
     ]
   })
@@ -111,7 +118,7 @@ resource "aws_s3_bucket_policy" "access_logs" {
 resource "aws_lb" "this" {
   count = var.enable_alb ? 1 : 0
 
-  name               = "${var.project}-${var.env}-alb"
+  name               = "${local.name_prefix}-alb"
   internal           = false
   load_balancer_type = "application"
   subnets            = var.public_subnet_ids
@@ -131,19 +138,19 @@ resource "aws_lb" "this" {
 
   access_logs {
     bucket  = aws_s3_bucket.access_logs.id
-    prefix  = "${var.project}-${var.env}-alb"
+    prefix  = "${local.name_prefix}-alb"
     enabled = true
   }
 
   tags = {
-    Name = "${var.project}-${var.env}-alb"
+    Name = "${local.name_prefix}-alb"
   }
 
   depends_on = [aws_s3_bucket_policy.access_logs]
 }
 
 resource "aws_security_group" "alb" {
-  name   = "${var.project}-${var.env}-alb-sg"
+  name   = "${local.name_prefix}-alb-sg"
   vpc_id = var.vpc_id
 
   # このSGのルールは全て aws_vpc_security_group_ingress_rule / aws_vpc_security_group_egress_rule
@@ -155,7 +162,7 @@ resource "aws_security_group" "alb" {
   #   全方向拒否の状態で作成する）
 
   tags = {
-    Name = "${var.project}-${var.env}-alb-sg"
+    Name = "${local.name_prefix}-alb-sg"
   }
 }
 
@@ -181,7 +188,7 @@ resource "aws_vpc_security_group_ingress_rule" "alb_https" {
 # 避けるため envs/dev/main.tf 側で aws_vpc_security_group_egress_rule として定義する。
 
 resource "aws_lb_target_group" "this" {
-  name        = "${var.project}-${var.env}-tg"
+  name        = "${local.name_prefix}-tg"
   port        = var.target_port
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
@@ -203,7 +210,7 @@ resource "aws_lb_target_group" "this" {
   }
 
   tags = {
-    Name    = "${var.project}-${var.env}-tg"
+    Name    = "${local.name_prefix}-tg"
     Project = var.project
     Env     = var.env
   }

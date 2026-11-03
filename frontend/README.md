@@ -97,3 +97,24 @@ src/
 - すべてのリクエストは `src/lib/api/client.ts` の `apiFetch` を経由します。
 - 認証は Cookie ベースのセッションで、`credentials: "include"` を付けて送信します(管理者: `/api/auth/*`、顧客: `/api/customer/auth/*`)。
 - エラー時は `ApiError`(HTTP ステータス + レスポンスボディ)が throw されます。
+
+## デプロイ(CI/CD)
+
+```
+GitHub push（frontend/ 配下の変更が対象）
+  │
+  ├─► GitHub Actions CI (.github/workflows/ci.yml、リポジトリルート)
+  │     ├─ lint / format:check / test / build
+  │     └─ Dockerfile で image build（CI検証のみ、push はしない）
+  │
+  └─► タグ "frontend-${env}-vX.Y.Z" push後: AWS CodePipeline（Terraform管理: infrastructure/terraform）
+        ├─ Source: GitHub (CodeStar Connections)
+        ├─ Build: CodeBuild → Next.js Docker build → ECR push
+        │    ※ NEXT_PUBLIC_API_BASE_URL はクライアントバンドルにビルド時に埋め込まれるため、
+        │      CodeBuild の環境変数(backend ALB の公開URL)からビルド引数として渡す
+        └─ Deploy: ECS Fargate サービスのローリングアップデート(backend とは別の ALB・ECS サービス)
+```
+
+- `Dockerfile`: `next.config.ts` の `output: "standalone"` を前提にした multi-stage build(`node:22-alpine`)。ビルドステージで `NEXT_PUBLIC_API_BASE_URL` を ARG として受け取る。
+- backend 側は `APP_CORS_ALLOWED_ORIGINS`(デフォルト `http://localhost:3000`)で frontend の公開URLを許可オリジンに加える必要がある(`infrastructure/terraform/modules/ecs` が自動で設定)。
+- backend・frontend それぞれ別ドメイン(別ALB)でホストする構成のため、Cookie の `SameSite=Lax` 設定上、本番運用では同一ドメインの別サブドメイン(例: `app.example.com` / `api.example.com`)に揃える必要がある。現時点ではドメイン未取得のため両ALBとも自己署名証明書を使っており、この制約の解消は今後の対応。

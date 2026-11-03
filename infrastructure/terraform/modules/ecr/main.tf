@@ -54,6 +54,23 @@ resource "aws_ecr_repository" "batch" {
   }
 }
 
+resource "aws_ecr_repository" "frontend" {
+  name                 = "${var.project}-${var.env}-frontend"
+  image_tag_mutability = "MUTABLE"
+
+  image_scanning_configuration {
+    scan_on_push = true
+  }
+
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
+
+  tags = {
+    Name = "${var.project}-${var.env}-frontend"
+  }
+}
+
 locals {
   # 未タグ付け(タグ上書きで浮いた旧イメージ)はビルドのたびに増え続けるため、
   # 直近を残しつつ一定数を超えたら古いものから自動削除する。
@@ -88,5 +105,10 @@ resource "aws_ecr_lifecycle_policy" "flyway" {
 
 resource "aws_ecr_lifecycle_policy" "batch" {
   repository = aws_ecr_repository.batch.name
+  policy     = local.lifecycle_policy
+}
+
+resource "aws_ecr_lifecycle_policy" "frontend" {
+  repository = aws_ecr_repository.frontend.name
   policy     = local.lifecycle_policy
 }

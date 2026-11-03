@@ -73,7 +73,7 @@ terraform apply -target=module.vpc -target=module.ecr
 ### ステップ2: 永続レイア（DB）の作成
 terraform apply -target=module.rds
 
-### ステップ3: 残り（ALB, ECS, CodePipeline）をすべて作成
+### ステップ3: 残り（ALB×2[backend/frontend], ECS, CodePipeline）をすべて作成
 terraform apply
 
 ### dev環境のスリープモード（コスト削減）
@@ -95,10 +95,10 @@ terraform apply -var="sleep_mode=false"
 | リソース | スリープ中 |
 |---|---|
 | NAT Gateway / EIP | 削除（プライベートサブネットはVPC内通信のみ） |
-| ALB / リスナー | 削除（ターゲットグループ・SG・証明書は残す） |
+| ALB / リスナー(backend・frontend) | 削除（ターゲットグループ・SG・証明書は残す） |
 | WAF WebACL | 削除（ログバケットは残す） |
 | ElastiCache Redis | 削除（中身のデータは消える） |
-| ECSサービス | 残す（オートスケールのmin/maxを0にしてタスク数0） |
+| ECSサービス(backend・frontend) | 残す（オートスケールのmin/maxを0にしてタスク数0） |
 | RDS | 停止（データは残る。ストレージ料金のみ） |
 | 日次バッチのスケジュール | 無効化 |
 | RDS自動起動の検知・再停止 | 作成（スリープ中のみ） |
