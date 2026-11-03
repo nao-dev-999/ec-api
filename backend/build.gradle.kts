@@ -53,7 +53,7 @@ dependencies {
     testImplementation("org.apache.poi:poi:6.0.0")
     testImplementation("org.apache.poi:poi-ooxml:6.0.0")
 
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0")
 }
 
 tasks.withType<Test> {
