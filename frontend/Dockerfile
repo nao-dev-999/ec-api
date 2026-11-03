@@ -16,6 +16,9 @@ COPY frontend ./
 ARG NEXT_PUBLIC_API_BASE_URL
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 
+# public/はこのアプリに静的アセットが無く未作成のため、無い場合でもCOPYが失敗しないよう保証する
+RUN mkdir -p public
+
 RUN npm run build
 
 # 実行ステージ: next.config.tsのoutput: "standalone"が生成する最小ランタイムのみを含める
