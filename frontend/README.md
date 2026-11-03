@@ -115,6 +115,6 @@ GitHub push（frontend/ 配下の変更が対象）
         └─ Deploy: ECS Fargate サービスのローリングアップデート(backend とは別の ALB・ECS サービス)
 ```
 
-- `Dockerfile`: `next.config.ts` の `output: "standalone"` を前提にした multi-stage build(`node:20-alpine`)。ビルドステージで `NEXT_PUBLIC_API_BASE_URL` を ARG として受け取る。
+- `Dockerfile`: `next.config.ts` の `output: "standalone"` を前提にした multi-stage build(`node:22-alpine`)。ビルドステージで `NEXT_PUBLIC_API_BASE_URL` を ARG として受け取る。
 - backend 側は `APP_CORS_ALLOWED_ORIGINS`(デフォルト `http://localhost:3000`)で frontend の公開URLを許可オリジンに加える必要がある(`infrastructure/terraform/modules/ecs` が自動で設定)。
 - backend・frontend それぞれ別ドメイン(別ALB)でホストする構成のため、Cookie の `SameSite=Lax` 設定上、本番運用では同一ドメインの別サブドメイン(例: `app.example.com` / `api.example.com`)に揃える必要がある。現時点ではドメイン未取得のため両ALBとも自己署名証明書を使っており、この制約の解消は今後の対応。

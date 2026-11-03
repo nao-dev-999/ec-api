@@ -12,7 +12,7 @@ Spring Boot (backend) + Next.js (frontend) で構成された EC サイトのサ
 |--------|----------------|
 | Docker / docker-compose | 最新 |
 | Java | 25 |
-| Node.js | 20 以上 |
+| Node.js | 22 以上(jsdom 30.x が要求) |
 | npm | Node.js に同梱のもの |
 
 ## セットアップ手順

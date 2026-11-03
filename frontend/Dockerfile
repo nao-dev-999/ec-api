@@ -1,10 +1,12 @@
 # ビルドコンテキストはリポジトリルート（backend/batchのDockerfileと合わせる）
-FROM node:20-alpine AS deps
+# jsdom 30.x(テストで使用)の依存undici 8.xがNode >=22.19.0を要求するため、CI(ci.yml)と
+# 合わせてNode 22を使う(Node 20は既にLTS終了)。
+FROM node:22-alpine AS deps
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --ignore-scripts
 
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY frontend ./
@@ -17,7 +19,7 @@ ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 RUN npm run build
 
 # 実行ステージ: next.config.tsのoutput: "standalone"が生成する最小ランタイムのみを含める
-FROM node:20-alpine AS runtime
+FROM node:22-alpine AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
