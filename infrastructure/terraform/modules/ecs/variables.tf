@@ -9,8 +9,9 @@ variable "target_group_arn" { type = string }
 
 variable "app_image_url" { type = string }
 variable "app_image_tag" {
-  type    = string
-  default = "latest"
+  type        = string
+  default     = null
+  description = "appイメージのタグ。null(既定)の場合は現在デプロイ済みのイメージをAWSから読み取って使う。初回構築時(読み取り元が存在しない)のみ明示指定する。"
 }
 
 variable "flyway_image_url" { type = string }
@@ -59,8 +60,9 @@ variable "max_capacity" {
 
 variable "batch_image_url" { type = string }
 variable "batch_image_tag" {
-  type    = string
-  default = "latest"
+  type        = string
+  default     = null
+  description = "batchイメージのタグ。null(既定)の場合は現在デプロイ済みのイメージをAWSから読み取って使う。初回構築時(読み取り元が存在しない)のみ明示指定する。"
 }
 
 variable "batch_cpu" {

@@ -93,7 +93,6 @@ module "ecs" {
   target_group_arn   = module.alb.target_group_arn
 
   app_image_url = module.ecr.app_repository_url
-  app_image_tag = "latest"
 
   flyway_image_url = module.ecr.flyway_repository_url
   flyway_image_tag = "latest"
@@ -110,7 +109,6 @@ module "ecs" {
   max_capacity  = var.sleep_mode ? 0 : 4
 
   batch_image_url          = module.ecr.batch_repository_url
-  batch_image_tag          = "latest"
   batch_private_subnet_ids = module.vpc.private_subnet_ids
 
   batch_schedule_enabled = !var.sleep_mode
