@@ -81,7 +81,9 @@ export default function AdminProductsPage() {
         );
         setCategoriesByProduct(Object.fromEntries(entries));
       })
-      .catch((err) => setError(getErrorMessage(err, "商品一覧の取得に失敗しました")));
+      .catch((err) =>
+        setError(getErrorMessage(err, "商品一覧の取得に失敗しました")),
+      );
     getAdminCategories()
       .then(setCategories)
       .catch(() => {

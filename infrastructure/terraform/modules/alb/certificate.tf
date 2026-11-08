@@ -10,7 +10,7 @@ resource "tls_self_signed_cert" "this" {
   private_key_pem = tls_private_key.this.private_key_pem
 
   subject {
-    common_name  = "${var.project}-${var.env}.local"
+    common_name  = "${local.name_prefix}.local"
     organization = var.project
   }
 
@@ -32,6 +32,6 @@ resource "aws_acm_certificate" "self_signed" {
   }
 
   tags = {
-    Name = "${var.project}-${var.env}-self-signed"
+    Name = "${local.name_prefix}-self-signed"
   }
 }

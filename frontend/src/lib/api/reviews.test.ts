@@ -18,7 +18,13 @@ describe("reviews api", () => {
 
   it("getProductReviews requests the given page/size", async () => {
     vi.mocked(apiFetch).mockResolvedValue({
-      reviews: { content: [], page: 1, size: 5, totalElements: 0, totalPages: 1 },
+      reviews: {
+        content: [],
+        page: 1,
+        size: 5,
+        totalElements: 0,
+        totalPages: 1,
+      },
       summary: { averageRating: 0, reviewCount: 0 },
     });
 
@@ -31,7 +37,13 @@ describe("reviews api", () => {
 
   it("getProductReviews defaults to page 0 / size 20", async () => {
     vi.mocked(apiFetch).mockResolvedValue({
-      reviews: { content: [], page: 0, size: 20, totalElements: 0, totalPages: 1 },
+      reviews: {
+        content: [],
+        page: 0,
+        size: 20,
+        totalElements: 0,
+        totalPages: 1,
+      },
       summary: { averageRating: 0, reviewCount: 0 },
     });
 

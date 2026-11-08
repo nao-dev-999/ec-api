@@ -19,7 +19,12 @@ export default async function ProductsPage() {
           <li key={product.id}>
             <Link
               href={`/products/${product.id}`}
-              style={{ display: "flex", alignItems: "center", gap: 12, flex: 1 }}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                flex: 1,
+              }}
             >
               {product.imageUrl && (
                 // eslint-disable-next-line @next/next/no-img-element

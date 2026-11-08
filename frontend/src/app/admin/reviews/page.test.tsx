@@ -76,6 +76,8 @@ describe("AdminReviewsPage", () => {
     fireEvent.click(deleteButtons[deleteButtons.length - 1]);
 
     await waitFor(() => expect(deleteAdminReview).toHaveBeenCalledWith(1));
-    expect(await screen.findByText("レビューはまだありません")).toBeInTheDocument();
+    expect(
+      await screen.findByText("レビューはまだありません"),
+    ).toBeInTheDocument();
   });
 });

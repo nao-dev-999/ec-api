@@ -62,6 +62,24 @@ module "alb" {
   depends_on = [module.vpc]
 }
 
+# ALB - Frontend（Next.js用。backendとはAPIを完全に分離するため別ALB・別ドメイン想定）
+module "alb_frontend" {
+  source = "../../modules/alb"
+
+  project           = var.project
+  env               = var.env
+  name              = "frontend"
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.vpc.public_subnet_ids
+  target_port       = 3000
+  health_check_path = "/"
+
+  enable_alb                 = !var.sleep_mode
+  enable_deletion_protection = false # devでは頻繁に作り直すためfalse。本番環境ではtrueにすること
+
+  depends_on = [module.vpc]
+}
+
 # WAF（ALBの手前でIPアドレス単位のレートベース制限）
 module "waf" {
   source = "../../modules/waf"
@@ -91,6 +109,7 @@ module "ecs" {
   private_subnet_ids = module.vpc.private_subnet_ids
   alb_sg_id          = module.alb.alb_sg_id
   target_group_arn   = module.alb.target_group_arn
+  frontend_alb_sg_id = module.alb_frontend.alb_sg_id
 
   app_image_url = module.ecr.app_repository_url
 
@@ -116,15 +135,26 @@ module "ecs" {
 
   swagger_enabled = var.swagger_enabled
 
+  # backendコンテナのCORS許可オリジン(enable_alb=falseの間はnullになるためダミーのhttps URLを渡す)
+  frontend_public_url = module.alb_frontend.alb_dns_name != null ? "https://${module.alb_frontend.alb_dns_name}" : "https://frontend-disabled.invalid"
+
+  frontend_image_url        = module.ecr.frontend_repository_url
+  frontend_image_tag        = "latest"
+  frontend_target_group_arn = module.alb_frontend.target_group_arn
+
+  frontend_desired_count = var.sleep_mode ? 0 : 1
+  frontend_min_capacity  = var.sleep_mode ? 0 : 1
+  frontend_max_capacity  = var.sleep_mode ? 0 : 2
+
   # ElastiCache/Fargateタスクのように、VPC内にENIを持つリソースはvpc_id/subnet_ids経由の
   # 暗黙の依存だけではInternet Gatewayとの順序が保証されない(module.alb/module.rdsと同じ理由)。
   # destroy時のIGWデタッチ詰まりを防ぐため明示的に依存させる。
   #
-  # module.alb も同様の理由で明示的に依存させる。aws_ecs_service.appはtarget_group_arn経由で
-  # ターゲットグループ(常に作成される)しか参照せず、リスナー(aws_lb_listener、enable_alb=falseの間は
-  # count=0)には暗黙の依存が無いため、ECSサービスがリスナーのLB紐付け完了を待たずに作成され、
-  # 「target group does not have an associated load balancer」エラーになることがある。
-  depends_on = [module.vpc, module.alb]
+  # module.alb/module.alb_frontend も同様の理由で明示的に依存させる。aws_ecs_service.app/frontendは
+  # target_group_arn経由でターゲットグループ(常に作成される)しか参照せず、リスナー(aws_lb_listener、
+  # enable_alb=falseの間はcount=0)には暗黙の依存が無いため、ECSサービスがリスナーのLB紐付け完了を
+  # 待たずに作成され、「target group does not have an associated load balancer」エラーになることがある。
+  depends_on = [module.vpc, module.alb, module.alb_frontend]
 }
 
 # ALB -> ECSタスクへのアウトバウンドをアプリポート(8080)のみに限定する。
@@ -137,6 +167,16 @@ resource "aws_vpc_security_group_egress_rule" "alb_egress_to_ecs" {
   description                  = "Allow to ECS Fargate tasks (app port)"
   from_port                    = 8080
   to_port                      = 8080
+  ip_protocol                  = "tcp"
+  referenced_security_group_id = module.ecs.ecs_sg_id
+}
+
+# alb_frontend -> ECS(frontendコンテナ、3000番)も同じ理由(モジュール間循環参照回避)でenv層に定義する。
+resource "aws_vpc_security_group_egress_rule" "alb_frontend_egress_to_ecs" {
+  security_group_id            = module.alb_frontend.alb_sg_id
+  description                  = "Allow to ECS Fargate tasks (frontend port)"
+  from_port                    = 3000
+  to_port                      = 3000
   ip_protocol                  = "tcp"
   referenced_security_group_id = module.ecs.ecs_sg_id
 }
@@ -166,6 +206,11 @@ module "codepipeline" {
 
   batch_repository_url         = module.ecr.batch_repository_url
   batch_task_definition_family = module.ecs.batch_task_definition_family
+
+  frontend_repository_url   = module.ecr.frontend_repository_url
+  frontend_ecs_service_name = module.ecs.frontend_service_name
+  # frontendのDockerビルド時にNEXT_PUBLIC_API_BASE_URLとして埋め込むbackendの公開URL
+  backend_public_url = module.alb.alb_dns_name != null ? "https://${module.alb.alb_dns_name}" : "https://backend-disabled.invalid"
 
   manual_approval_enabled = var.manual_approval_enabled
 }
