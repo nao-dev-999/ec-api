@@ -1,7 +1,7 @@
 plugins {
     id("org.springframework.boot") version "4.1.2" apply false
     id("io.spring.dependency-management") version "1.1.7" apply false
-    id("com.diffplug.spotless") version "8.10.4"
+    id("com.diffplug.spotless") version "8.11.0"
     id("org.sonarqube") version "7.5.0.8588"
     id("io.gatling.gradle") version "3.16.0" apply false
 }
