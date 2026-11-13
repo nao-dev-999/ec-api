@@ -42,9 +42,30 @@ resource "aws_ssm_document" "restop" {
           DesiredValues        = ["available"]
         }
       },
+      # 自動起動直後は再起動・Enhanced Monitoring/Performance Insightsの再設定・バックアップが続き、
+      # available とそれ以外の状態を数分間行き来する。一瞬の available で停止するとInvalidDBInstanceStateで
+      # 失敗するため、落ち着くまで待ってから再度 available を待つ。
       {
-        name   = "StopInstance"
-        action = "aws:executeAwsApi"
+        name   = "WaitForPostStartTasks"
+        action = "aws:sleep"
+        inputs = { Duration = "PT15M" }
+      },
+      {
+        name           = "WaitForAvailableAgain"
+        action         = "aws:waitForAwsResourceProperty"
+        timeoutSeconds = 3600
+        inputs = {
+          Service              = "rds"
+          Api                  = "DescribeDBInstances"
+          DBInstanceIdentifier = "{{ InstanceId }}"
+          PropertySelector     = "$.DBInstances[0].DBInstanceStatus"
+          DesiredValues        = ["available"]
+        }
+      },
+      {
+        name        = "StopInstance"
+        action      = "aws:executeAwsApi"
+        maxAttempts = 3
         inputs = {
           Service              = "rds"
           Api                  = "StopDBInstance"
@@ -119,9 +140,14 @@ resource "aws_iam_role_policy" "restop_events" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect   = "Allow"
-        Action   = "ssm:StartAutomationExecution"
-        Resource = "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:automation-definition/${aws_ssm_document.restop[0].name}:*"
+        Effect = "Allow"
+        Action = "ssm:StartAutomationExecution"
+        # 認可はautomation-definitionだけでなくdocument側のARNでも評価されるため両方を許可する。
+        # (document側が無いとAccessDeniedになり、Automationの実行自体が作られない)
+        Resource = [
+          "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:automation-definition/${aws_ssm_document.restop[0].name}:*",
+          aws_ssm_document.restop[0].arn,
+        ]
       },
       {
         Effect   = "Allow"
