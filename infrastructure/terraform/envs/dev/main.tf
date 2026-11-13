@@ -97,6 +97,66 @@ module "ecr" {
   env     = var.env
 }
 
+# ---------------------------------------------------------------------------
+# 現在デプロイ済みのapp/batchタスク定義の読み取り
+# ---------------------------------------------------------------------------
+# イメージのタグ(コミットSHA)はCodePipelineが決めるため、Terraformはタグを固定せず
+# 「今動いているイメージ」をAWSから読み取ってタスク定義に入れる。これにより、
+# Terraformでタスク定義の設定(CPU/メモリ/環境変数等)を変えてapplyしたとき、
+# イメージはそのままで設定だけが反映される。
+#
+# module.ecsの中ではなくここ(depends_onの無いルート)で読み取る: module.ecsにはモジュール単位の
+# depends_on = [module.vpc, module.alb, module.alb_frontend] があるため、モジュール内のdata sourceは
+# それらに変更がある plan(sleep_modeの切り替え時は毎回)で読み取りがapply時まで遅れ、
+# イメージがknown after applyになる(タスク定義のreplaceが毎回計画され、:latestのpreconditionも
+# plan時に判定されなくなる)。ここではクラスタ名・サービス名を文字列で組み立て、管理リソースを参照しない。
+#
+# *_image_tag を明示した場合(初回構築時など、読み取り元が存在しないとき)はその値を優先し、読み取りは行わない。
+data "aws_caller_identity" "current" {}
+
+locals {
+  ecs_cluster_name     = "${var.project}-${var.env}-cluster"
+  ecs_app_service_name = "${var.project}-${var.env}-app-service"
+}
+
+# app: ECSサービスが現在使っているタスク定義
+data "aws_ecs_service" "app_current" {
+  count        = var.app_image_tag == null ? 1 : 0
+  service_name = local.ecs_app_service_name
+  cluster_arn  = "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${local.ecs_cluster_name}"
+}
+
+data "aws_ecs_container_definition" "app_current" {
+  count           = var.app_image_tag == null ? 1 : 0
+  task_definition = data.aws_ecs_service.app_current[0].task_definition
+  container_name  = "app"
+}
+
+# batch: サービスが無いため、ファミリーの最新ACTIVEリビジョン(Step Functionsが実行するもの)
+data "aws_ecs_container_definition" "batch_current" {
+  count           = var.batch_image_tag == null ? 1 : 0
+  task_definition = "${var.project}-${var.env}-batch"
+  container_name  = "batch"
+}
+
+locals {
+  app_image   = var.app_image_tag != null ? "${module.ecr.app_repository_url}:${var.app_image_tag}" : data.aws_ecs_container_definition.app_current[0].image
+  batch_image = var.batch_image_tag != null ? "${module.ecr.batch_repository_url}:${var.batch_image_tag}" : data.aws_ecs_container_definition.batch_current[0].image
+
+  # 現在のappタスク定義の環境変数(読み取っていない場合は空)
+  app_current_environment = var.app_image_tag == null ? data.aws_ecs_container_definition.app_current[0].environment : {}
+
+  # スリープ中(Redis・frontend ALBが無い間)にappタスク定義へ入れる値。
+  # ダミー値に書き換えるとスリープ移行時にタスク定義が変わり、サービスのローリング更新が
+  # min/maxの0化より先に走る(NAT Gateway削除後のため新タスクはイメージpullに失敗する)。
+  # これを避けるため、スリープ中は現在のタスク定義の値をそのまま使ってタスク定義を据え置く。
+  # タスクは0台なので値は使われず、起こすときに実際の値へ更新される(その時点ではタスク0台のまま
+  # 新リビジョンに切り替わり、その後min/maxが戻ってタスクが起動する)。
+  # 読み取り元が無い場合(初回構築時など)はダミー値を使う。
+  app_redis_host_while_sleeping   = lookup(local.app_current_environment, "SPRING_DATA_REDIS_HOST", "redis-disabled.invalid")
+  app_cors_origins_while_sleeping = lookup(local.app_current_environment, "APP_CORS_ALLOWED_ORIGINS", "https://frontend-disabled.invalid")
+}
+
 # ECS (Fargate + ElastiCache Redis)
 module "ecs" {
   source = "../../modules/ecs"
@@ -111,7 +171,7 @@ module "ecs" {
   target_group_arn   = module.alb.target_group_arn
   frontend_alb_sg_id = module.alb_frontend.alb_sg_id
 
-  app_image_url = module.ecr.app_repository_url
+  app_image = local.app_image
 
   flyway_image_url = module.ecr.flyway_repository_url
   flyway_image_tag = "latest"
@@ -127,16 +187,19 @@ module "ecs" {
   min_capacity  = var.sleep_mode ? 0 : 2
   max_capacity  = var.sleep_mode ? 0 : 4
 
-  batch_image_url          = module.ecr.batch_repository_url
+  batch_image              = local.batch_image
   batch_private_subnet_ids = module.vpc.private_subnet_ids
 
   batch_schedule_enabled = !var.sleep_mode
   enable_redis           = !var.sleep_mode
+  # スリープ中はappタスク定義を据え置く(上のlocals参照)
+  redis_host_when_disabled = local.app_redis_host_while_sleeping
 
   swagger_enabled = var.swagger_enabled
 
-  # backendコンテナのCORS許可オリジン(enable_alb=falseの間はnullになるためダミーのhttps URLを渡す)
-  frontend_public_url = module.alb_frontend.alb_dns_name != null ? "https://${module.alb_frontend.alb_dns_name}" : "https://frontend-disabled.invalid"
+  # backendコンテナのCORS許可オリジン(enable_alb=falseの間はnullになるため、現在のタスク定義の値を渡して
+  # タスク定義を据え置く。上のlocals参照)
+  frontend_public_url = module.alb_frontend.alb_dns_name != null ? "https://${module.alb_frontend.alb_dns_name}" : local.app_cors_origins_while_sleeping
 
   frontend_image_url        = module.ecr.frontend_repository_url
   frontend_image_tag        = "latest"

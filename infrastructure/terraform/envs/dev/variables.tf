@@ -9,6 +9,18 @@ variable "sleep_mode" {
   description = "trueにすると時間課金のリソース(NAT Gateway・ALB・WAF・Redis等)を削除・停止してコストを抑える(destroyせずに済む)。falseで元に戻る"
 }
 
+# ECSイメージ(通常はnullのまま。現在デプロイ済みのイメージをAWSから読み取って使う)
+variable "app_image_tag" {
+  type        = string
+  default     = null
+  description = "appイメージのタグ。null(既定)の場合は現在デプロイ済みのイメージをAWSから読み取って使う。初回構築時(ECSサービスがまだ無い)のみ明示指定する。"
+}
+variable "batch_image_tag" {
+  type        = string
+  default     = null
+  description = "batchイメージのタグ。null(既定)の場合は現在デプロイ済みのイメージをAWSから読み取って使う。初回構築時(batchタスク定義がまだ無い)のみ明示指定する。"
+}
+
 # VPC
 variable "vpc_cidr" {}
 variable "public_subnet_cidrs" { type = list(string) }

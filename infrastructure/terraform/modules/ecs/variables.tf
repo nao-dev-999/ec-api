@@ -8,11 +8,9 @@ variable "alb_sg_id" { type = string }
 variable "target_group_arn" { type = string }
 variable "frontend_alb_sg_id" { type = string }
 
-variable "app_image_url" { type = string }
-variable "app_image_tag" {
+variable "app_image" {
   type        = string
-  default     = null
-  description = "appイメージのタグ。null(既定)の場合は現在デプロイ済みのイメージをAWSから読み取って使う。初回構築時(読み取り元が存在しない)のみ明示指定する。"
+  description = "appコンテナのイメージURI(タグ込み)。呼び出し側で現在デプロイ済みのイメージを解決して渡す。モジュール内で読み取るとモジュールのdepends_onによりplan時に値が確定しなくなるため。"
 }
 
 variable "flyway_image_url" { type = string }
@@ -64,11 +62,9 @@ variable "max_capacity" {
   default = 4
 }
 
-variable "batch_image_url" { type = string }
-variable "batch_image_tag" {
+variable "batch_image" {
   type        = string
-  default     = null
-  description = "batchイメージのタグ。null(既定)の場合は現在デプロイ済みのイメージをAWSから読み取って使う。初回構築時(読み取り元が存在しない)のみ明示指定する。"
+  description = "batchコンテナのイメージURI(タグ込み)。app_imageと同様に呼び出し側で解決して渡す。"
 }
 
 variable "batch_cpu" {
@@ -107,6 +103,17 @@ variable "enable_redis" {
   type        = bool
   default     = true
   description = "falseにするとElastiCache Redisレプリケーショングループを削除する(SG・サブネットグループ・AUTHトークンは残す。スリープ用)"
+}
+
+variable "redis_host_when_disabled" {
+  type        = string
+  default     = "redis-disabled.invalid"
+  description = <<-EOT
+    enable_redis = false の間、appタスク定義のSPRING_DATA_REDIS_HOSTに入れる値。
+    スリープ移行時にタスク定義が変わるとサービスのローリング更新が走るため、
+    呼び出し側は現在のタスク定義の値を渡してタスク定義を据え置くこと(タスクは0台なので値は使われない)。
+    読み取り元が無い場合(初回構築時など)は既定のダミー値(名前解決できないホスト名)を使う。
+  EOT
 }
 
 variable "redis_node_type" {

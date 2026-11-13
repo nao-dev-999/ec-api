@@ -139,8 +139,9 @@ resource "aws_secretsmanager_secret_version" "redis_auth_token" {
 
 locals {
   redis_replication_group_id = "${var.project}-${var.env}-redis"
-  # enable_redis = false の間はタスク定義に入れる値が無いため、名前解決できないダミーのホスト名を入れておく
-  redis_host = var.enable_redis ? aws_elasticache_replication_group.this[0].primary_endpoint_address : "redis-disabled.invalid"
+  # enable_redis = false の間はエンドポイントが無いため、呼び出し側が渡す値(現在のタスク定義の値など)を入れる。
+  # 詳細は var.redis_host_when_disabled 参照
+  redis_host = var.enable_redis ? aws_elasticache_replication_group.this[0].primary_endpoint_address : var.redis_host_when_disabled
 }
 
 # 転送時・保管時暗号化とAUTHを有効化するため、aws_elasticache_cluster(暗号化非対応)ではなく
@@ -295,40 +296,6 @@ resource "aws_iam_role_policy" "task_exec_ssm" {
 }
 
 # ---------------------------------------------------------------------------
-# 現在デプロイ済みのイメージの解決
-# ---------------------------------------------------------------------------
-# イメージのタグ(コミットSHA)はCodePipelineが決めるため、Terraformはタグを固定せず
-# 「今動いているイメージ」をAWSから読み取ってタスク定義に入れる。これにより、
-# Terraformでタスク定義の設定(CPU/メモリ/環境変数等)を変えてapplyしたとき、
-# イメージはそのままで設定だけが反映される。
-# *_image_tag を明示した場合(初回構築時など)はその値を優先し、読み取りは行わない。
-
-# app: ECSサービスが現在使っているタスク定義のイメージ
-data "aws_ecs_service" "app_current" {
-  count        = var.app_image_tag == null ? 1 : 0
-  service_name = "${var.project}-${var.env}-app-service"
-  cluster_arn  = "arn:aws:ecs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:cluster/${var.project}-${var.env}-cluster"
-}
-
-data "aws_ecs_container_definition" "app_current" {
-  count           = var.app_image_tag == null ? 1 : 0
-  task_definition = data.aws_ecs_service.app_current[0].task_definition
-  container_name  = "app"
-}
-
-# batch: サービスが無いため、ファミリーの最新ACTIVEリビジョン(Step Functionsが実行するもの)のイメージ
-data "aws_ecs_container_definition" "batch_current" {
-  count           = var.batch_image_tag == null ? 1 : 0
-  task_definition = "${var.project}-${var.env}-batch"
-  container_name  = "batch"
-}
-
-locals {
-  app_image   = var.app_image_tag != null ? "${var.app_image_url}:${var.app_image_tag}" : data.aws_ecs_container_definition.app_current[0].image
-  batch_image = var.batch_image_tag != null ? "${var.batch_image_url}:${var.batch_image_tag}" : data.aws_ecs_container_definition.batch_current[0].image
-}
-
-# ---------------------------------------------------------------------------
 # ECS Task Definition - App
 # ---------------------------------------------------------------------------
 resource "aws_ecs_task_definition" "app" {
@@ -343,7 +310,7 @@ resource "aws_ecs_task_definition" "app" {
   container_definitions = jsonencode([
     {
       name      = "app"
-      image     = local.app_image
+      image     = var.app_image
       essential = true
 
       # SIGTERM送信からSIGKILLまでの猶予秒数。Fargateデフォルトと同値(30秒)だが、
@@ -407,8 +374,8 @@ resource "aws_ecs_task_definition" "app" {
   lifecycle {
     # パイプラインはlatestタグをpushしないため、latestを指すとタスクが起動できない
     precondition {
-      condition     = !endswith(local.app_image, ":latest")
-      error_message = "appイメージが :latest を指しています。CodePipelineでデプロイ済みのタグ(コミットSHA)を app_image_tag に指定してください。"
+      condition     = !endswith(var.app_image, ":latest")
+      error_message = "appイメージが :latest を指しています。CodePipelineでデプロイ済みのタグ(コミットSHA)を指定してください。"
     }
   }
 
@@ -509,7 +476,7 @@ resource "aws_ecs_task_definition" "batch" {
   container_definitions = jsonencode([
     {
       name      = "batch"
-      image     = local.batch_image
+      image     = var.batch_image
       essential = true
 
       # ECS.5(FSBP): ルートファイルシステムを読み取り専用に制限。
@@ -553,8 +520,8 @@ resource "aws_ecs_task_definition" "batch" {
   lifecycle {
     # パイプラインはlatestタグをpushしないため、latestを指すとタスクが起動できない
     precondition {
-      condition     = !endswith(local.batch_image, ":latest")
-      error_message = "batchイメージが :latest を指しています。batchパイプラインを実行してSHAタグのリビジョンを登録するか、batch_image_tag にタグを指定してください。"
+      condition     = !endswith(var.batch_image, ":latest")
+      error_message = "batchイメージが :latest を指しています。batchパイプラインを実行してSHAタグのリビジョンを登録するか、デプロイ済みのタグ(コミットSHA)を指定してください。"
     }
   }
 
@@ -960,8 +927,11 @@ resource "aws_ecs_service" "app" {
     container_port   = 8080
   }
 
-  # task_definitionは無視しない: タスク定義のイメージは現在デプロイ済みのものを読み取って
-  # 組み立てるため、Terraformのリビジョンへ切り替えてもイメージは変わらず設定変更だけが反映される。
+  # task_definitionは無視しない: タスク定義のイメージは呼び出し側が現在デプロイ済みのものを読み取って
+  # 渡すため、Terraformのリビジョンへ切り替えてもイメージは変わらず設定変更だけが反映される。
+  # なお、このサービスの更新はaws_appautoscaling_target.ecs(min/maxの変更)より先に行われる。
+  # スリープへの移行時にタスク定義が変わると、NAT Gateway削除後に新リビジョンのタスクを起動しようとして
+  # 失敗するため、呼び出し側はスリープ移行時にタスク定義の内容を変えないこと(var.redis_host_when_disabled参照)。
   # desired_countはオートスケーリングが変更するため無視する。
   lifecycle {
     ignore_changes = [desired_count]
