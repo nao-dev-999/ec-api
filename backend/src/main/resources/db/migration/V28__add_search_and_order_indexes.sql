@@ -7,4 +7,5 @@ CREATE INDEX idx_product_name_trgm ON product USING gin (lower(name) gin_trgm_op
 CREATE INDEX idx_product_description_trgm ON product USING gin (lower(description) gin_trgm_ops);
 
 -- 顧客ごとの注文一覧取得（GET /api/orders）を高速化する
-CREATE INDEX idx_customer_order_customer_id ON customer_order (customer_id);
+-- 一覧は ordered_at の降順で並べるため、並び順まで含めた複合インデックスにする
+CREATE INDEX idx_customer_order_customer_id ON customer_order (customer_id, ordered_at DESC);
