@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.*;
  * <pre>
  * GET   /api/orders                      全注文取得
  * GET   /api/orders/{id}                 注文詳細
+ * GET   /api/orders/{id}/receipt         領収書表示用の注文情報
  * POST  /api/orders                      注文作成（在庫チェックあり）
  * POST  /api/orders/{id}/cancel          注文キャンセル
  * </pre>
@@ -74,6 +75,17 @@ public class OrderController {
             @PathVariable Long id, @AuthenticationPrincipal LoginUserDetails loginUser) {
         return ResponseEntity.ok(
                 toOrderResponse(orderService.findByIdForCustomer(id, loginUser.getUserId())));
+    }
+
+    /**
+     * 領収書の表示に使う注文情報を取得します。注文完了メールに記載するリンクから開かれるため、注文詳細と同じ形式で返します。
+     *
+     * @param id 注文ID
+     * @return 注文詳細 {@link OrderResponse}
+     */
+    @GetMapping("/{id}/receipt")
+    public ResponseEntity<OrderResponse> getReceipt(@PathVariable Long id) {
+        return ResponseEntity.ok(toOrderResponse(orderService.findById(id)));
     }
 
     /**
