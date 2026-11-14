@@ -164,8 +164,7 @@ public class CouponService {
 
         Instant now = Instant.now();
         boolean withinPeriod =
-                (coupon.getValidFrom() == null || !now.isBefore(coupon.getValidFrom()))
-                        && (coupon.getValidTo() == null || !now.isAfter(coupon.getValidTo()));
+                !now.isBefore(coupon.getValidFrom()) && !now.isAfter(coupon.getValidTo());
         boolean withinUsageLimit =
                 coupon.getUsageLimit() == null || coupon.getUsageCount() < coupon.getUsageLimit();
         // キャンセル済みの注文は「使用済み」判定から除外し、同じクーポンを再利用可能にする。
