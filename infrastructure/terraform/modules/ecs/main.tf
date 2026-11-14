@@ -943,7 +943,8 @@ resource "aws_ecs_service" "app" {
   }
 
   # アプリ起動が完了する前にALBヘルスチェック失敗でタスクが強制終了されないよう、起動猶予期間を設ける
-  health_check_grace_period_seconds = var.health_check_grace_period_seconds
+  # LB未接続(スリープ中)のサービスには猶予期間を設定できないため0にする
+  health_check_grace_period_seconds = var.attach_load_balancer ? var.health_check_grace_period_seconds : 0
 
   # タスクをAZ間で常に均等配置（1AZ1タスク）に保つ
   availability_zone_rebalancing = "ENABLED"
@@ -954,10 +955,16 @@ resource "aws_ecs_service" "app" {
     assign_public_ip = false
   }
 
-  load_balancer {
-    target_group_arn = var.target_group_arn
-    container_name   = "app"
-    container_port   = 8080
+  # スリープ中(ALB削除中)はターゲットグループがLBに紐付かず、その状態でload_balancerを指定したまま
+  # UpdateServiceすると「does not have an associated load balancer」で失敗するため、LB接続ごと外す。
+  # (load_balancerはin-placeで変更可能。外す場合は空リストで更新される)
+  dynamic "load_balancer" {
+    for_each = var.attach_load_balancer ? [1] : []
+    content {
+      target_group_arn = var.target_group_arn
+      container_name   = "app"
+      container_port   = 8080
+    }
   }
 
   # task_definitionは無視しない: タスク定義のイメージは現在デプロイ済みのものを読み取って
@@ -1021,7 +1028,8 @@ resource "aws_ecs_service" "frontend" {
     rollback = true
   }
 
-  health_check_grace_period_seconds = var.health_check_grace_period_seconds
+  # LB未接続(スリープ中)のサービスには猶予期間を設定できないため0にする
+  health_check_grace_period_seconds = var.attach_load_balancer ? var.health_check_grace_period_seconds : 0
 
   availability_zone_rebalancing = "ENABLED"
 
@@ -1031,10 +1039,16 @@ resource "aws_ecs_service" "frontend" {
     assign_public_ip = false
   }
 
-  load_balancer {
-    target_group_arn = var.frontend_target_group_arn
-    container_name   = "frontend"
-    container_port   = 3000
+  # スリープ中(ALB削除中)はターゲットグループがLBに紐付かず、その状態でload_balancerを指定したまま
+  # UpdateServiceすると「does not have an associated load balancer」で失敗するため、LB接続ごと外す。
+  # (load_balancerはin-placeで変更可能。外す場合は空リストで更新される)
+  dynamic "load_balancer" {
+    for_each = var.attach_load_balancer ? [1] : []
+    content {
+      target_group_arn = var.frontend_target_group_arn
+      container_name   = "frontend"
+      container_port   = 3000
+    }
   }
 
   # CodePipelineによるデプロイ時にタスク定義が更新されるため

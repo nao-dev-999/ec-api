@@ -98,6 +98,12 @@ variable "batch_schedule_enabled" {
   description = "falseにすると日次バッチのスケジュールを無効化する(スリープ中はNAT・Redisが無く必ず失敗するため)"
 }
 
+variable "attach_load_balancer" {
+  type        = bool
+  default     = true
+  description = "ECSサービスをALBのターゲットグループに接続するか。ALBを削除するスリープ中はfalseにする"
+}
+
 variable "health_check_grace_period_seconds" {
   type    = number
   default = 120

@@ -109,7 +109,9 @@ module "ecs" {
   private_subnet_ids = module.vpc.private_subnet_ids
   alb_sg_id          = module.alb.alb_sg_id
   target_group_arn   = module.alb.target_group_arn
-  frontend_alb_sg_id = module.alb_frontend.alb_sg_id
+  # スリープ中はALB本体が無くターゲットグループがLBに紐付かないため、サービスからLB接続を外す
+  attach_load_balancer = !var.sleep_mode
+  frontend_alb_sg_id   = module.alb_frontend.alb_sg_id
 
   app_image_url = module.ecr.app_repository_url
 
