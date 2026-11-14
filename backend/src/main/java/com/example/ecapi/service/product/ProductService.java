@@ -19,6 +19,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
@@ -55,12 +56,19 @@ public class ProductService {
                 .toList();
     }
 
+    /** 件数の取得と一覧の取得を同じ結果から行い、ページをまたいで件数がずれないようにする（取得の間に商品が追加・削除されても一貫する）。 */
     public Page<ProductResult> searchProducts(
             String name, String description, BigDecimal price, Pageable pageable) {
         Specification<Product> spec =
                 ProductSpecification.byCriteria(name, description, price)
                         .and(ProductSpecification.notDeleted());
-        return productRepository.findAll(spec, pageable).map(this::toProductResult);
+        List<ProductResult> all =
+                productRepository.findAll(spec, pageable.getSort()).stream()
+                        .map(this::toProductResult)
+                        .toList();
+        int start = (int) Math.min(pageable.getOffset(), all.size());
+        int end = Math.min(start + pageable.getPageSize(), all.size());
+        return new PageImpl<>(all.subList(start, end), pageable, all.size());
     }
 
     @Transactional
