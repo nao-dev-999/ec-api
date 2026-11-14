@@ -144,9 +144,11 @@ resource "aws_iam_role_policy" "restop_events" {
         Action = "ssm:StartAutomationExecution"
         # 認可はautomation-definitionだけでなくdocument側のARNでも評価されるため両方を許可する。
         # (document側が無いとAccessDeniedになり、Automationの実行自体が作られない)
+        # 注意: Automationタイプのaws_ssm_document.arnは automation-definition/<name> を返すため、
+        # document/<name> は明示的に組み立てる。
         Resource = [
           "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:automation-definition/${aws_ssm_document.restop[0].name}:*",
-          aws_ssm_document.restop[0].arn,
+          "arn:aws:ssm:${var.aws_region}:${data.aws_caller_identity.current.account_id}:document/${aws_ssm_document.restop[0].name}",
         ]
       },
       {
