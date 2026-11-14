@@ -70,3 +70,8 @@ server:
         http-only: true
         secure: true
         same-site: Lax
+
+app:
+  notification:
+    # 通知サービス(メール送信)のURL。ECSではタスク定義の環境変数 APP_NOTIFICATION_BASE_URL で上書きする
+    base-url: ${APP_NOTIFICATION_BASE_URL:http://localhost:8081}

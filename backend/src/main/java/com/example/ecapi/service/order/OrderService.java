@@ -1,5 +1,6 @@
 package com.example.ecapi.service.order;
 
+import com.example.ecapi.client.OrderNotificationClient;
 import com.example.ecapi.constant.OrderPaymentStatus;
 import com.example.ecapi.constant.OrderStatus;
 import com.example.ecapi.entity.Customer;
@@ -54,6 +55,7 @@ public class OrderService {
     private final ShippingAddressRepository shippingAddressRepository;
     private final CartService cartService;
     private final CouponService couponService;
+    private final OrderNotificationClient orderNotificationClient;
 
     public Page<OrderResult> findAll(Pageable pageable) {
         return toOrderResultPage(orderRepository.findAll(pageable));
@@ -164,6 +166,7 @@ public class OrderService {
 
         CustomerOrder saved = orderRepository.save(order);
         cartService.clearCart(customer.getId());
+        orderNotificationClient.notifyOrderCreated(saved.getId(), customer.getEmail());
         log.info(
                 "Order created orderId={} customerId={} totalAmount={}",
                 saved.getId(),
