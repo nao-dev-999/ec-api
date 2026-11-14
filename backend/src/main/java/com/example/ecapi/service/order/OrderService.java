@@ -30,7 +30,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -257,13 +256,11 @@ public class OrderService {
     }
 
     private Page<OrderResult> toOrderResultPage(Page<CustomerOrder> orders) {
-        List<Long> orderIds = orders.getContent().stream().map(CustomerOrder::getId).toList();
-        Map<Long, List<CustomerOrderDetail>> itemsByOrderId =
-                orderIds.isEmpty()
-                        ? Map.of()
-                        : orderDetailRepository.findAllByOrderIdIn(orderIds).stream()
-                                .collect(Collectors.groupingBy(d -> d.getOrder().getId()));
-        return orders.map(o -> toOrderResult(o, itemsByOrderId.getOrDefault(o.getId(), List.of())));
+        return orders.map(o -> toOrderResult(o, findItems(o.getId())));
+    }
+
+    private List<CustomerOrderDetail> findItems(Long orderId) {
+        return orderDetailRepository.findAllByOrderIdIn(List.of(orderId));
     }
 
     private String resolveCustomerName(Customer customer) {
