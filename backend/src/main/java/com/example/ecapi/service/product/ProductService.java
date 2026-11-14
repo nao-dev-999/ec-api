@@ -5,6 +5,7 @@ import com.example.ecapi.exception.OptimisticLockConflictException;
 import com.example.ecapi.exception.ProductInUseException;
 import com.example.ecapi.exception.ProductNotFoundException;
 import com.example.ecapi.repository.ProductRepository;
+import com.example.ecapi.repository.ProductSearchRepository;
 import com.example.ecapi.repository.ProductSpecification;
 import com.example.ecapi.service.product.dto.CreateProduct;
 import com.example.ecapi.service.product.dto.ProductResult;
@@ -31,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProductService {
 
     private final ProductRepository productRepository;
+    private final ProductSearchRepository productSearchRepository;
 
     public List<ProductResult> findAll() {
         return productRepository.findAll().stream().map(this::toProductResult).toList();
@@ -61,6 +63,13 @@ public class ProductService {
                 ProductSpecification.byCriteria(name, description, price)
                         .and(ProductSpecification.notDeleted());
         return productRepository.findAll(spec, pageable).map(this::toProductResult);
+    }
+
+    /** 検索窓のサジェスト向け: 商品名のキーワードで検索し、指定した項目の順に返します。 */
+    public List<ProductResult> searchByKeyword(String keyword, String sortBy, int limit) {
+        return productSearchRepository.searchByName(keyword, sortBy, limit).stream()
+                .map(this::toProductResult)
+                .toList();
     }
 
     @Transactional

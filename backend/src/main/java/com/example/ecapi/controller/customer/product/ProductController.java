@@ -5,6 +5,7 @@ import com.example.ecapi.controller.customer.product.dto.ProductResponse;
 import com.example.ecapi.service.product.ProductService;
 import com.example.ecapi.service.product.dto.ProductResult;
 import java.math.BigDecimal;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
  *                                                   （name, description, price はAND条件で検索）
  * GET    /api/customer/products?page=0&amp;size=20      ページ番号（0始まり）・件数を指定
  * GET    /api/customer/products/{id}                 商品詳細
+ * GET    /api/customer/products/suggest?keyword=xxx  検索窓のサジェスト（sort で並び順を指定）
  * </pre>
  */
 @RestController
@@ -34,6 +36,7 @@ import org.springframework.web.bind.annotation.*;
 public class ProductController {
 
     private static final int MAX_PAGE_SIZE = 100;
+    private static final int SUGGEST_LIMIT = 10;
 
     private final ProductService productService;
 
@@ -64,6 +67,22 @@ public class ProductController {
                         .searchProducts(name, description, price, pageable)
                         .map(this::toProductResponse);
         return ResponseEntity.ok(PageResponse.from(result));
+    }
+
+    /**
+     * 検索窓のサジェスト用に、商品名のキーワードに合致する商品を返します。
+     *
+     * @param keyword 商品名のキーワード（部分一致、大文字小文字無視）
+     * @param sort 並び順に使う項目名（既定は name）
+     * @return 合致した商品（最大10件） {@link ProductResponse}
+     */
+    @GetMapping("/suggest")
+    public ResponseEntity<List<ProductResponse>> suggest(
+            @RequestParam String keyword, @RequestParam(defaultValue = "name") String sort) {
+        return ResponseEntity.ok(
+                productService.searchByKeyword(keyword.trim(), sort, SUGGEST_LIMIT).stream()
+                        .map(this::toProductResponse)
+                        .toList());
     }
 
     @GetMapping("/{id}")
