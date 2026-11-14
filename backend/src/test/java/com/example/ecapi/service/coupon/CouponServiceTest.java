@@ -351,6 +351,33 @@ class CouponServiceTest {
             assertThatThrownBy(() -> couponService.preview("SAVE500", CUSTOMER_ID, subtotal))
                     .isInstanceOf(CouponNotAllowedException.class);
         }
+
+        @Test
+        @DisplayName("割引額が小計を超える場合、小計を上限とした割引額を返すこと")
+        void shouldCapDiscountAtSubtotal() {
+            when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
+            when(customerOrderRepository.existsByCustomerIdAndCouponCodeAndDeletedFalseAndStatusNot(
+                            CUSTOMER_ID,
+                            "SAVE500",
+                            com.example.ecapi.constant.OrderStatus.CANCELLED))
+                    .thenReturn(false);
+
+            BigDecimal discount =
+                    couponService.preview("SAVE500", CUSTOMER_ID, BigDecimal.valueOf(300));
+
+            assertThat(discount).isEqualByComparingTo("300");
+        }
+
+        @Test
+        @DisplayName("有効期限切れのクーポンの場合、CouponNotAllowedException をスローすること")
+        void shouldThrowExceptionWhenExpired() {
+            coupon.setValidTo(Instant.now().minusSeconds(60));
+            when(couponRepository.findByCode("SAVE500")).thenReturn(Optional.of(coupon));
+            BigDecimal subtotal = BigDecimal.valueOf(1000);
+
+            assertThatThrownBy(() -> couponService.preview("SAVE500", CUSTOMER_ID, subtotal))
+                    .isInstanceOf(CouponNotAllowedException.class);
+        }
     }
 
     @Nested
