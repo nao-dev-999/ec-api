@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.*;
  * <pre>
  * GET   /api/orders                      全注文取得
  * GET   /api/orders/{id}                 注文詳細
+ * GET   /api/orders/export               注文履歴の CSV ダウンロード
  * POST  /api/orders                      注文作成（在庫チェックあり）
  * POST  /api/orders/{id}/cancel          注文キャンセル
  * </pre>
@@ -74,6 +76,19 @@ public class OrderController {
             @PathVariable Long id, @AuthenticationPrincipal LoginUserDetails loginUser) {
         return ResponseEntity.ok(
                 toOrderResponse(orderService.findByIdForCustomer(id, loginUser.getUserId())));
+    }
+
+    /**
+     * 注文履歴を CSV でダウンロードします。
+     *
+     * @param customerId 顧客ID
+     * @return 注文履歴の CSV
+     */
+    @GetMapping(value = "/export", produces = "text/csv")
+    public ResponseEntity<String> export(@RequestParam Long customerId) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"orders.csv\"")
+                .body(orderService.exportCsv(customerId));
     }
 
     /**

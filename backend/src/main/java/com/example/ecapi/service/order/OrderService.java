@@ -29,6 +29,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -38,6 +39,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -62,6 +64,19 @@ public class OrderService {
     /** ログイン中の顧客自身の注文のみを、新しい順に取得します。 */
     public Page<OrderResult> findAllByCustomerId(Long customerId, Pageable pageable) {
         return toOrderResultPage(orderRepository.findAllByCustomerId(customerId, pageable));
+    }
+
+    /** 指定した顧客の注文履歴を、新しい順に CSV 形式で返します。 */
+    public String exportCsv(Long customerId) {
+        Pageable newestFirst = Pageable.unpaged(Sort.by(Sort.Direction.DESC, "orderedAt"));
+        Page<CustomerOrder> page = orderRepository.findAllByCustomerId(customerId, newestFirst);
+        List<OrderResult> orders = new ArrayList<>();
+        for (CustomerOrder order : page.getContent()) {
+            List<CustomerOrderDetail> items =
+                    orderDetailRepository.findAllByOrderIdIn(List.of(order.getId()));
+            orders.add(toOrderResult(order, items));
+        }
+        return OrderCsvWriter.write(orders);
     }
 
     /**
