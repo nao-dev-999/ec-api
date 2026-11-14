@@ -36,7 +36,7 @@ public class CartService {
                         .findAllById(items.stream().map(CartItem::getProductId).toList())
                         .stream()
                         .collect(Collectors.toMap(Product::getId, Function.identity()));
-
+        // 商品が削除済みでカートだけに残っている場合は、明示的にエラーにする
         return items.stream()
                 .map(
                         item -> {
@@ -55,7 +55,6 @@ public class CartService {
                 productRepository
                         .findById(dto.productId())
                         .orElseThrow(() -> new ProductNotFoundException(dto.productId()));
-
         CartItem item =
                 cartItemRepository
                         .findByCustomerIdAndProductId(customerId, dto.productId())
@@ -67,7 +66,6 @@ public class CartService {
                                     newItem.setQuantity(0);
                                     return newItem;
                                 });
-
         item.setQuantity(item.getQuantity() + dto.quantity());
         CartItem saved = cartItemRepository.save(item);
         log.info(
@@ -85,11 +83,11 @@ public class CartService {
                         .findByCustomerIdAndProductId(customerId, dto.productId())
                         .orElseThrow(() -> new CartItemNotFoundException(dto.productId()));
         OptimisticLockConflictException.throwIfStale(item, dto.version());
+
         Product product =
                 productRepository
                         .findById(dto.productId())
                         .orElseThrow(() -> new ProductNotFoundException(dto.productId()));
-
         item.setQuantity(dto.quantity());
         CartItem saved = cartItemRepository.save(item);
         log.info(
@@ -106,6 +104,7 @@ public class CartService {
                 cartItemRepository
                         .findByCustomerIdAndProductId(customerId, productId)
                         .orElseThrow(() -> new CartItemNotFoundException(productId));
+
         cartItemRepository.delete(item);
         log.info("CartItem removed customerId={} productId={}", customerId, productId);
     }
