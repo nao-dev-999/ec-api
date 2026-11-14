@@ -22,12 +22,14 @@ public class RequestLoggingFilter extends OncePerRequestFilter {
         try {
             chain.doFilter(request, response);
         } finally {
+            // 同じ利用者の一連の操作をログで追えるように、セッションIDも出力する
             log.info(
-                    "method={} path={} status={} responseTimeMs={}",
+                    "method={} path={} status={} responseTimeMs={} sessionId={}",
                     request.getMethod(),
                     request.getRequestURI(),
                     response.getStatus(),
-                    System.currentTimeMillis() - startMs);
+                    System.currentTimeMillis() - startMs,
+                    request.getRequestedSessionId());
         }
     }
 

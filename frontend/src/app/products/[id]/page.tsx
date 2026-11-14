@@ -7,6 +7,7 @@ import { ApiError } from "@/lib/api/client";
 import AddToCartButton from "./AddToCartButton";
 import WishlistButton from "./WishlistButton";
 import ProductReviews from "./ProductReviews";
+import RecommendedProducts from "./RecommendedProducts";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +71,7 @@ export default async function ProductDetailPage({
       <AddToCartButton productId={product.id!} />
       <WishlistButton productId={product.id!} />
       <ProductReviews productId={product.id!} />
+      <RecommendedProducts productId={product.id!} />
     </main>
   );
 }
