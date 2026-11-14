@@ -99,7 +99,6 @@ public class OrderService {
      *     指定したクーポンが無効化済み・有効期限外・利用上限到達・使用済みの場合
      * @throws ShippingAddressNotFoundException 指定された配送先住所が存在しない、または他顧客の住所の場合
      */
-    @Transactional
     public OrderResult create(CreateOrder createOrder) {
         Customer customer =
                 customerRepository
@@ -176,7 +175,6 @@ public class OrderService {
      * @throws OrderNotFoundException 指定されたIDの注文が見つからない場合
      * @throws OptimisticLockConflictException リクエストの version が現在値と異なる場合（他の更新が先に入った）
      */
-    @Transactional
     public OrderResult updateStatus(Long id, OrderStatus newStatus, int version) {
         CustomerOrder order =
                 orderRepository.findById(id).orElseThrow(() -> new OrderNotFoundException(id));
@@ -194,7 +192,6 @@ public class OrderService {
      * @throws OrderCannotBeCancelledException 配達完了またはキャンセル済みの注文をキャンセルしようとした場合
      * @throws OptimisticLockConflictException リクエストの version が現在値と異なる場合（他の更新が先に入った）
      */
-    @Transactional
     public OrderResult cancel(Long id, int version) {
         CustomerOrder order =
                 orderRepository
