@@ -33,7 +33,7 @@ public class ProductService {
     private final ProductRepository productRepository;
 
     public List<ProductResult> findAll() {
-        return productRepository.findAll().stream().map(this::toProductResult).toList();
+        return productRepository.findAll().stream().map(this::toResult).toList();
     }
 
     // 在庫はOrderService経由でも更新されるため最新性を保証できない。
@@ -42,7 +42,7 @@ public class ProductService {
     public ProductResult findById(Long id) {
         return productRepository
                 .findById(id)
-                .map(this::toProductResult)
+                .map(this::toResult)
                 .orElseThrow(() -> new ProductNotFoundException(id));
     }
 
@@ -51,7 +51,7 @@ public class ProductService {
         return productRepository
                 .findByDeletedFalseAndStockLessThanEqualOrderByStockAsc(threshold)
                 .stream()
-                .map(this::toProductResult)
+                .map(this::toResult)
                 .toList();
     }
 
@@ -60,14 +60,14 @@ public class ProductService {
         Specification<Product> spec =
                 ProductSpecification.byCriteria(name, description, price)
                         .and(ProductSpecification.notDeleted());
-        return productRepository.findAll(spec, pageable).map(this::toProductResult);
+        return productRepository.findAll(spec, pageable).map(this::toResult);
     }
 
     @Transactional
     public ProductResult create(CreateProduct createProduct) {
         Product saved = productRepository.save(toProduct(createProduct));
         log.info("Product created productId={} name={}", saved.getId(), saved.getName());
-        return toProductResult(saved);
+        return toResult(saved);
     }
 
     /**
@@ -91,7 +91,7 @@ public class ProductService {
         if (updateProduct.stock() != null) product.setStock(updateProduct.stock());
         if (updateProduct.imageUrl() != null) product.setImageUrl(updateProduct.imageUrl());
         log.info("Product updated productId={}", updateProduct.id());
-        return toProductResult(productRepository.save(product));
+        return toResult(productRepository.save(product));
     }
 
     /**
@@ -123,7 +123,7 @@ public class ProductService {
         return product;
     }
 
-    private ProductResult toProductResult(Product product) {
+    private ProductResult toResult(Product product) {
         return new ProductResult(
                 product.getId(),
                 product.getName(),
