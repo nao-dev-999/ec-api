@@ -24,7 +24,7 @@ resource "aws_db_instance" "this" {
   skip_final_snapshot         = var.skip_final_snapshot
   final_snapshot_identifier   = "${var.identifier}-final-snapshot"
   deletion_protection         = var.deletion_protection
-  publicly_accessible         = false
+  publicly_accessible         = true
   multi_az                    = var.multi_az
   port                        = 5432
   backup_retention_period     = var.backup_retention_period
@@ -145,6 +145,14 @@ resource "aws_security_group" "rds" {
     to_port         = 5432
     protocol        = "tcp"
     security_groups = [var.ecs_sg_id]
+  }
+
+  # メンテナンス作業(マイグレーションの手動確認・データ調査)で作業端末から直接接続するため
+  ingress {
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
