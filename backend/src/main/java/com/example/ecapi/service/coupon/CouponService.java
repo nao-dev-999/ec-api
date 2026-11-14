@@ -73,11 +73,7 @@ public class CouponService {
                         .findById(dto.id())
                         .orElseThrow(() -> new CouponNotFoundException(dto.id()));
         OptimisticLockConflictException.throwIfStale(coupon, dto.version());
-        if (dto.discountAmount() != null) coupon.setDiscountAmount(dto.discountAmount());
-        coupon.setValidFrom(toInstant(dto.validFrom()));
-        coupon.setValidTo(toInstant(dto.validTo()));
-        coupon.setUsageLimit(dto.usageLimit());
-        if (dto.active() != null) coupon.setActive(dto.active());
+        applyChanges(coupon, dto);
         log.info("Coupon updated couponId={}", dto.id());
         return toResult(couponRepository.save(coupon));
     }
@@ -177,6 +173,19 @@ public class CouponService {
             throw new CouponNotAllowedException(code);
         }
         return coupon;
+    }
+
+    /** 割引額と有効フラグは null なら変更しない。有効期間と利用上限は null で「制限なし」に戻せるため、そのまま反映する。 */
+    private void applyChanges(Coupon coupon, UpdateCoupon dto) {
+        if (dto.discountAmount() != null) {
+            coupon.setDiscountAmount(dto.discountAmount());
+        }
+        coupon.setValidFrom(toInstant(dto.validFrom()));
+        coupon.setValidTo(toInstant(dto.validTo()));
+        coupon.setUsageLimit(dto.usageLimit());
+        if (dto.active() != null) {
+            coupon.setActive(dto.active());
+        }
     }
 
     private Instant toInstant(LocalDateTime dateTime) {
