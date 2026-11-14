@@ -10,6 +10,50 @@ resource "aws_sns_topic" "alarms" {
   }
 }
 
+# EventBridgeルール(RDS自動再停止の失敗検知など)からのPublishを許可する。
+# トピックポリシーを指定するとデフォルトポリシーが置き換わるため、デフォルト相当の
+# ステートメント(同一アカウントからの操作・CloudWatchアラーム/RDSイベント通知のPublish)も残す。
+data "aws_caller_identity" "current" {}
+
+resource "aws_sns_topic_policy" "alarms" {
+  arn = aws_sns_topic.alarms.arn
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "__default_statement_ID"
+        Effect    = "Allow"
+        Principal = { AWS = "*" }
+        Action = [
+          "SNS:GetTopicAttributes",
+          "SNS:SetTopicAttributes",
+          "SNS:AddPermission",
+          "SNS:RemovePermission",
+          "SNS:DeleteTopic",
+          "SNS:Subscribe",
+          "SNS:ListSubscriptionsByTopic",
+          "SNS:Publish",
+        ]
+        Resource = aws_sns_topic.alarms.arn
+        Condition = {
+          StringEquals = { "AWS:SourceOwner" = data.aws_caller_identity.current.account_id }
+        }
+      },
+      {
+        Sid       = "AllowEventBridgePublish"
+        Effect    = "Allow"
+        Principal = { Service = "events.amazonaws.com" }
+        Action    = "sns:Publish"
+        Resource  = aws_sns_topic.alarms.arn
+        Condition = {
+          StringEquals = { "aws:SourceAccount" = data.aws_caller_identity.current.account_id }
+        }
+      },
+    ]
+  })
+}
+
 resource "aws_sns_topic_subscription" "alarms_email" {
   for_each = toset(var.notification_emails)
 
