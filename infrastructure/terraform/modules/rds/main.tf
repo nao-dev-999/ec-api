@@ -72,7 +72,7 @@ resource "aws_rds_instance_state" "this" {
 }
 
 resource "aws_db_parameter_group" "this" {
-  name   = "${var.project}-${var.env}-pg-params"
+  name   = "${var.project}-${var.env}-${var.engine}-params"
   family = "${var.engine}${split(".", var.engine_version)[0]}" # engineのメジャーバージョンに合わせて動的に組み立てる
 
   # スロークエリログ: 指定ミリ秒以上かかったクエリを記録する
